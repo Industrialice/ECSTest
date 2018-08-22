@@ -1,0 +1,103 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Systen Headers">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Headers">
+      <UniqueIdentifier>{7c4b248e-066e-436d-9b55-14d02da1f357}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Sources">
+      <UniqueIdentifier>{a66e3abb-e867-47c9-bdde-c08f6b46c93b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Component Headers">
+      <UniqueIdentifier>{d428779b-c3e1-48c0-bb0d-6e211900d29a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="System Sources">
+      <UniqueIdentifier>{8f40f555-e610-4874-a16b-39b784d10424}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Entity.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="Source.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="Scene.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="PreHeader.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="System.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="PhysicsSystem.cpp">
+      <Filter>System Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="JiggleBonesSystem.cpp">
+      <Filter>System Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="BulletMoverSystem.cpp">
+      <Filter>System Sources</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Entity.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Component.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="System.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="Scene.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="BulletMoverComponent.hpp">
+      <Filter>Component Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="JiggleBonesComponent.hpp">
+      <Filter>Component Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="PreHeader.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="TypeIdentifiable.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="AISystem.hpp">
+      <Filter>Systen Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="AnimatorSystem.hpp">
+      <Filter>Systen Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="PhysicsSystem.hpp">
+      <Filter>Systen Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="RendererSystem.hpp">
+      <Filter>Systen Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ScriptingSystem.hpp">
+      <Filter>Systen Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="SoundSystem.hpp">
+      <Filter>Systen Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="PhysicsComponent.hpp">
+      <Filter>Component Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="TransformComponent.hpp">
+      <Filter>Component Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="JiggleBonesSystem.hpp">
+      <Filter>Systen Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="BulletMoverSystem.hpp">
+      <Filter>Systen Headers</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
