@@ -5,5 +5,7 @@
 int main()
 {
     StdLib::Initialization::PlatformAbstractionInitialize({});
+	printf("done\n");
+	getchar();
     return 0;
 }
