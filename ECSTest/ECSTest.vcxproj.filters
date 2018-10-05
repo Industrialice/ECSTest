@@ -43,6 +43,10 @@
     <ClCompile Include="BulletMoverSystem.cpp">
       <Filter>System Sources</Filter>
     </ClCompile>
+    <ClCompile Include="SystemsManager.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="RendererSystem.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Entity.hpp">
@@ -98,6 +102,18 @@
     </ClInclude>
     <ClInclude Include="BulletMoverSystem.hpp">
       <Filter>Systen Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="SystemsManager.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="FramePresenterSystem.hpp">
+      <Filter>Systen Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshRendererComponent.hpp">
+      <Filter>Component Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="CameraComponent.hpp">
+      <Filter>Component Headers</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

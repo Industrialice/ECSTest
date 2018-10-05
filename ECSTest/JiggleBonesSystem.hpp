@@ -7,9 +7,9 @@
 
 namespace ECSTest
 {
-    class JiggleBonesSystem final : public System
+    class JiggleBonesSystem final : public _SystemTypeIdentifiable<JiggleBonesSystem>
     {
-        static constexpr RequiredComponent _requiredComponents[] =
+        static constexpr RequestedComponent _requiredComponents[] =
         {
             {TransformComponent::GetTypeId(), true, false},
             {PhysicsComponent::GetTypeId(), true, true},
@@ -17,6 +17,6 @@ namespace ECSTest
         };
 
     public:
-        virtual pair<const RequiredComponent *, uiw> RequiredComponents() const override;
+        virtual pair<const RequestedComponent *, uiw> RequestedComponentsAll() const override;
     };
 }

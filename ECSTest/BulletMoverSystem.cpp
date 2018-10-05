@@ -3,7 +3,7 @@
 
 using namespace ECSTest;
 
-auto BulletMoverSystem::RequiredComponents() const -> pair<const RequiredComponent *, uiw>
+auto BulletMoverSystem::RequestedComponentsAll() const -> pair<const RequestedComponent *, uiw>
 {
-    return make_pair(_requiredComponents, CountOf(_requiredComponents));
+	return {_requiredComponents, CountOf(_requiredComponents)};
 }

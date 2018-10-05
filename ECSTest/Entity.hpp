@@ -13,5 +13,6 @@ namespace ECSTest
 
     public:
         void AddComponent(unique_ptr<Component> component);
+		void RemoveComponent(const Component &component);
     };
 }

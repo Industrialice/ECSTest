@@ -6,15 +6,15 @@
 
 namespace ECSTest
 {
-    class BulletMoverSystem final : public System
+    class BulletMoverSystem final : public _SystemTypeIdentifiable<BulletMoverSystem>
     {
-        static constexpr RequiredComponent _requiredComponents[] =
+        static constexpr RequestedComponent _requiredComponents[] =
         {
             {TransformComponent::GetTypeId(), true, true},
             {BulletMoverComponent::GetTypeId(), true, false}
         };
 
     public:
-        virtual pair<const RequiredComponent *, uiw> RequiredComponents() const override;
+        virtual pair<const RequestedComponent *, uiw> RequestedComponentsAll() const override;
     };
 }

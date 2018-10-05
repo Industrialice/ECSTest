@@ -2,41 +2,48 @@
 
 namespace ECSTest
 {
-    class TypeId
-    {
-        const char *const _id{};
+	class TypeId
+	{
+		const char *_id{};
 
-    public:
-        constexpr TypeId(const char *id) : _id(id)
-        {}
+	public:
+		using InternalIdType = const char *;
 
-        constexpr bool operator == (const TypeId &other) const
-        {
-            return _id == other._id;
-        }
+		constexpr TypeId(const char *id) : _id(id)
+		{}
 
-        constexpr bool operator != (const TypeId &other) const
-        {
-            return _id == other._id;
-        }
+		[[nodiscard]] constexpr bool operator == (const TypeId &other) const
+		{
+			return _id == other._id;
+		}
 
-        constexpr bool operator < (const TypeId &other) const
-        {
-            return _id < other._id;
-        }
+		[[nodiscard]] constexpr bool operator != (const TypeId &other) const
+		{
+			return _id == other._id;
+		}
 
-        constexpr bool operator > (const TypeId &other) const
-        {
-            return _id > other._id;
-        }
-    };
+		[[nodiscard]] constexpr bool operator < (const TypeId &other) const
+		{
+			return _id < other._id;
+		}
+
+		[[nodiscard]] constexpr bool operator > (const TypeId &other) const
+		{
+			return _id > other._id;
+		}
+
+		[[nodiscard]] constexpr const char *InternalId() const
+		{
+			return _id;
+		}
+	};
 
     template <typename T> class TypeIdentifiable
     {
         static constexpr char var = 0;
 
     public:
-        static constexpr TypeId GetTypeId()
+        [[nodiscard]] static constexpr TypeId GetTypeId()
         {
             return &var;
         }
