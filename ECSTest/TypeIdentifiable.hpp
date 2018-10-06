@@ -48,4 +48,16 @@ namespace ECSTest
             return &var;
         }
     };
+
+    template <TypeId::InternalIdType id, bool isWriteable> struct TypeIdToType;
 }
+
+#define GENERATE_TYPE_ID_TO_TYPE(T) \
+    template <> struct TypeIdToType<T::GetTypeId().InternalId(), true> \
+    { \
+        using type = T; \
+    }; \
+    template <> struct TypeIdToType<T::GetTypeId().InternalId(), false> \
+    { \
+        using type = const T; \
+    }

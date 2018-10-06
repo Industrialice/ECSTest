@@ -3,17 +3,12 @@
 
 using namespace ECSTest;
 
-auto System::RequestedComponentsAny() const -> pair<const RequestedComponent *, uiw>
-{
-	return {nullptr, 0};
-}
-
-auto System::RequestedComponentsOptional() const -> pair<const RequestedComponent *, uiw>
-{
-	return {nullptr, 0};
-}
-
 bool System::IsFatSystem() const
 {
 	return false;
+}
+
+void System::AcceptComponents(void *first, ...) const
+{
+    // do nothing in the base implementation
 }

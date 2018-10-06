@@ -3,9 +3,9 @@
 
 using namespace ECSTest;
 
-auto PhysicsSystem::RequestedComponentsAll() const -> pair<const RequestedComponent *, uiw>
+auto PhysicsSystem::RequestedComponents() const -> pair<const RequestedComponent *, uiw>
 {
-    return make_pair(_requiredComponents, CountOf(_requiredComponents));
+    return make_pair(_requestedComponents, CountOf(_requestedComponents));
 }
 
 bool PhysicsSystem::IsFatSystem() const

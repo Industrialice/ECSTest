@@ -3,7 +3,5 @@
 
 using namespace ECSTest;
 
-auto JiggleBonesSystem::RequestedComponentsAll() const -> pair<const RequestedComponent *, uiw>
-{
-    return make_pair(_requiredComponents, CountOf(_requiredComponents));
-}
+void JiggleBonesSystem::Accept(const TransformComponent &transform, PhysicsComponent &physics, JiggleBonesComponent &jiggleBones) const
+{}

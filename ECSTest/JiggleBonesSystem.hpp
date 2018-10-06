@@ -9,14 +9,8 @@ namespace ECSTest
 {
     class JiggleBonesSystem final : public _SystemTypeIdentifiable<JiggleBonesSystem>
     {
-        static constexpr RequestedComponent _requiredComponents[] =
-        {
-            {TransformComponent::GetTypeId(), true, false},
-            {PhysicsComponent::GetTypeId(), true, true},
-            {JiggleBonesComponent::GetTypeId(), true, true}
-        };
-
-    public:
-        virtual pair<const RequestedComponent *, uiw> RequestedComponentsAll() const override;
+        ACCEPT_SLIM_COMPONENTS(const TransformComponent &transform, PhysicsComponent &physics, JiggleBonesComponent &jiggleBones);
     };
+
+    GENERATE_TYPE_ID_TO_TYPE(JiggleBonesSystem);
 }

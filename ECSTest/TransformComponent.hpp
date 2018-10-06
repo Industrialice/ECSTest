@@ -18,4 +18,6 @@ namespace ECSTest
         Vector3 scale = {1, 1, 1};
         Mutability mutability = Mutability::Dynamic;
     };
+
+    GENERATE_TYPE_ID_TO_TYPE(TransformComponent);
 }

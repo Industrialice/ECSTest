@@ -3,7 +3,5 @@
 
 using namespace ECSTest;
 
-auto BulletMoverSystem::RequestedComponentsAll() const -> pair<const RequestedComponent *, uiw>
-{
-	return {_requiredComponents, CountOf(_requiredComponents)};
-}
+void BulletMoverSystem::Accept(TransformComponent &transform, const BulletMoverComponent &bulletMover) const
+{}

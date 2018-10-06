@@ -46,7 +46,9 @@
     <ClCompile Include="SystemsManager.cpp">
       <Filter>Sources</Filter>
     </ClCompile>
-    <ClCompile Include="RendererSystem.cpp" />
+    <ClCompile Include="RendererSystem.cpp">
+      <Filter>System Sources</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Entity.hpp">
@@ -114,6 +116,12 @@
     </ClInclude>
     <ClInclude Include="CameraComponent.hpp">
       <Filter>Component Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="FunctionInfo.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="SystemHelpers.hpp">
+      <Filter>Headers</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

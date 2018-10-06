@@ -8,13 +8,8 @@ namespace ECSTest
 {
     class BulletMoverSystem final : public _SystemTypeIdentifiable<BulletMoverSystem>
     {
-        static constexpr RequestedComponent _requiredComponents[] =
-        {
-            {TransformComponent::GetTypeId(), true, true},
-            {BulletMoverComponent::GetTypeId(), true, false}
-        };
-
-    public:
-        virtual pair<const RequestedComponent *, uiw> RequestedComponentsAll() const override;
+        ACCEPT_SLIM_COMPONENTS(TransformComponent &transform, const BulletMoverComponent &bulletMover);
     };
+
+    GENERATE_TYPE_ID_TO_TYPE(BulletMoverSystem);
 }

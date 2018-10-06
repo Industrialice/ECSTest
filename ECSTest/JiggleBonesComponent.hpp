@@ -9,4 +9,6 @@ namespace ECSTest
         Vector3 initialRotations{};
         Vector3 currentPosition{};
     };
+
+    GENERATE_TYPE_ID_TO_TYPE(JiggleBonesComponent);
 }

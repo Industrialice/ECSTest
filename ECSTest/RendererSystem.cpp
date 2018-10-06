@@ -3,14 +3,9 @@
 
 using namespace ECSTest;
 
-auto RendererSystem::RequestedComponentsAll() const -> pair<const RequestedComponent *, uiw>
+auto RendererSystem::RequestedComponents() const -> pair<const RequestedComponent *, uiw>
 {
-	return {_requiredComponentsAll, CountOf(_requiredComponentsAll)};
-}
-
-auto RendererSystem::RequestedComponentsAny() const -> pair<const RequestedComponent *, uiw>
-{
-	return {_requiredComponentsAny, CountOf(_requiredComponentsAny)};
+	return {_requiredComponents, CountOf(_requiredComponents)};
 }
 
 bool RendererSystem::IsFatSystem() const

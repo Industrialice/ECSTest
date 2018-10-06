@@ -8,6 +8,7 @@
 #include <thread>
 #include <atomic>
 #include <condition_variable>
+#include <cstdarg>
 
 using std::vector;
 using std::shared_ptr;
@@ -25,5 +26,7 @@ using namespace std::literals;
 #include <StdPlatformAbstractionLib.hpp>
 #include <MatrixMathTypes.hpp>
 using namespace StdLib;
+
+#include "FunctionInfo.hpp"
 
 static constexpr uiw MaxSystemDataPointers = 8;

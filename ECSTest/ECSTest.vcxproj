@@ -124,14 +124,24 @@
     <ClCompile Include="BulletMoverSystem.cpp" />
     <ClCompile Include="Entity.cpp" />
     <ClCompile Include="JiggleBonesSystem.cpp" />
-    <ClCompile Include="PhysicsSystem.cpp" />
+    <ClCompile Include="PhysicsSystem.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="PreHeader.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="RendererSystem.cpp" />
+    <ClCompile Include="RendererSystem.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="Scene.cpp" />
     <ClCompile Include="Source.cpp" />
     <ClCompile Include="System.cpp" />
@@ -146,6 +156,7 @@
     <ClInclude Include="Component.hpp" />
     <ClInclude Include="Entity.hpp" />
     <ClInclude Include="FramePresenterSystem.hpp" />
+    <ClInclude Include="FunctionInfo.hpp" />
     <ClInclude Include="JiggleBonesComponent.hpp" />
     <ClInclude Include="JiggleBonesSystem.hpp" />
     <ClInclude Include="MeshRendererComponent.hpp" />
@@ -157,6 +168,7 @@
     <ClInclude Include="ScriptingSystem.hpp" />
     <ClInclude Include="SoundSystem.hpp" />
     <ClInclude Include="System.hpp" />
+    <ClInclude Include="SystemHelpers.hpp" />
     <ClInclude Include="SystemsManager.hpp" />
     <ClInclude Include="TransformComponent.hpp" />
     <ClInclude Include="TypeIdentifiable.hpp" />
