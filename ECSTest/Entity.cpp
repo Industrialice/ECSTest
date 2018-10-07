@@ -22,3 +22,13 @@ void Entity::RemoveComponent(const Component &component)
 	}
 	_components.erase(it);
 }
+
+const vector<unique_ptr<Component>> &Entity::Components() const
+{
+    return _components;
+}
+
+vector<unique_ptr<Component>> &Entity::Components()
+{
+    return _components;
+}

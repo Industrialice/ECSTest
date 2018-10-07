@@ -4,7 +4,7 @@
 
 namespace ECSTest
 {
-    class Scene
+    class World
     {
         vector<unique_ptr<Entity>> _entities{};
 

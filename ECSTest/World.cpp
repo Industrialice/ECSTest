@@ -1,9 +1,9 @@
 #include "PreHeader.hpp"
-#include "Scene.hpp"
+#include "World.hpp"
 
 using namespace ECSTest;
 
-void Scene::AddEntity(unique_ptr<Entity> entity)
+void World::AddEntity(unique_ptr<Entity> entity)
 {
     _entities.push_back(move(entity));
 }

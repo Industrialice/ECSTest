@@ -4,12 +4,13 @@
 #include "TransformComponent.hpp"
 #include "MeshRendererComponent.hpp"
 #include "CameraComponent.hpp"
+#include "LightComponent.hpp"
 
 namespace ECSTest
 {
 	class RendererSystem final : public _SystemTypeIdentifiable<RendererSystem>
 	{
-        ACCEPT_COMPONENTS(const TransformComponent &transform, const MeshRendererComponent *meshRenderer, const CameraComponent *camera);
+        ACCEPT_COMPONENTS(const TransformComponent &transform, const MeshRendererComponent *meshRenderer, const CameraComponent *camera, const LightComponent *light);
 		virtual bool IsFatSystem() const override;
 	};
 

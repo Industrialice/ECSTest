@@ -14,5 +14,7 @@ namespace ECSTest
     public:
         void AddComponent(unique_ptr<Component> component);
 		void RemoveComponent(const Component &component);
+        const vector<unique_ptr<Component>> &Components() const;
+        vector<unique_ptr<Component>> &Components();
     };
 }

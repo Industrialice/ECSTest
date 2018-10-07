@@ -52,6 +52,36 @@ namespace ECSTest
             decltype(auto) a3 = Convert<t3>(va_arg(args, void *));
             (object->*Method)(Convert<t0>(first), a1, a2, a3);
         }
+
+        template <typename T, typename = std::enable_if_t<count == 5>, typename = std::enable_if_t<count == 5>, typename = std::enable_if_t<count == 5>, typename = std::enable_if_t<count == 5>, typename = std::enable_if_t<count == 5>> static FORCEINLINE void Call(T *object, void *first, va_list args)
+        {
+            using t0 = std::tuple_element_t<0, types>;
+            using t1 = std::tuple_element_t<1, types>;
+            using t2 = std::tuple_element_t<2, types>;
+            using t3 = std::tuple_element_t<3, types>;
+            using t4 = std::tuple_element_t<4, types>;
+            decltype(auto) a1 = Convert<t1>(va_arg(args, void *));
+            decltype(auto) a2 = Convert<t2>(va_arg(args, void *));
+            decltype(auto) a3 = Convert<t3>(va_arg(args, void *));
+            decltype(auto) a4 = Convert<t4>(va_arg(args, void *));
+            (object->*Method)(Convert<t0>(first), a1, a2, a3, a4);
+        }
+
+        template <typename T, typename = std::enable_if_t<count == 6>, typename = std::enable_if_t<count == 6>, typename = std::enable_if_t<count == 6>, typename = std::enable_if_t<count == 6>, typename = std::enable_if_t<count == 6>, typename = std::enable_if_t<count == 6>> static FORCEINLINE void Call(T *object, void *first, va_list args)
+        {
+            using t0 = std::tuple_element_t<0, types>;
+            using t1 = std::tuple_element_t<1, types>;
+            using t2 = std::tuple_element_t<2, types>;
+            using t3 = std::tuple_element_t<3, types>;
+            using t4 = std::tuple_element_t<4, types>;
+            using t5 = std::tuple_element_t<5, types>;
+            decltype(auto) a1 = Convert<t1>(va_arg(args, void *));
+            decltype(auto) a2 = Convert<t2>(va_arg(args, void *));
+            decltype(auto) a3 = Convert<t3>(va_arg(args, void *));
+            decltype(auto) a4 = Convert<t4>(va_arg(args, void *));
+            decltype(auto) a5 = Convert<t5>(va_arg(args, void *));
+            (object->*Method)(Convert<t0>(first), a1, a2, a3, a4, a5);
+        }
     };
 
     template <typename T> constexpr System::RequestedComponent _ArgumentToComponent()
@@ -108,6 +138,37 @@ namespace ECSTest
                 _ArgumentToComponent<std::tuple_element_t<1, T>>(),
                 _ArgumentToComponent<std::tuple_element_t<2, T>>(),
                 _ArgumentToComponent<std::tuple_element_t<3, T>>(),
+            };
+        }
+    };
+
+    template <auto Method, typename T> struct _TupleToComponents<Method, T, 5>
+    {
+        static constexpr std::array<System::RequestedComponent, 5> Convert()
+        {
+            return
+            {
+                _ArgumentToComponent<std::tuple_element_t<0, T>>(),
+                _ArgumentToComponent<std::tuple_element_t<1, T>>(),
+                _ArgumentToComponent<std::tuple_element_t<2, T>>(),
+                _ArgumentToComponent<std::tuple_element_t<3, T>>(),
+                _ArgumentToComponent<std::tuple_element_t<4, T>>(),
+            };
+        }
+    };
+
+    template <auto Method, typename T> struct _TupleToComponents<Method, T, 6>
+    {
+        static constexpr std::array<System::RequestedComponent, 6> Convert()
+        {
+            return
+            {
+                _ArgumentToComponent<std::tuple_element_t<0, T>>(),
+                _ArgumentToComponent<std::tuple_element_t<1, T>>(),
+                _ArgumentToComponent<std::tuple_element_t<2, T>>(),
+                _ArgumentToComponent<std::tuple_element_t<3, T>>(),
+                _ArgumentToComponent<std::tuple_element_t<4, T>>(),
+                _ArgumentToComponent<std::tuple_element_t<5, T>>(),
             };
         }
     };

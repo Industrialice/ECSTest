@@ -17,15 +17,15 @@
     <Filter Include="System Sources">
       <UniqueIdentifier>{8f40f555-e610-4874-a16b-39b784d10424}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Component Sources">
+      <UniqueIdentifier>{b08d0693-d55d-4ed5-9f53-9ee27b714464}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Entity.cpp">
       <Filter>Sources</Filter>
     </ClCompile>
     <ClCompile Include="Source.cpp">
-      <Filter>Sources</Filter>
-    </ClCompile>
-    <ClCompile Include="Scene.cpp">
       <Filter>Sources</Filter>
     </ClCompile>
     <ClCompile Include="PreHeader.cpp">
@@ -52,6 +52,42 @@
     <ClCompile Include="PhysicsPresenterSystem.cpp">
       <Filter>System Sources</Filter>
     </ClCompile>
+    <ClCompile Include="Component.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshRendererComponent.cpp">
+      <Filter>Component Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="PhysicsComponent.cpp">
+      <Filter>Component Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="SkinnedMeshRendererComponent.cpp">
+      <Filter>Component Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="CameraComponent.cpp">
+      <Filter>Component Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="BoxColliderComponent.cpp">
+      <Filter>Component Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="CapsuleColliderComponent.cpp">
+      <Filter>Component Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshColliderComponent.cpp">
+      <Filter>Component Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="SphereColliderComponent.cpp">
+      <Filter>Component Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="BulletMoverComponent.cpp">
+      <Filter>Component Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="JiggleBonesComponent.cpp">
+      <Filter>Component Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="World.cpp">
+      <Filter>Sources</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Entity.hpp">
@@ -61,9 +97,6 @@
       <Filter>Headers</Filter>
     </ClInclude>
     <ClInclude Include="System.hpp">
-      <Filter>Headers</Filter>
-    </ClInclude>
-    <ClInclude Include="Scene.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
     <ClInclude Include="BulletMoverComponent.hpp">
@@ -128,6 +161,27 @@
     </ClInclude>
     <ClInclude Include="PhysicsPresenterSystem.hpp">
       <Filter>Systen Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="SkinnedMeshRendererComponent.hpp">
+      <Filter>Component Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="SphereColliderComponent.hpp">
+      <Filter>Component Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="CapsuleColliderComponent.hpp">
+      <Filter>Component Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="BoxColliderComponent.hpp">
+      <Filter>Component Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshColliderComponent.hpp">
+      <Filter>Component Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="LightComponent.hpp">
+      <Filter>Component Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="World.hpp">
+      <Filter>Headers</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
