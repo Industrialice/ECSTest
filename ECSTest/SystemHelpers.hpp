@@ -6,13 +6,18 @@ namespace ECSTest
     {
         template <typename T> static FORCEINLINE auto Convert(void *arg) -> decltype(auto)
         {
+            static_assert(std::is_reference_v<T> || std::is_pointer_v<T>, "Type must be either reference or pointer");
+
             if constexpr (std::is_reference_v<T>)
             {
                 using bare = std::remove_reference_t<T>;
+                static_assert(!std::is_pointer_v<bare>, "Type cannot be reference to pointer");
                 return *(bare *)arg;
             }
             else
             {
+                using bare = std::remove_pointer_t<T>;
+                static_assert(!std::is_pointer_v<bare> && !std::is_reference_v<bare>, "Type cannot be pointer to reference/pointer");
                 return (T)arg;
             }
         }

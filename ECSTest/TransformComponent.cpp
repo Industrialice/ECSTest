@@ -1,4 +1,3 @@
 #include "PreHeader.hpp"
-#include "PhysicsComponent.hpp"
-
+#include "TransformComponent.hpp"
 using namespace ECSTest;

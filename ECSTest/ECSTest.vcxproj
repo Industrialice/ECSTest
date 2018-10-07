@@ -130,6 +130,7 @@
     <ClCompile Include="Entity.cpp" />
     <ClCompile Include="JiggleBonesComponent.cpp" />
     <ClCompile Include="JiggleBonesSystem.cpp" />
+    <ClCompile Include="LightComponent.cpp" />
     <ClCompile Include="MeshColliderComponent.cpp" />
     <ClCompile Include="MeshRendererComponent.cpp" />
     <ClCompile Include="PhysicsComponent.cpp" />
@@ -142,6 +143,8 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="RendererSystem.cpp" />
+    <ClCompile Include="SoundEmitterComponent.cpp" />
+    <ClCompile Include="TransformComponent.cpp" />
     <ClCompile Include="World.cpp" />
     <ClCompile Include="SkinnedMeshRendererComponent.cpp" />
     <ClCompile Include="Source.cpp" />
@@ -171,6 +174,7 @@
     <ClInclude Include="PhysicsSystem.hpp" />
     <ClInclude Include="PreHeader.hpp" />
     <ClInclude Include="RendererSystem.hpp" />
+    <ClInclude Include="SoundEmitterComponent.hpp" />
     <ClInclude Include="World.hpp" />
     <ClInclude Include="ScriptingSystem.hpp" />
     <ClInclude Include="SkinnedMeshRendererComponent.hpp" />

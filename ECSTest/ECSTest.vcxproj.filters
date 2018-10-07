@@ -88,6 +88,15 @@
     <ClCompile Include="World.cpp">
       <Filter>Sources</Filter>
     </ClCompile>
+    <ClCompile Include="TransformComponent.cpp">
+      <Filter>Component Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="LightComponent.cpp">
+      <Filter>Component Sources</Filter>
+    </ClCompile>
+    <ClCompile Include="SoundEmitterComponent.cpp">
+      <Filter>Component Sources</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Entity.hpp">
@@ -182,6 +191,9 @@
     </ClInclude>
     <ClInclude Include="World.hpp">
       <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="SoundEmitterComponent.hpp">
+      <Filter>Component Headers</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

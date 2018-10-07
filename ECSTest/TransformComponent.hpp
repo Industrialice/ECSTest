@@ -9,8 +9,8 @@ namespace ECSTest
         enum Mutability
         {
             Dynamic,
-            Static,
-            Unmovable
+            Unmovable,
+            Static
         };
 
         Vector3 position = {0, 0, 0};
