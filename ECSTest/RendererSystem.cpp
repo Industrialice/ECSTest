@@ -3,9 +3,8 @@
 
 using namespace ECSTest;
 
-auto RendererSystem::RequestedComponents() const -> pair<const RequestedComponent *, uiw>
+void RendererSystem::Accept(const TransformComponent &transform, const MeshRendererComponent *meshRenderer, const CameraComponent *camera) const
 {
-	return {_requiredComponents, CountOf(_requiredComponents)};
 }
 
 bool RendererSystem::IsFatSystem() const

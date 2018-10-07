@@ -49,6 +49,9 @@
     <ClCompile Include="RendererSystem.cpp">
       <Filter>System Sources</Filter>
     </ClCompile>
+    <ClCompile Include="PhysicsPresenterSystem.cpp">
+      <Filter>System Sources</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Entity.hpp">
@@ -122,6 +125,9 @@
     </ClInclude>
     <ClInclude Include="SystemHelpers.hpp">
       <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="PhysicsPresenterSystem.hpp">
+      <Filter>Systen Headers</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

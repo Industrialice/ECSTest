@@ -9,15 +9,7 @@ namespace ECSTest
 {
 	class RendererSystem final : public _SystemTypeIdentifiable<RendererSystem>
 	{
-		static constexpr RequestedComponent _requiredComponents[] =
-        {
-            {TransformComponent::GetTypeId(), true, false, System::ComponentOptionality::Required},
-            {MeshRendererComponent::GetTypeId(), true, false, System::ComponentOptionality::Any},
-            {CameraComponent::GetTypeId(), true, false, System::ComponentOptionality::Any}
-        };
-
-	public:
-		virtual pair<const RequestedComponent *, uiw> RequestedComponents() const override;
+        ACCEPT_COMPONENTS(const TransformComponent &transform, const MeshRendererComponent *meshRenderer, const CameraComponent *camera);
 		virtual bool IsFatSystem() const override;
 	};
 

@@ -8,15 +8,8 @@ namespace ECSTest
 {
     class PhysicsSystem final : public _SystemTypeIdentifiable<PhysicsSystem>
     {
-        static constexpr RequestedComponent _requestedComponents[] =
-        {
-            {TransformComponent::GetTypeId(), true, true, System::ComponentOptionality::Required},
-            {PhysicsComponent::GetTypeId(), true, true, System::ComponentOptionality::Required}
-        };
-
-    public:
-        virtual pair<const RequestedComponent *, uiw> RequestedComponents() const override;
-		virtual bool IsFatSystem() const;
+        ACCEPT_COMPONENTS(const TransformComponent &transform, const PhysicsComponent &physics);
+		virtual bool IsFatSystem() const override;
     };
 
     GENERATE_TYPE_ID_TO_TYPE(PhysicsSystem);
