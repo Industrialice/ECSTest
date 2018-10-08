@@ -2,11 +2,27 @@
 
 namespace ECSTest
 {
+	template <typename T> struct _GetComponentType
+	{
+		using type = T;
+	};
+
+	template <typename T> struct _GetComponentType<ArrayOfComponents<T>>
+	{
+		using type = T;
+	};
+
     template <auto Method, typename types = typename FunctionInfo<decltype(Method)>::args, uiw count = std::tuple_size_v<types>> struct _AcceptCaller
     {
         template <typename T> static FORCEINLINE auto Convert(void *arg) -> decltype(auto)
         {
             static_assert(std::is_reference_v<T> || std::is_pointer_v<T>, "Type must be either reference or pointer");
+
+			using pureType = std::remove_cv_t<std::remove_pointer_t<std::remove_reference_t<T>>>;
+			static constexpr bool isArray = std::is_base_of_v<_ArrayOfComponentsBase, pureType>;
+			using componentType = typename _GetComponentType<pureType>::type;
+			static constexpr bool isExclusive = componentType::IsExclusive();
+			static_assert(isArray != isExclusive, "You need to use components arrays for non-exclusive components, but you can't use them for exclusive components");
 
             if constexpr (std::is_reference_v<T>)
             {
@@ -92,7 +108,8 @@ namespace ECSTest
     template <typename T> constexpr System::RequestedComponent _ArgumentToComponent()
     {
         using TPure = std::remove_pointer_t<std::remove_reference_t<T>>;
-        return {TPure::GetTypeId(), !std::is_const_v<TPure>, std::is_reference_v<T>};
+		using componentType = typename _GetComponentType<std::remove_cv_t<TPure>>::type;
+		return {componentType::GetTypeId(), !std::is_const_v<TPure>, std::is_reference_v<T>};
     }
 
     template <auto Method, typename T = typename FunctionInfo<decltype(Method)>::args, uiw size = std::tuple_size_v<T>> struct _TupleToComponents;

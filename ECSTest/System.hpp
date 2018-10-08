@@ -21,10 +21,10 @@ namespace ECSTest
             bool isRequired;
         };
 
-        virtual pair<const RequestedComponent *, uiw> RequestedComponents() const = 0;
-		virtual bool IsFatSystem() const;
+		[[nodiscard]] virtual pair<const RequestedComponent *, uiw> RequestedComponents() const = 0;
+		[[nodiscard]] virtual bool IsFatSystem() const;
         virtual void AcceptComponents(void *first, ...) const; // used only for slim systems
-		virtual TypeId Type() const = 0;
+		[[nodiscard]] virtual TypeId Type() const = 0;
     };
 
     template <typename T> class _SystemTypeIdentifiable : public System, public TypeIdentifiable<T>
@@ -32,7 +32,7 @@ namespace ECSTest
     public:
         using TypeIdentifiable<T>::GetTypeId;
 
-        virtual TypeId Type() const override final
+		[[nodiscard]] virtual TypeId Type() const override final
         {
             return GetTypeId();
         }

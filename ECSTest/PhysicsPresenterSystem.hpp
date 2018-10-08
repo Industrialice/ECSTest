@@ -13,7 +13,7 @@ namespace ECSTest
     class PhysicsPresenterSystem final : public _SystemTypeIdentifiable<PhysicsPresenterSystem>
     {
         ACCEPT_COMPONENTS(TransformComponent &transform, PhysicsComponent &physics, const BoxColliderComponent *boxCollider, const CapsuleColliderComponent *capsuleCollider, const MeshColliderComponent *meshCollider, const SphereColliderComponent *sphereCollider);
-        virtual bool IsFatSystem() const override;
+		[[nodiscard]] virtual bool IsFatSystem() const override;
     };
 
     GENERATE_TYPE_ID_TO_TYPE(PhysicsPresenterSystem);

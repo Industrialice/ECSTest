@@ -14,5 +14,7 @@ namespace ECSTest
         }
     };
 
+	using SoundEmitterComponentsArray = ArrayOfComponents<SoundEmitterComponent>;
+
     GENERATE_TYPE_ID_TO_TYPE(SoundEmitterComponent);
 }

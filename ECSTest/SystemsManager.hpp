@@ -27,7 +27,7 @@ namespace ECSTest
 		using OnSystemExecutedCallbackType = function<void(const System &)>;
 
 		SystemsManager() = default;
-		ListenerHandle OnSystemExecuted(TypeId systemType, OnSystemExecutedCallbackType callback);
+		[[nodiscard]] ListenerHandle OnSystemExecuted(TypeId systemType, OnSystemExecutedCallbackType callback);
 		void RemoveListener(ListenerHandle &listener);
 		void Register(System &system, optional<ui32> stepMicroSeconds, const vector<TypeId> &runBefore, const vector<TypeId> &runAfter, std::thread::id affinityThread);
 		void Unregister(TypeId systemType);

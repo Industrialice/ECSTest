@@ -32,3 +32,8 @@ vector<unique_ptr<Component>> &Entity::Components()
 {
     return _components;
 }
+
+const string &Entity::Name() const
+{
+	return _name;
+}

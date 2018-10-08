@@ -14,5 +14,7 @@ namespace ECSTest
         }
     };
 
+	using LightComponentsArray = ArrayOfComponents<LightComponent>;
+
     GENERATE_TYPE_ID_TO_TYPE(LightComponent);
 }
