@@ -6,7 +6,7 @@ namespace ECSTest
 {
     struct TransformComponent final : public _BaseComponent<TransformComponent>
     {
-        enum Mutability
+        enum class Mutability
         {
             Dynamic,
             Unmovable,

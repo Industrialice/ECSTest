@@ -31,7 +31,7 @@ namespace ECSTest
 		void RemoveListener(ListenerHandle &listener);
 		void Register(System &system, optional<ui32> stepMicroSeconds, const vector<TypeId> &runBefore, const vector<TypeId> &runAfter, std::thread::id affinityThread);
 		void Unregister(TypeId systemType);
-		void Spin(vector<std::thread> &&threads);
+		void Spin(class World &world, vector<std::thread> &&threads);
 
 	private:
 		struct OnSystemExecutedData

@@ -7,9 +7,9 @@ namespace ECSTest
 		const char *_id{};
 
 	public:
-		using InternalIdType = const char *;
+		using InternalIdType = decltype(_id);
 
-		constexpr TypeId(const char *id) : _id(id)
+		constexpr TypeId(InternalIdType id) : _id(id)
 		{}
 
 		[[nodiscard]] constexpr bool operator == (const TypeId &other) const
@@ -32,7 +32,7 @@ namespace ECSTest
 			return _id > other._id;
 		}
 
-		[[nodiscard]] constexpr const char *InternalId() const
+		[[nodiscard]] constexpr InternalIdType InternalId() const
 		{
 			return _id;
 		}

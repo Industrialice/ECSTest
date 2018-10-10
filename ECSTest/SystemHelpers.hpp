@@ -12,16 +12,25 @@ namespace ECSTest
 		using type = T;
 	};
 
+	template <typename T> struct _GetComponentType<SubtractiveComponent<T>>
+	{
+		using type = T;
+	};
+
     template <auto Method, typename types = typename FunctionInfo<decltype(Method)>::args, uiw count = std::tuple_size_v<types>> struct _AcceptCaller
     {
         template <typename T> static FORCEINLINE auto Convert(void *arg) -> decltype(auto)
         {
-            static_assert(std::is_reference_v<T> || std::is_pointer_v<T>, "Type must be either reference or pointer");
-
 			using pureType = std::remove_cv_t<std::remove_pointer_t<std::remove_reference_t<T>>>;
-			static constexpr bool isArray = std::is_base_of_v<_ArrayOfComponentsBase, pureType>;
+
+			static constexpr bool isRefOrPtr = std::is_reference_v<T> || std::is_pointer_v<T>;
+			static constexpr bool isSubtractive = std::is_base_of_v<_SubtractiveComponentBase, pureType>;
+            static_assert(isSubtractive || isRefOrPtr, "Type must be either reference or pointer");
+			static_assert(!isSubtractive || !isRefOrPtr, "Subtractive component cannot be passed by reference or pointer");
+
 			using componentType = typename _GetComponentType<pureType>::type;
 			static constexpr bool isExclusive = componentType::IsExclusive();
+			static constexpr bool isArray = std::is_base_of_v<_ArrayOfComponentsBase, pureType>;
 			static_assert(isArray != isExclusive, "You need to use components arrays for non-exclusive components, but you can't use them for exclusive components");
 
             if constexpr (std::is_reference_v<T>)
@@ -30,12 +39,17 @@ namespace ECSTest
                 static_assert(!std::is_pointer_v<bare>, "Type cannot be reference to pointer");
                 return *(bare *)arg;
             }
-            else
+            else if constexpr (std::is_pointer_v<T>)
             {
                 using bare = std::remove_pointer_t<T>;
                 static_assert(!std::is_pointer_v<bare> && !std::is_reference_v<bare>, "Type cannot be pointer to reference/pointer");
                 return (T)arg;
             }
+			else
+			{
+				ASSUME(arg == nullptr);
+				return T();
+			}
         }
 
         template <typename T, typename = std::enable_if_t<count == 1>> static FORCEINLINE void Call(T *object, void *first, va_list args)
@@ -109,7 +123,20 @@ namespace ECSTest
     {
         using TPure = std::remove_pointer_t<std::remove_reference_t<T>>;
 		using componentType = typename _GetComponentType<std::remove_cv_t<TPure>>::type;
-		return {componentType::GetTypeId(), !std::is_const_v<TPure>, std::is_reference_v<T>};
+		System::ComponentAvailability availability;
+		if constexpr (std::is_reference_v<T>)
+		{
+			availability = System::ComponentAvailability::Required;
+		}
+		else if constexpr (std::is_pointer_v<T>)
+		{
+			availability = System::ComponentAvailability::Optional;
+		}
+		else if constexpr (std::is_base_of_v<_SubtractiveComponentBase, T>)
+		{
+			availability = System::ComponentAvailability::Subtractive;
+		}
+		return {componentType::GetTypeId(), !std::is_const_v<TPure>, availability};
     }
 
     template <auto Method, typename T = typename FunctionInfo<decltype(Method)>::args, uiw size = std::tuple_size_v<T>> struct _TupleToComponents;

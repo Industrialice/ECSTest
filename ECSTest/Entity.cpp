@@ -23,17 +23,17 @@ void Entity::RemoveComponent(const Component &component)
 	_components.erase(it);
 }
 
-const vector<unique_ptr<Component>> &Entity::Components() const
+const vector<unique_ptr<const Component>> &Entity::Components() const
 {
-    return _components;
-}
-
-vector<unique_ptr<Component>> &Entity::Components()
-{
-    return _components;
+    return (vector<unique_ptr<const Component>> &)_components;
 }
 
 const string &Entity::Name() const
 {
 	return _name;
+}
+
+const Entity *Entity::Parent() const
+{
+	return _parent;
 }

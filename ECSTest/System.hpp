@@ -7,18 +7,18 @@ namespace ECSTest
     class System
     {
     public:
-        enum ComponentOptionality
+        enum ComponentAvailability
         {
             Required,
-            Any,
-            Optional
+            Optional,
+			Subtractive
         };
 
         struct RequestedComponent
         {
             TypeId type;
             bool isWriteAccess;
-            bool isRequired;
+			ComponentAvailability isRequired;
         };
 
 		[[nodiscard]] virtual pair<const RequestedComponent *, uiw> RequestedComponents() const = 0;

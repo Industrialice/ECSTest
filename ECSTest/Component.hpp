@@ -7,8 +7,10 @@ namespace ECSTest
     class Component
     {
         friend class SystemsManager;
+		friend class ComponentChanger;
 
         class Entity *_entity = nullptr;
+		bool _isEnabled = true;
 
     public:
 		[[nodiscard]] class Entity &Entity();
@@ -67,5 +69,13 @@ namespace ECSTest
 		{
 			return _count;
 		}
+	};
+
+	struct _SubtractiveComponentBase
+	{};
+
+	template <typename T> struct SubtractiveComponent : _SubtractiveComponentBase
+	{
+		using ComponentType = T;
 	};
 }

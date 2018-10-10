@@ -21,6 +21,7 @@ using std::move;
 using std::swap;
 using std::make_pair;
 using std::make_shared;
+using std::make_unique;
 using namespace std::literals;
 
 #include <StdPlatformAbstractionLib.hpp>

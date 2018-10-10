@@ -71,6 +71,6 @@ void SystemsManager::Unregister(TypeId systemType)
 {
 }
 
-void SystemsManager::Spin(vector<std::thread> &&threads)
+void SystemsManager::Spin(class World &world, vector<std::thread> &&threads)
 {
 }
