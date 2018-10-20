@@ -3,6 +3,34 @@
 
 using namespace ECSTest;
 
+// EntityID
+
+EntityID::EntityID(ui32 id) : _id(id)
+{
+}
+
+bool EntityID::operator == (const EntityID &other) const
+{
+	return _id == other._id;
+}
+
+bool EntityID::operator != (const EntityID &other) const
+{
+	return _id != other._id;
+}
+
+bool EntityID::operator < (const EntityID &other) const
+{
+	return _id < other._id;
+}
+
+bool EntityID::IsValid() const
+{
+	return _id != ui32_max;
+}
+
+// Entity
+
 void Entity::AddComponent(unique_ptr<Component> component)
 {
     _components.push_back(move(component));
@@ -36,4 +64,28 @@ const string &Entity::Name() const
 const Entity *Entity::Parent() const
 {
 	return _parent;
+}
+
+EntityID Entity::ID() const
+{
+	ASSUME(_id != ui32_max);
+	return _id;
+}
+
+bool Entity::IsEnabledSelf() const
+{
+	return _isEnabled;
+}
+
+bool Entity::IsEnabledInHierarchy() const
+{
+	if (_isEnabled == false)
+	{
+		return false;
+	}
+	if (_parent)
+	{
+		return _parent->IsEnabledInHierarchy();
+	}
+	return true;
 }

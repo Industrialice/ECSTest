@@ -24,7 +24,7 @@ using std::make_shared;
 using std::make_unique;
 using namespace std::literals;
 
-#include <StdPlatformAbstractionLib.hpp>
+#include <StdMiscellaneousLib.hpp>
 #include <MatrixMathTypes.hpp>
 using namespace StdLib;
 

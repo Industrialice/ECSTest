@@ -10,7 +10,7 @@ namespace ECSTest
 {
 	class RendererSystem final : public _SystemTypeIdentifiable<RendererSystem>
 	{
-        ACCEPT_COMPONENTS(const TransformComponent &transform, const MeshRendererComponent *meshRenderer, const CameraComponent *camera, const LightComponentsArray *lights);
+        ACCEPT_COMPONENTS(const TransformComponent &transform, const MeshRendererComponent *meshRenderer, const CameraComponent *camera, const LightComponent *light);
 		[[nodiscard]] virtual bool IsFatSystem() const override;
 	};
 

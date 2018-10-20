@@ -7,11 +7,6 @@ namespace ECSTest
 		using type = T;
 	};
 
-	template <typename T> struct _GetComponentType<ArrayOfComponents<T>>
-	{
-		using type = T;
-	};
-
 	template <typename T> struct _GetComponentType<SubtractiveComponent<T>>
 	{
 		using type = T;
@@ -29,9 +24,6 @@ namespace ECSTest
 			static_assert(!isSubtractive || !isRefOrPtr, "Subtractive component cannot be passed by reference or pointer");
 
 			using componentType = typename _GetComponentType<pureType>::type;
-			static constexpr bool isExclusive = componentType::IsExclusive();
-			static constexpr bool isArray = std::is_base_of_v<_ArrayOfComponentsBase, pureType>;
-			static_assert(isArray != isExclusive, "You need to use components arrays for non-exclusive components, but you can't use them for exclusive components");
 
             if constexpr (std::is_reference_v<T>)
             {

@@ -17,6 +17,7 @@ namespace ECSTest
 		[[nodiscard]] const class Entity &Entity() const;
 		[[nodiscard]] virtual TypeId Type() const = 0;
 		[[nodiscard]] virtual pair<const TypeId *, uiw> Excludes() const = 0;
+		[[nodiscard]] virtual uiw SizeOf() const = 0;
     };
 
     template <typename T> class _BaseComponent : public Component, public TypeIdentifiable<T>
@@ -35,41 +36,11 @@ namespace ECSTest
             return {excludes, CountOf(excludes)};
         }
 
-		[[nodiscard]] static constexpr bool IsExclusive()
-        { 
-            return true; 
-        }
+		[[nodiscard]] virtual uiw SizeOf() const override
+		{
+			return sizeof(T);
+		}
     };
-
-	struct _ArrayOfComponentsBase
-	{};
-
-	template <typename T> class ArrayOfComponents : public _ArrayOfComponentsBase
-	{
-		T *const _components{};
-		const uiw _count = 0;
-
-	public:
-		using ComponentType = T;
-
-		ArrayOfComponents(T *components, uiw count) : _components(components), _count(count)
-		{}
-
-		[[nodiscard]] pair<T *, uiw> GetComponents()
-		{
-			return {_components, _count};
-		}
-
-		[[nodiscard]] pair<const T *, uiw> GetComponents() const
-		{
-			return {_components, _count};
-		}
-
-		[[nodiscard]] uiw Count() const
-		{
-			return _count;
-		}
-	};
 
 	struct _SubtractiveComponentBase
 	{};

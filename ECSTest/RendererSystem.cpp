@@ -3,7 +3,7 @@
 
 using namespace ECSTest;
 
-void RendererSystem::Accept(const TransformComponent &transform, const MeshRendererComponent *meshRenderer, const CameraComponent *camera, const LightComponentsArray *lights) const
+void RendererSystem::Accept(const TransformComponent &transform, const MeshRendererComponent *meshRenderer, const CameraComponent *camera, const LightComponent *light) const
 {
 }
 

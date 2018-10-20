@@ -36,6 +36,11 @@ namespace ECSTest
 		{
 			Entity::RemoveComponent(component);
 		}
+
+		void SetID(EntityID id)
+		{
+			_id = id;
+		}
 	};
 
 	class ComponentChanger
@@ -47,11 +52,17 @@ namespace ECSTest
 			parent.AddComponent(move(component));
 		}
 	};
+
+	static void AddEntityToWorld(World &world, unique_ptr<ChangeableEntity> entity)
+	{
+		entity->SetID(world.IDManager().Allocate());
+		world.AddEntity(move(entity));
+	}
 }
 
 int main()
 {
-	StdLib::Initialization::PlatformAbstractionInitialize({});
+	StdLib::Initialization::Initialize({});
 
 	World world{};
 
@@ -71,7 +82,7 @@ int main()
 			auto boxCollider = make_unique<BoxColliderComponent>();
 			ComponentChanger::ParentComponent(move(boxCollider), *lightPole);
 		}
-		world.AddEntity(move(lightPole));
+		AddEntityToWorld(world, move(lightPole));
 	}
 
 	{
@@ -97,7 +108,7 @@ int main()
 			auto boxCollider = make_unique<BoxColliderComponent>();
 			ComponentChanger::ParentComponent(move(boxCollider), *radioBox);
 		}
-		world.AddEntity(move(radioBox));
+		AddEntityToWorld(world, move(radioBox));
 	}
 
 	SystemsManager manager;

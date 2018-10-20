@@ -3,7 +3,7 @@
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <IncludePath>C:\Users\Colgate\Documents\Visual Studio 2017\Projects\StdLib2018\Core\;C:\Users\Colgate\Documents\Visual Studio 2017\Projects\StdLib2018\PlatformAbstraction\;$(VC_IncludePath);$(WindowsSDK_IncludePath);C:\StdLib2018\Core\;C:\StdLib2018\PlatformAbstraction\</IncludePath>
+    <IncludePath>C:\Users\Colgate\Documents\Visual Studio 2017\Projects\StdLib2018\Core\;C:\Users\Colgate\Documents\Visual Studio 2017\Projects\StdLib2018\PlatformAbstraction\;C:\Users\Colgate\Documents\Visual Studio 2017\Projects\StdLib2018\Miscellaneous\;$(VC_IncludePath);$(WindowsSDK_IncludePath);C:\StdLib2018\Core\;C:\StdLib2018\PlatformAbstraction\;C:\StdLib2018\Miscellaneous\</IncludePath>
     <LibraryPath>C:\Users\Colgate\Documents\Visual Studio 2017\Projects\StdLib2018\$(Configuration)_$(Platform)\;C:\StdLib2018\$(Configuration)_$(Platform)\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup>
@@ -20,7 +20,7 @@
       <PreprocessorDefinitions>ENABLE_FILE_STATS;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>Core.lib;PlatformAbstraction.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Core.lib;PlatformAbstraction.lib;Miscellaneous.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup />
