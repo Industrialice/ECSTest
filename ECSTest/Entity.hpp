@@ -16,11 +16,21 @@ namespace ECSTest
 		[[nodiscard]] bool IsValid() const;
 	};
 
+	class EntityArchetype
+	{
+		ui64 _hash{};
+
+	public:
+		void Add(TypeId type);
+		void Subtract(TypeId type);
+	};
+
     class Entity
     {
 	protected:
         void *_systemDataPointrs[MaxSystemDataPointers]{};
         std::list<void *> _extraSystemDataPointers{};
+		EntityArchetype _archetype{};
         Entity *_parent = nullptr;
         vector<unique_ptr<Component>> _components{};
 		EntityID _id = ui32_max;
@@ -35,6 +45,7 @@ namespace ECSTest
 		[[nodiscard]] const string &Name() const;
 		[[nodiscard]] const Entity *Parent() const;
 		[[nodiscard]] EntityID ID() const;
+		[[nodiscard]] EntityArchetype Archetype() const;
 		[[nodiscard]] bool IsEnabledSelf() const;
 		[[nodiscard]] bool IsEnabledInHierarchy() const;
     };

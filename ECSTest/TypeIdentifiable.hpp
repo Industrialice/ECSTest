@@ -36,6 +36,11 @@ namespace ECSTest
 		{
 			return _id;
 		}
+
+		[[nodiscard]] ui64 Hash() const
+		{
+			return Hash::FNVHash<ui64>(_id);
+		}
 	};
 
     template <typename T> class TypeIdentifiable

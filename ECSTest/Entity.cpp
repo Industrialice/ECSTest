@@ -33,11 +33,13 @@ bool EntityID::IsValid() const
 
 void Entity::AddComponent(unique_ptr<Component> component)
 {
+	_archetype.Add(component->Type());
     _components.push_back(move(component));
 }
 
 void Entity::RemoveComponent(const Component &component)
 {
+	_archetype.Subtract(component.Type());
 	auto pred = [&component](const unique_ptr<Component> &contained)
 	{
 		return contained.get() == &component;
@@ -72,6 +74,11 @@ EntityID Entity::ID() const
 	return _id;
 }
 
+EntityArchetype Entity::Archetype() const
+{
+	return _archetype;
+}
+
 bool Entity::IsEnabledSelf() const
 {
 	return _isEnabled;
@@ -88,4 +95,14 @@ bool Entity::IsEnabledInHierarchy() const
 		return _parent->IsEnabledInHierarchy();
 	}
 	return true;
+}
+
+void EntityArchetype::Add(TypeId type)
+{
+	_hash ^= type.Hash();
+}
+
+void EntityArchetype::Subtract(TypeId type)
+{
+	_hash ^= type.Hash();
 }
