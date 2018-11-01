@@ -18,11 +18,16 @@ namespace ECSTest
 
 	class EntityArchetype
 	{
+		friend class SystemsManager;
+
 		ui64 _hash{};
 
 	public:
 		void Add(TypeId type);
 		void Subtract(TypeId type);
+		[[nodiscard]] bool operator == (const EntityArchetype &other) const;
+		[[nodiscard]] bool operator != (const EntityArchetype &other) const;
+		[[nodiscard]] bool operator < (const EntityArchetype &other) const;
 	};
 
     class Entity

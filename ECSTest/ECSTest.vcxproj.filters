@@ -195,5 +195,8 @@
     <ClInclude Include="SoundEmitterComponent.hpp">
       <Filter>Component Headers</Filter>
     </ClInclude>
+    <ClInclude Include="Array.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

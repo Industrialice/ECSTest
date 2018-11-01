@@ -106,3 +106,18 @@ void EntityArchetype::Subtract(TypeId type)
 {
 	_hash ^= type.Hash();
 }
+
+bool EntityArchetype::operator == (const EntityArchetype &other) const
+{
+	return _hash == other._hash;
+}
+
+bool EntityArchetype::operator != (const EntityArchetype &other) const
+{
+	return _hash != other._hash;
+}
+
+bool EntityArchetype::operator < (const EntityArchetype &other) const
+{
+	return _hash < other._hash;
+}

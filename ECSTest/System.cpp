@@ -3,12 +3,42 @@
 
 using namespace ECSTest;
 
-bool System::IsFatSystem() const
+IndirectSystem *System::AsIndirectSystem()
 {
-	return false;
+	return nullptr;
 }
 
-void System::AcceptComponents(void *first, ...) const
+const IndirectSystem *System::AsIndirectSystem() const
 {
-    // do nothing in the base implementation
+	return nullptr;
+}
+
+DirectSystem *System::AsDirectSystem()
+{
+	return nullptr;
+}
+
+const DirectSystem *System::AsDirectSystem() const
+{
+	return nullptr;
+}
+
+IndirectSystem *IndirectSystem::AsIndirectSystem()
+{
+	return this;
+}
+
+const IndirectSystem *IndirectSystem::AsIndirectSystem() const
+{
+	return this;
+}
+
+DirectSystem *DirectSystem::AsDirectSystem()
+{
+	return this;
+}
+
+const DirectSystem *DirectSystem::AsDirectSystem() const
+{
+	return this;
 }

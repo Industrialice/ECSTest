@@ -155,6 +155,7 @@
   <ItemGroup>
     <ClInclude Include="AISystem.hpp" />
     <ClInclude Include="AnimatorSystem.hpp" />
+    <ClInclude Include="Array.hpp" />
     <ClInclude Include="BoxColliderComponent.hpp" />
     <ClInclude Include="BulletMoverComponent.hpp" />
     <ClInclude Include="BulletMoverSystem.hpp" />

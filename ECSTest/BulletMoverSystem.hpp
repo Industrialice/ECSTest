@@ -6,9 +6,9 @@
 
 namespace ECSTest
 {
-    class BulletMoverSystem final : public _SystemTypeIdentifiable<BulletMoverSystem>
+    class BulletMoverSystem final : public _DirectSystem<BulletMoverSystem>
     {
-        ACCEPT_COMPONENTS(TransformComponent &transform, const BulletMoverComponent &bulletMover);
+        ACCEPT_COMPONENTS(Array<TransformComponent> &transform, const Array<BulletMoverComponent> &bulletMover);
     };
 
     GENERATE_TYPE_ID_TO_TYPE(BulletMoverSystem);

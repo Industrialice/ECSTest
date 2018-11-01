@@ -29,5 +29,6 @@ using namespace std::literals;
 using namespace StdLib;
 
 #include "FunctionInfo.hpp"
+#include "Array.hpp"
 
 static constexpr uiw MaxSystemDataPointers = 8;
