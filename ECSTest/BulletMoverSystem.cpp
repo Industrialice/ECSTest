@@ -3,5 +3,5 @@
 
 using namespace ECSTest;
 
-void BulletMoverSystem::Accept(Array<TransformComponent> &transform, const Array<BulletMoverComponent> &bulletMover) const
+void BulletMoverSystem::Acceptor(Array<TransformComponent> &transform, const Array<BulletMoverComponent> &bulletMover) const
 {}

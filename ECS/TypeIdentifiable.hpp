@@ -9,6 +9,8 @@ namespace ECSTest
 	public:
 		using InternalIdType = decltype(_id);
 
+        constexpr TypeId() = default;
+
 		constexpr TypeId(InternalIdType id) : _id(id)
 		{}
 

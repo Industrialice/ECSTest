@@ -12,7 +12,7 @@ namespace ECSTest
 {
     class PhysicsSystem final : public _IndirectSystem<PhysicsSystem>
     {
-        //ACCEPT_COMPONENTS(const TransformComponent &transform, const PhysicsComponent &physics, const BoxColliderComponent *boxCollider, const CapsuleColliderComponent *capsuleCollider, const MeshColliderComponent *meshCollider, const SphereColliderComponent *sphereCollider);
+        //DIRECT_ACCEPT_COMPONENTS(const TransformComponent &transform, const PhysicsComponent &physics, const BoxColliderComponent *boxCollider, const CapsuleColliderComponent *capsuleCollider, const MeshColliderComponent *meshCollider, const SphereColliderComponent *sphereCollider);
     };
 
     GENERATE_TYPE_ID_TO_TYPE(PhysicsSystem);

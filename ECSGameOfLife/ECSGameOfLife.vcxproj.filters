@@ -1,0 +1,59 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Component Headers">
+      <UniqueIdentifier>{7b2ab0be-545a-40aa-9c48-0b0e46ae1522}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="System Headers">
+      <UniqueIdentifier>{529a79ae-1afc-4f8b-a9ad-ab3d1e95fa48}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Source.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PreHeader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="PreHeader.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ComponentProgrammer.hpp">
+      <Filter>Component Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ComponentGender.hpp">
+      <Filter>Component Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ComponentSpouse.hpp">
+      <Filter>Component Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ComponentFirstName.hpp">
+      <Filter>Component Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ComponentArtist.hpp">
+      <Filter>Component Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ComponentDesign.hpp">
+      <Filter>Component Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ComponentDateOfBirth.hpp">
+      <Filter>Component Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ComponentLastName.hpp">
+      <Filter>Component Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ComponentCompany.hpp">
+      <Filter>Component Headers</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

@@ -3,5 +3,5 @@
 
 using namespace ECSTest;
 
-void JiggleBonesSystem::Accept(const Array<TransformComponent> &transform, Array<PhysicsComponent> &physics, Array<JiggleBonesComponent> &jiggleBones) const
+void JiggleBonesSystem::Acceptor(const Array<TransformComponent> &transform, Array<PhysicsComponent> &physics, Array<JiggleBonesComponent> &jiggleBones) const
 {}

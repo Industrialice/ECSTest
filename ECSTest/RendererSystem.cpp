@@ -3,6 +3,6 @@
 
 using namespace ECSTest;
 
-//void RendererSystem::Accept(const TransformComponent &transform, const MeshRendererComponent *meshRenderer, const CameraComponent *camera, const LightComponent *light) const
+//void RendererSystem::Acceptor(const TransformComponent &transform, const MeshRendererComponent *meshRenderer, const CameraComponent *camera, const LightComponent *light) const
 //{
 //}

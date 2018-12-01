@@ -27,19 +27,23 @@ namespace ECSTest
 		[[nodiscard]] virtual const struct IndirectSystem *AsIndirectSystem() const;
 		[[nodiscard]] virtual struct DirectSystem *AsDirectSystem();
 		[[nodiscard]] virtual const struct DirectSystem *AsDirectSystem() const;
+        virtual void Accept(void **array) = 0;
 	};
 
 	struct IndirectSystem : public System
 	{
 		[[nodiscard]] virtual struct IndirectSystem *AsIndirectSystem() override final;
 		[[nodiscard]] virtual const struct IndirectSystem *AsIndirectSystem() const override final;
+        virtual void OnChanged(const shared_ptr<vector<Component>> &components) = 0;
+        virtual void Commit() = 0;
+        virtual void RemoveAll() = 0;
+        virtual void Update() = 0;
 	};
 
 	struct DirectSystem : public System
 	{
 		[[nodiscard]] virtual struct DirectSystem *AsDirectSystem() override final;
 		[[nodiscard]] virtual const struct DirectSystem *AsDirectSystem() const override final;
-		virtual void AcceptComponents(void **array) const = 0;
 	};
 
 	template <typename T> class _SystemTypeIdentifiable : public System, public TypeIdentifiable<T>

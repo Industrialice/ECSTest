@@ -20,8 +20,8 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
-    <ProjectGuid>{4D12A33A-56A1-4A15-81D4-DF69463D8DF8}</ProjectGuid>
-    <RootNamespace>ECSTest</RootNamespace>
+    <ProjectGuid>{65C70E5C-E622-4A50-BFC6-284EAC556A21}</ProjectGuid>
+    <RootNamespace>ECSGameOfLife</RootNamespace>
     <WindowsTargetPlatformVersion>10.0.17134.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -60,27 +60,27 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\GeneralPropertySheet.props" />
     <Import Project="..\DebugPropertySheet.props" />
-    <Import Project="ECSTestPropertySheet.props" />
+    <Import Project="ECSGameOfLifePropertySheet.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\GeneralPropertySheet.props" />
-    <Import Project="ECSTestPropertySheet.props" />
+    <Import Project="ECSGameOfLifePropertySheet.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\GeneralPropertySheet.props" />
     <Import Project="..\DebugPropertySheet.props" />
-    <Import Project="ECSTestPropertySheet.props" />
+    <Import Project="ECSGameOfLifePropertySheet.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\GeneralPropertySheet.props" />
-    <Import Project="ECSTestPropertySheet.props" />
+    <Import Project="ECSGameOfLifePropertySheet.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup />
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
@@ -88,7 +88,7 @@
       <ConformanceMode>true</ConformanceMode>
     </ClCompile>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
@@ -125,57 +125,25 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="BoxColliderComponent.cpp" />
-    <ClCompile Include="BulletMoverComponent.cpp" />
-    <ClCompile Include="BulletMoverSystem.cpp" />
-    <ClCompile Include="CameraComponent.cpp" />
-    <ClCompile Include="CapsuleColliderComponent.cpp" />
-    <ClCompile Include="JiggleBonesComponent.cpp" />
-    <ClCompile Include="JiggleBonesSystem.cpp" />
-    <ClCompile Include="LightComponent.cpp" />
-    <ClCompile Include="MeshColliderComponent.cpp" />
-    <ClCompile Include="MeshRendererComponent.cpp" />
-    <ClCompile Include="PhysicsComponent.cpp" />
-    <ClCompile Include="PhysicsPresenterSystem.cpp" />
-    <ClCompile Include="PhysicsSystem.cpp" />
     <ClCompile Include="PreHeader.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="RendererSystem.cpp" />
-    <ClCompile Include="SoundEmitterComponent.cpp" />
     <ClCompile Include="Source.cpp" />
-    <ClCompile Include="TransformComponent.cpp" />
-    <ClCompile Include="SkinnedMeshRendererComponent.cpp" />
-    <ClCompile Include="SphereColliderComponent.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="AISystem.hpp" />
-    <ClInclude Include="AnimatorSystem.hpp" />
-    <ClInclude Include="BoxColliderComponent.hpp" />
-    <ClInclude Include="BulletMoverComponent.hpp" />
-    <ClInclude Include="BulletMoverSystem.hpp" />
-    <ClInclude Include="CameraComponent.hpp" />
-    <ClInclude Include="CapsuleColliderComponent.hpp" />
-    <ClInclude Include="FramePresenterSystem.hpp" />
-    <ClInclude Include="JiggleBonesComponent.hpp" />
-    <ClInclude Include="JiggleBonesSystem.hpp" />
-    <ClInclude Include="LightComponent.hpp" />
-    <ClInclude Include="MeshColliderComponent.hpp" />
-    <ClInclude Include="MeshRendererComponent.hpp" />
-    <ClInclude Include="PhysicsComponent.hpp" />
-    <ClInclude Include="PhysicsPresenterSystem.hpp" />
-    <ClInclude Include="PhysicsSystem.hpp" />
+    <ClInclude Include="ComponentCompany.hpp" />
+    <ClInclude Include="ComponentDateOfBirth.hpp" />
+    <ClInclude Include="ComponentArtist.hpp" />
+    <ClInclude Include="ComponentDesign.hpp" />
+    <ClInclude Include="ComponentFirstName.hpp" />
+    <ClInclude Include="ComponentGender.hpp" />
+    <ClInclude Include="ComponentLastName.hpp" />
+    <ClInclude Include="ComponentSpouse.hpp" />
     <ClInclude Include="PreHeader.hpp" />
-    <ClInclude Include="RendererSystem.hpp" />
-    <ClInclude Include="SoundEmitterComponent.hpp" />
-    <ClInclude Include="ScriptingSystem.hpp" />
-    <ClInclude Include="SkinnedMeshRendererComponent.hpp" />
-    <ClInclude Include="SoundSystem.hpp" />
-    <ClInclude Include="SphereColliderComponent.hpp" />
-    <ClInclude Include="TransformComponent.hpp" />
+    <ClInclude Include="ComponentProgrammer.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

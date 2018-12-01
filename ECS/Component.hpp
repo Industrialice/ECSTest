@@ -9,7 +9,6 @@ namespace ECSTest
         friend class SystemsManager;
 		friend class ComponentChanger;
 
-        class Entity *_entity = nullptr;
 		bool _isEnabled = true;
 
     public:
@@ -22,6 +21,8 @@ namespace ECSTest
 
     template <typename T> class _BaseComponent : public Component, public TypeIdentifiable<T>
     {
+        static_assert(std::is_pod_v<T>, "Component must be POD");
+
     public:
         using TypeIdentifiable<T>::GetTypeId;
 

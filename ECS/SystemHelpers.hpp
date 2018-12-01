@@ -235,7 +235,7 @@ namespace ECSTest
     };
 }
 
-#define ACCEPT_COMPONENTS(...) \
+#define DIRECT_ACCEPT_COMPONENTS(...) \
     virtual pair<const RequestedComponent *, uiw> RequestedComponents() const override \
     { \
         using thisType = std::remove_reference_t<std::remove_cv_t<decltype(*this)>>; \
@@ -243,11 +243,33 @@ namespace ECSTest
         return {arr.data(), arr.size()}; \
     } \
     \
-    virtual void AcceptComponents(void **array) const override \
+    virtual void Accept(void **array) override \
     { \
         using thisType = std::remove_reference_t<std::remove_cv_t<decltype(*this)>>; \
 		using types = typename FunctionInfo<decltype(&thisType::Accept)>::args; \
 		static constexpr uiw count = std::tuple_size_v<types>; \
         _AcceptCaller<&thisType::Accept, types>::Call(this, array, std::integral_constant<uiw, count>()); \
     } \
-    void Accept(__VA_ARGS__) const
+    void Accept(__VA_ARGS__)
+
+#define INDIRECT_ACCEPT_COMPONENTS(...) \
+    virtual pair<const RequestedComponent *, uiw> RequestedComponents() const override \
+    { \
+        using thisType = std::remove_reference_t<std::remove_cv_t<decltype(*this)>>; \
+        auto arr = _TupleToComponents<&thisType::Accept>::Convert(); \
+        return {arr.data(), arr.size()}; \
+    } \
+    \
+    virtual void Accept(void **array) override \
+    { \
+        using thisType = std::remove_reference_t<std::remove_cv_t<decltype(*this)>>; \
+		using types = typename FunctionInfo<decltype(&thisType::Accept)>::args; \
+		static constexpr uiw count = std::tuple_size_v<types>; \
+        _AcceptCaller<&thisType::Accept, types>::Call(this, array, std::integral_constant<uiw, count>()); \
+    } \
+    virtual void Remove(Entity *entity) override; \
+    virtual void Commit() override; \
+    virtual void Clear() override; \
+    virtual void OnChanged(const shared_ptr<vector<Component>> &components) override; \
+    virtual void Update() override; \
+    void Acceptor(__VA_ARGS__)
