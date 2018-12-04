@@ -231,6 +231,7 @@ auto SystemsManager::FindArchetypeGroup(Archetype archetype, const vector<ui16> 
         componentArray.alignmentOf = component.alignmentOf;
         componentArray.sizeOf = component.sizeOf;
         componentArray.type = component.type;
+        componentArray.excludes = component.excludes; // TODO: check excludes
         ++componentArray.stride;
     }
 

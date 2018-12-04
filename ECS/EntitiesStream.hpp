@@ -14,6 +14,7 @@ namespace ECSTest
             ui16 sizeOf{};
             ui16 alignmentOf{};
 			ui8 *data{};
+            pair<const TypeId *, uiw> excludes{}; // assumed to point at static memory
         };
 
         struct StreamedEntity

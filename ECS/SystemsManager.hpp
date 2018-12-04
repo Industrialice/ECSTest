@@ -53,10 +53,11 @@ namespace ECSTest
                 ui16 stride{}; // Components of that type per entity, 1 if there's only one. Any access to a particular component must be performed using index * stride
                 ui16 sizeOf{}; // of each component
                 ui16 alignmentOf{}; // of each component
-                unique_ptr<ui8[], AlignedMallocDeleter> data{};
+                unique_ptr<ui8[], AlignedMallocDeleter> data{}; // each component can be safely casted into class Component
                 // must lock it first before accessing `data` if you don't have exclusive
                 // access to this group, other fields can be accessed without this lock
                 DIWRSpinLock lock{};
+                pair<const TypeId *, uiw> excludes{}; // assumed to point at static memory
             };
 
             unique_ptr<ComponentArray[]> components{};
