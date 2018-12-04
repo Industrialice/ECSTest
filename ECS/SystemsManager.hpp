@@ -113,7 +113,7 @@ namespace ECSTest
         DIWRSpinLock _entitiesLocationsLock{};
 
         // stores all antities and their components grouped by archetype
-        std::map<Archetype, ArchetypeGroup> _archetypeGroups{};
+        std::unordered_map<Archetype, ArchetypeGroup> _archetypeGroups{};
         // similar archetypes, like containing entities with multiple components of the same type,
         // will be considered as same archetype, so if you don't care about the components count,
         // just about their presence, use this

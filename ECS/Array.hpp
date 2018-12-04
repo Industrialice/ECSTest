@@ -74,5 +74,15 @@ namespace ECSTest
             ASSUME(index < _count);
             return _items[index];
         }
+
+		template <typename E, typename = std::enable_if_t<std::is_base_of_v<E, T>>> operator Array<E>() const
+		{
+			return {_items, _count};
+		}
 	};
+
+	template <typename T> Array<T> ToArray(T &value)
+	{
+		return Array(&value, 1);
+	}
 }

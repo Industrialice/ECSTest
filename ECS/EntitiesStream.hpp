@@ -13,7 +13,7 @@ namespace ECSTest
             TypeId type{};
             ui16 sizeOf{};
             ui16 alignmentOf{};
-            ui8 data[];
+			ui8 *data{};
         };
 
         struct StreamedEntity

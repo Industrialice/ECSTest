@@ -7,6 +7,11 @@ EntityID::EntityID(ui32 id) : _id(id)
 {
 }
 
+ui32 EntityID::Hash() const
+{
+	return _id;
+}
+
 bool EntityID::operator == (const EntityID &other) const
 {
 	return _id == other._id;

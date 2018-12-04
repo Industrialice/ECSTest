@@ -16,12 +16,12 @@ namespace ECSTest
 		[[nodiscard]] const class Entity &Entity() const;
 		[[nodiscard]] virtual TypeId Type() const = 0;
 		[[nodiscard]] virtual pair<const TypeId *, uiw> Excludes() const = 0;
-		[[nodiscard]] virtual uiw SizeOf() const = 0;
+		[[nodiscard]] virtual pair<uiw, uiw> SizeAlignment() const = 0;
     };
 
     template <typename T> class _BaseComponent : public Component, public TypeIdentifiable<T>
     {
-        static_assert(std::is_pod_v<T>, "Component must be POD");
+        //static_assert(std::is_pod_v<T>, "Component must be POD");
 
     public:
         using TypeIdentifiable<T>::GetTypeId;
@@ -37,9 +37,9 @@ namespace ECSTest
             return {excludes, CountOf(excludes)};
         }
 
-		[[nodiscard]] virtual uiw SizeOf() const override
+		[[nodiscard]] virtual pair<uiw, uiw> SizeAlignment() const override
 		{
-			return sizeof(T);
+			return {sizeof(T), alignof(T)};
 		}
     };
 

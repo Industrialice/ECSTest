@@ -11,6 +11,9 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ECS", "ECS\ECS.vcxproj", "{F08091C1-62EE-4763-8C58-0684B250866A}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ECSGameOfLife", "ECSGameOfLife\ECSGameOfLife.vcxproj", "{65C70E5C-E622-4A50-BFC6-284EAC556A21}"
+	ProjectSection(ProjectDependencies) = postProject
+		{F08091C1-62EE-4763-8C58-0684B250866A} = {F08091C1-62EE-4763-8C58-0684B250866A}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

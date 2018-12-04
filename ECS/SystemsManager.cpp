@@ -96,6 +96,18 @@ void SystemsManager::Register(unique_ptr<System> system, PipelineGroup pipelineG
 
     ASSUME(pipelineGroup.index < _pipelines.size());
 
+	for (auto &[step, systems, thread] : _pipelines)
+	{
+		for (const auto &existingSystem : systems)
+		{
+			if (existingSystem->Type() == system->Type())
+			{
+				SOFTBREAK; // system with such type already exists
+				return;
+			}
+		}
+	}
+
     _pipelines[pipelineGroup.index].systems.push_back(move(system));
 }
 
@@ -248,6 +260,8 @@ void SystemsManager::AddEntityToArchetypeGroup(ArchetypeGroup &group, const Enti
         for (ui16 index = 0; index < group.uniqueTypedComponentsCount; ++index)
         {
             auto &componentArray = group.components[index];
+
+			ASSUME(componentArray.sizeOf > 0 && componentArray.stride > 0);
 
             void *oldPtr = componentArray.data.release();
             void *newPtr = _aligned_realloc(oldPtr, componentArray.sizeOf * componentArray.stride * group.reservedCount, componentArray.alignmentOf);
