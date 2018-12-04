@@ -17,9 +17,6 @@
     <ClInclude Include="Component.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Entity.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="FunctionInfo.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -38,18 +35,21 @@
     <ClInclude Include="TypeIdentifiable.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="World.hpp">
+    <ClInclude Include="DIWRSpinLock.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="DIWRSpinLock.hpp">
+    <ClInclude Include="EntitiesStream.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="EntityID.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Archetype.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Component.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Entity.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="System.cpp">
@@ -58,13 +58,16 @@
     <ClCompile Include="SystemsManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="World.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="PreHeader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="DIWRSpinLock.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="EntityID.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Archetype.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

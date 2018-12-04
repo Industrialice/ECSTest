@@ -16,16 +16,4 @@ namespace ECSTest
 		[[nodiscard]] bool operator < (const EntityID &other) const;
 		[[nodiscard]] bool IsValid() const;
 	};
-
-	class EntityArchetype
-	{
-		ui64 _hash{};
-
-	public:
-		void Add(TypeId type);
-		void Subtract(TypeId type);
-		[[nodiscard]] bool operator == (const EntityArchetype &other) const;
-		[[nodiscard]] bool operator != (const EntityArchetype &other) const;
-		[[nodiscard]] bool operator < (const EntityArchetype &other) const;
-	};
 }

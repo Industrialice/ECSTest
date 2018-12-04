@@ -67,7 +67,26 @@ using namespace ECSTest;
 //{
 //}
 
-void SystemsManager::Register(unique_ptr<System> system, optional<ui32> stepMicroSeconds)
+auto SystemsManager::CreatePipelineGroup(optional<ui32> stepMicroSeconds, bool isMergeWithExisting) -> PipelineGroup
+{
+    PipelineGroup group;
+    if (isMergeWithExisting)
+    {
+        for (ui32 index = 0; index < (ui32)_pipelines.size(); ++index)
+        {
+            if (_pipelines[index].stepMicroSeconds == stepMicroSeconds)
+            {
+                group.index = index;
+                return group;
+            }
+        }
+    }
+    group.index = (ui32)_pipelines.size();
+    _pipelines.push_back({stepMicroSeconds});
+    return group;
+}
+
+void SystemsManager::Register(unique_ptr<System> system, PipelineGroup pipelineGroup)
 {
     if (_entitiesLocations.size())
     {
@@ -75,7 +94,9 @@ void SystemsManager::Register(unique_ptr<System> system, optional<ui32> stepMicr
         return;
     }
 
-    _pipelines[stepMicroSeconds].emplace_back(move(system));
+    ASSUME(pipelineGroup.index < _pipelines.size());
+
+    _pipelines[pipelineGroup.index].systems.push_back(move(system));
 }
 
 void SystemsManager::Unregister(TypeId systemType)
@@ -86,7 +107,7 @@ void SystemsManager::Unregister(TypeId systemType)
         return;
     }
 
-    for (auto &[step, systems] : _pipelines)
+    for (auto &[step, systems, thread] : _pipelines)
     {
         for (auto &system : systems)
         {
@@ -102,13 +123,148 @@ void SystemsManager::Unregister(TypeId systemType)
     SOFTBREAK; // system not found
 }
 
-void SystemsManager::Spin(World &&world, vector<std::thread> &&threads)
+static void ComputeComponentIndexes(vector<ui16> &assignedIndexes, const Array<EntitiesStream::ComponentDesc> components)
+{
+    assignedIndexes.resize(components.size());
+
+    if (components.size() == 0)
+    {
+        return;
+    }
+
+    for (uiw outer = 0; outer < components.size() - 1; ++outer)
+    {
+        ui16 index = 0;
+        for (uiw inner = outer + 1; inner < components.size(); ++inner)
+        {
+            if (components[outer].type == components[inner].type)
+            {
+                ++index;
+            }
+        }
+
+        assignedIndexes[outer] = index;
+    }
+
+    // can skip this, it's already 0
+    //assignedIndexes.back() = 0;
+}
+
+static Archetype ComputeArchetype(const vector<ui16> &assignedIndexes, const Array<EntitiesStream::ComponentDesc> components)
+{
+    Archetype archetype;
+    for (uiw index = 0; index < components.size(); ++index)
+    {
+        archetype.Add(components[index].type, assignedIndexes[index]);
+    }
+    return archetype;
+}
+
+void SystemsManager::Start(vector<std::thread> &&threads, Array<EntitiesStream> streams)
 {
     ASSUME(_entitiesLocations.empty());
 
-    _threads = {threads.size()};
+    _workerThreads = {threads.size()};
     for (uiw index = 0, size = threads.size(); index < size; ++index)
     {
-        _threads[index]._thread = move(threads[index]);
+        _workerThreads[index]._thread = move(threads[index]);
     }
+
+    vector<ui16> assignedIndexes;
+
+    for (auto &stream : streams)
+    {
+        while (auto entity = stream.Next())
+        {
+            ComputeComponentIndexes(assignedIndexes, entity->components);
+            Archetype entityArchetype = ComputeArchetype(assignedIndexes, entity->components);
+            ArchetypeGroup &archetypeGroup = FindArchetypeGroup(entityArchetype, assignedIndexes, entity->components);
+            AddEntityToArchetypeGroup(archetypeGroup, *entity);
+        }
+    }
+}
+
+void SystemsManager::StreamIn(Array<EntitiesStream> streams)
+{
+    NOIMPL;
+}
+
+auto SystemsManager::FindArchetypeGroup(Archetype archetype, const vector<ui16> &assignedIndexes, const Array<EntitiesStream::ComponentDesc> components) -> ArchetypeGroup &
+{
+    auto searchResult = _archetypeGroups.find(archetype);
+    if (searchResult != _archetypeGroups.end())
+    {
+        return searchResult->second;
+    }
+
+    // such group doesn't exist yet, adding a new one
+
+    auto [insertedWhere, insertedResult] = _archetypeGroups.try_emplace(archetype);
+    ASSUME(insertedResult);
+    ArchetypeGroup &group = insertedWhere->second;
+
+    _archetypeGroupsShort.emplace(archetype.ToShort(), &group);
+
+    group.uniqueTypedComponentsCount = (ui16)std::count(assignedIndexes.begin(), assignedIndexes.end(), 0);
+    group.components = make_unique<ArchetypeGroup::ComponentArray[]>(group.uniqueTypedComponentsCount);
+
+    for (const auto &component : components)
+    {
+        auto pred = [&component](const ArchetypeGroup::ComponentArray &stored)
+        {
+            return stored.type == component.type;
+        };
+        auto &componentArray = *std::find_if(group.components.get(), group.components.get() + group.uniqueTypedComponentsCount, pred);
+
+        componentArray.alignmentOf = component.alignmentOf;
+        componentArray.sizeOf = component.sizeOf;
+        componentArray.type = component.type;
+        ++componentArray.stride;
+    }
+
+    group.reservedCount = 8; // by default initialize enough space for 8 entities
+
+    for (ui16 index = 0; index < group.uniqueTypedComponentsCount; ++index)
+    {
+        auto &componentArray = group.components[index];
+
+        // allocate memory
+        componentArray.data.reset((ui8 *)_aligned_malloc(componentArray.sizeOf * componentArray.stride * group.reservedCount, componentArray.alignmentOf));
+
+        // and also register component type locations
+        ComponentLocation location = {&group, index};
+        _archetypeGroupsComponents.emplace(componentArray.type, location);
+    }
+    
+    return group;
+}
+
+void SystemsManager::AddEntityToArchetypeGroup(ArchetypeGroup &group, const EntitiesStream::StreamedEntity &entity)
+{
+    if (group.entitiesCount == group.reservedCount)
+    {
+        group.reservedCount *= 2;
+        
+        for (ui16 index = 0; index < group.uniqueTypedComponentsCount; ++index)
+        {
+            auto &componentArray = group.components[index];
+
+            void *oldPtr = componentArray.data.release();
+            void *newPtr = _aligned_realloc(oldPtr, componentArray.sizeOf * componentArray.stride * group.reservedCount, componentArray.alignmentOf);
+            componentArray.data.reset((ui8 *)newPtr);
+        }
+    }
+
+    for (const auto &component : entity.components)
+    {
+        auto pred = [&component](const ArchetypeGroup::ComponentArray &stored)
+        {
+            return stored.type == component.type;
+        };
+        auto &componentArray = *std::find_if(group.components.get(), group.components.get() + group.uniqueTypedComponentsCount, pred);
+
+        memcpy(componentArray.data.get() + componentArray.sizeOf * componentArray.stride * group.entitiesCount, component.data, componentArray.sizeOf);
+    }
+
+    ++group.entitiesCount;
 }

@@ -10,6 +10,8 @@
 #include <condition_variable>
 #include <cstdarg>
 #include <array>
+#include <unordered_map>
+#include <map>
 
 using std::vector;
 using std::shared_ptr;
@@ -35,7 +37,7 @@ using namespace StdLib;
 
 struct AlignedMallocDeleter
 {
-    void operator()(ui8 *ptr)
+    void operator()(void *ptr)
     {
         _aligned_free(ptr);
     }

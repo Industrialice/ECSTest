@@ -68,3 +68,14 @@ namespace ECSTest
     { \
         using type = const T; \
     }
+
+namespace std
+{
+    template <> struct hash<ECSTest::TypeId>
+    {
+        size_t operator()(const ECSTest::TypeId &value) const
+        {
+            return (size_t)value.InternalId();
+        }
+    };
+}
