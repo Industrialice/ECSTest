@@ -34,7 +34,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Archetype.cpp" />
-    <ClCompile Include="Component.cpp" />
     <ClCompile Include="DIWRSpinLock.cpp" />
     <ClCompile Include="EntityID.cpp" />
     <ClCompile Include="PreHeader.cpp">

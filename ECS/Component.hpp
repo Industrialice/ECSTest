@@ -8,14 +8,14 @@ namespace ECSTest
     {
     };
 
-    template <typename T> class _BaseComponent : public Component, public TypeIdentifiable<T>
+    template <typename T> class EMPTY_BASES _BaseComponent : public Component, public TypeIdentifiable<T>
     {
         //static_assert(std::is_pod_v<T>, "Component must be POD");
 
     public:
         using TypeIdentifiable<T>::GetTypeId;
 
-		[[nodiscard]] pair<const TypeId *, uiw> Excludes() const
+		[[nodiscard]] static pair<const TypeId *, uiw> Excludes()
         {
             static constexpr TypeId excludes[] = {GetTypeId()};
             return {excludes, CountOf(excludes)};

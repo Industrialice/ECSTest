@@ -58,5 +58,8 @@
     <ClInclude Include="ComponentEmployee.hpp">
       <Filter>Component Headers</Filter>
     </ClInclude>
+    <ClInclude Include="ComponentParents.hpp">
+      <Filter>Component Headers</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

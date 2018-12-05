@@ -12,6 +12,7 @@
 #include "ComponentFirstName.hpp"
 #include "ComponentGender.hpp"
 #include "ComponentLastName.hpp"
+#include "ComponentParents.hpp"
 #include "ComponentProgrammer.hpp"
 #include "ComponentSpouse.hpp"
 
@@ -19,7 +20,20 @@ using namespace ECSTest;
 
 class GameOfLifeEntities : public EntitiesStream
 {
-    vector<StreamedEntity> _entities{};
+public:
+	struct PreStreamedEntity
+	{
+		StreamedEntity streamed;
+		vector<ComponentDesc> descs;
+		vector<unique_ptr<ui8[]>> componentsData;
+
+		PreStreamedEntity() = default;
+		PreStreamedEntity(PreStreamedEntity &&) = default;
+		PreStreamedEntity &operator = (PreStreamedEntity &&) = default;
+	};
+
+private:
+    vector<PreStreamedEntity> _entities{};
     uiw _currentEntity{};
 
 public:
@@ -28,54 +42,60 @@ public:
         if (_currentEntity < _entities.size())
         {
             uiw index = _currentEntity++;
-            return _entities[index];
+            return _entities[index].streamed;
         }
         return {};
     }
 
-    void AddEntity(StreamedEntity &&entity)
+    void AddEntity(PreStreamedEntity &&entity)
     {
         _entities.emplace_back(move(entity));
     }
 };
 
-template <typename... Args> class ComponentsAllocator
+template <typename T> void StreamComponent(const T &component, GameOfLifeEntities::PreStreamedEntity &preStreamed)
 {
-	std::tuple<vector<Args>...> storages{};
+	EntitiesStream::ComponentDesc desc;
+	auto componentData = make_unique<ui8[]>(sizeof(T));
+	memcpy(componentData.get(), &component, sizeof(T));
+	desc.alignmentOf = alignof(T);
+	desc.excludes = T::Excludes();
+	desc.sizeOf = sizeof(T);
+	desc.type = T::GetTypeId();
+	desc.data = componentData.get();
+	preStreamed.componentsData.emplace_back(move(componentData));
+	preStreamed.descs.emplace_back(desc);
+}
 
-public:
-	template <typename T> uiw Allocate(const T &element = T())
+template <typename... Args> GameOfLifeEntities::PreStreamedEntity Stream(EntityID entityId, const Args &... args)
+{
+	GameOfLifeEntities::PreStreamedEntity preStreamed;
+	(StreamComponent(args, preStreamed), ...);
+	preStreamed.streamed.entityId = entityId;
+	preStreamed.streamed.components = ToArray(preStreamed.descs);
+	return preStreamed;
+}
+
+static void GenerateScene(SystemsManager &manager, GameOfLifeEntities &stream)
+{
+	Funcs::Reinitialize(manager);
+
+	ui32 entityId = 0;
+
+	struct Microsoft
 	{
-		auto &storage = std::get<vector<T>>(storages);
-		uiw index = storage.size();
-		storage.emplace_back(element);
-		return index;
-	}
-};
+		EntityID entityId;
+		ComponentCompany company;
+		ComponentProgrammer programmer;
+		ComponentArtist artist;
+	} microsoft;
+	microsoft.entityId = entityId++;
+	microsoft.company.name = {"Microsoft"};
+	microsoft.programmer.language = ComponentProgrammer::Language::C + ComponentProgrammer::Language::CPP + ComponentProgrammer::Language::CS;
+	microsoft.programmer.skillLevel = ComponentProgrammer::SkillLevel::Junior;
+	microsoft.artist.area = ComponentArtist::Area::TwoD + ComponentArtist::Area::Concept;
 
-static void GenerateScene(SystemsManager &manager)
-{
-    Funcs::Reinitialize(manager);
-
-    ui32 entityId = 0;
-
-    ComponentsAllocator<ComponentArtist, ComponentCompany, ComponentDateOfBirth,
-        ComponentDesign, ComponentEmployee, ComponentFirstName, ComponentGender, 
-        ComponentLastName, ComponentProgrammer, ComponentSpouse>
-        allocator;
-
-    struct Microsoft
-    {
-        EntityID id;
-        ComponentCompany company;
-        ComponentProgrammer programmer;
-        ComponentArtist artist;
-    } microsoft;
-    microsoft.id = entityId++;
-    microsoft.company.name = {"Microsoft"};
-    microsoft.programmer.language = ComponentProgrammer::Language::C + ComponentProgrammer::Language::CPP + ComponentProgrammer::Language::CS;
-    microsoft.programmer.skillLevel = ComponentProgrammer::SkillLevel::Junior;
-    microsoft.artist.area = ComponentArtist::Area::TwoD + ComponentArtist::Area::Concept;
+	stream.AddEntity(Stream(entityId, microsoft.company, microsoft.programmer, microsoft.artist));
 }
 
 int main()
@@ -83,8 +103,10 @@ int main()
     StdLib::Initialization::Initialize({});
 
 	GameOfLifeEntities stream;
-
 	SystemsManager manager;
+
+	GenerateScene(manager, stream);
+
 	manager.Start({}, ToArray(stream));
 
     printf("done\n");

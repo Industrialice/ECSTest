@@ -142,6 +142,7 @@
     <ClInclude Include="ComponentFirstName.hpp" />
     <ClInclude Include="ComponentGender.hpp" />
     <ClInclude Include="ComponentLastName.hpp" />
+    <ClInclude Include="ComponentParents.hpp" />
     <ClInclude Include="ComponentSpouse.hpp" />
     <ClInclude Include="PreHeader.hpp" />
     <ClInclude Include="ComponentProgrammer.hpp" />

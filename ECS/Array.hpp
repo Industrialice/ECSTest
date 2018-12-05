@@ -7,13 +7,16 @@ namespace ECSTest
 
 	template <typename T> class Array : public _ArrayBase
 	{
-		T *const _items{};
-		const uiw _count = 0;
+		T *_items{};
+		uiw _count = 0;
 
 	public:
 		using ItemType = T;
 
         Array() = default;
+
+		/*Array(const Array &source) : _items(source._items), _count(source._count)
+		{}*/
 
 		Array(T *items, uiw count) : _items(items), _count(count)
 		{}
@@ -84,5 +87,10 @@ namespace ECSTest
 	template <typename T> Array<T> ToArray(T &value)
 	{
 		return Array(&value, 1);
+	}
+
+	template <typename T> Array<T> ToArray(vector<T> &value)
+	{
+		return Array(value.data(), value.size());
 	}
 }

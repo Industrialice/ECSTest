@@ -224,7 +224,7 @@ auto SystemsManager::FindArchetypeGroup(Archetype archetype, const vector<ui16> 
     {
         auto pred = [&component](const ArchetypeGroup::ComponentArray &stored)
         {
-            return stored.type == component.type;
+            return stored.sizeOf == 0 || stored.type == component.type;
         };
         auto &componentArray = *std::find_if(group.components.get(), group.components.get() + group.uniqueTypedComponentsCount, pred);
 
@@ -242,6 +242,7 @@ auto SystemsManager::FindArchetypeGroup(Archetype archetype, const vector<ui16> 
         auto &componentArray = group.components[index];
 
         // allocate memory
+		ASSUME(componentArray.sizeOf > 0 && componentArray.stride > 0 && group.reservedCount > 0 && componentArray.alignmentOf > 0);
         componentArray.data.reset((ui8 *)_aligned_malloc(componentArray.sizeOf * componentArray.stride * group.reservedCount, componentArray.alignmentOf));
 
         // and also register component type locations
@@ -262,7 +263,7 @@ void SystemsManager::AddEntityToArchetypeGroup(ArchetypeGroup &group, const Enti
         {
             auto &componentArray = group.components[index];
 
-			ASSUME(componentArray.sizeOf > 0 && componentArray.stride > 0);
+			ASSUME(componentArray.sizeOf > 0 && componentArray.stride > 0 && group.reservedCount && componentArray.alignmentOf > 0);
 
             void *oldPtr = componentArray.data.release();
             void *newPtr = _aligned_realloc(oldPtr, componentArray.sizeOf * componentArray.stride * group.reservedCount, componentArray.alignmentOf);
