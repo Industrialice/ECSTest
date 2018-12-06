@@ -4,14 +4,15 @@
 
 namespace ECSTest
 {
-    struct ComponentDesign : public _BaseComponent<ComponentDesign>
+    struct ComponentDesigner : public _BaseComponent<ComponentDesigner>
     {
 		ENUM_COMBINABLE(Area, ui32,
+            Undefined,
 			Level = Funcs::BitPos(0),
 			UXUI = Funcs::BitPos(1));
 
         Area area;
     };
 
-	ENUM_COMBINABLE_OPS(ComponentDesign::Area, ui32);
+	ENUM_COMBINABLE_OPS(ComponentDesigner::Area, ui32);
 }

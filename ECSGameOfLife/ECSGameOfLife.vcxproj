@@ -137,7 +137,7 @@
     <ClInclude Include="ComponentCompany.hpp" />
     <ClInclude Include="ComponentDateOfBirth.hpp" />
     <ClInclude Include="ComponentArtist.hpp" />
-    <ClInclude Include="ComponentDesign.hpp" />
+    <ClInclude Include="ComponentDesigner.hpp" />
     <ClInclude Include="ComponentEmployee.hpp" />
     <ClInclude Include="ComponentFirstName.hpp" />
     <ClInclude Include="ComponentGender.hpp" />

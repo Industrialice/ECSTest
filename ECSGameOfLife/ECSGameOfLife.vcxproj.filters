@@ -43,9 +43,6 @@
     <ClInclude Include="ComponentArtist.hpp">
       <Filter>Component Headers</Filter>
     </ClInclude>
-    <ClInclude Include="ComponentDesign.hpp">
-      <Filter>Component Headers</Filter>
-    </ClInclude>
     <ClInclude Include="ComponentDateOfBirth.hpp">
       <Filter>Component Headers</Filter>
     </ClInclude>
@@ -59,6 +56,9 @@
       <Filter>Component Headers</Filter>
     </ClInclude>
     <ClInclude Include="ComponentParents.hpp">
+      <Filter>Component Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ComponentDesigner.hpp">
       <Filter>Component Headers</Filter>
     </ClInclude>
   </ItemGroup>

@@ -1,5 +1,5 @@
 #pragma once
 
-#define _SILENCE_CXX17_ALLOCATOR_VOID_DEPRECATION_WARNING
+#define _CRT_SECURE_NO_WARNINGS
 
 #include <PreHeader.hpp>
