@@ -4,7 +4,7 @@
 
 namespace ECSTest
 {
-    struct ComponentProgrammer : public _BaseComponent<ComponentProgrammer>
+	COMPONENT(ComponentProgrammer)
     {
 		ENUM_COMBINABLE(Language, ui32,
             Undefined,

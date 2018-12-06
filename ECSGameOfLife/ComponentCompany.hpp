@@ -4,7 +4,7 @@
 
 namespace ECSTest
 {
-    struct ComponentCompany : public _BaseComponent<ComponentCompany>
+	COMPONENT(ComponentCompany)
     {
         array<char, 32> name;
     };

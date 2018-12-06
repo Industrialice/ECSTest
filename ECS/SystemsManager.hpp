@@ -35,12 +35,12 @@ namespace ECSTest
         //using OnSystemExecutedCallbackType = function<void(const System &)>;
 
         SystemsManager() = default;
-        //[[nodiscard]] ListenerHandle OnSystemExecuted(TypeId systemType, OnSystemExecutedCallbackType callback);
+        //[[nodiscard]] ListenerHandle OnSystemExecuted(StableTypeId systemType, OnSystemExecutedCallbackType callback);
         //void RemoveListener(ListenerHandle &listener);
-        //void Register(System &system, optional<ui32> stepMicroSeconds, const vector<TypeId> &runBefore, const vector<TypeId> &runAfter, std::thread::id affinityThread);
+        //void Register(System &system, optional<ui32> stepMicroSeconds, const vector<StableTypeId> &runBefore, const vector<StableTypeId> &runAfter, std::thread::id affinityThread);
         PipelineGroup CreatePipelineGroup(optional<ui32> stepMicroSeconds, bool isMergeWithExisting);
         void Register(unique_ptr<System> system, PipelineGroup pipelineGroup);
-        void Unregister(TypeId systemType);
+        void Unregister(StableTypeId systemType);
         void Start(vector<std::thread> &&threads, Array<EntitiesStream> streams);
         void StreamIn(Array<EntitiesStream> streams);
 
@@ -49,7 +49,7 @@ namespace ECSTest
         {
             struct ComponentArray
             {
-                TypeId type{}; // of each component
+                StableTypeId type{}; // of each component
                 ui16 stride{}; // Components of that type per entity, 1 if there's only one. Any access to a particular component must be performed using index * stride
                 ui16 sizeOf{}; // of each component
                 ui16 alignmentOf{}; // of each component
@@ -57,7 +57,7 @@ namespace ECSTest
                 // must lock it first before accessing `data` if you don't have exclusive
                 // access to this group, other fields can be accessed without this lock
                 DIWRSpinLock lock{};
-                pair<const TypeId *, uiw> excludes{}; // assumed to point at static memory
+                pair<const StableTypeId *, uiw> excludes{}; // assumed to point at static memory
             };
 
             unique_ptr<ComponentArray[]> components{};
@@ -91,7 +91,7 @@ namespace ECSTest
         //struct PendingOnSystemExecutedData
         //{
         //	OnSystemExecutedData _data;
-        //	TypeId _type;
+        //	StableTypeId _type;
         //};
 
         struct WorkerThread
@@ -120,7 +120,7 @@ namespace ECSTest
         // just about their presence, use this
         std::unordered_multimap<ArchetypeShort, ArchetypeGroup *> _archetypeGroupsShort{};
         // used to match component types and archetype groups
-        std::unordered_multimap<TypeId, ComponentLocation> _archetypeGroupsComponents{};
+        std::unordered_multimap<StableTypeId, ComponentLocation> _archetypeGroupsComponents{};
         // this lock is shared between all archetype groups arrays
         DIWRSpinLock _archetypeGroupsLock{};
 

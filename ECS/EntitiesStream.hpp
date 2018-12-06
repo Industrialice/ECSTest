@@ -10,11 +10,11 @@ namespace ECSTest
     public:
         struct ComponentDesc
         {
-            TypeId type{};
+            StableTypeId type{};
             ui16 sizeOf{};
             ui16 alignmentOf{};
 			ui8 *data{};
-            pair<const TypeId *, uiw> excludes{}; // assumed to point at static memory
+            pair<const StableTypeId *, uiw> excludes{}; // assumed to point at static memory
         };
 
         struct StreamedEntity

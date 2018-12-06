@@ -8,19 +8,19 @@ namespace ECSTest
     {
     };
 
-    template <typename T> class EMPTY_BASES _BaseComponent : public Component, public TypeIdentifiable<T>
+    template <ui64 stableId> class EMPTY_BASES _BaseComponent : public Component, public StableTypeIdentifiable<stableId>
     {
-        //static_assert(std::is_pod_v<T>, "Component must be POD");
-
     public:
-        using TypeIdentifiable<T>::GetTypeId;
+        using StableTypeIdentifiable<stableId>::GetTypeId;
 
-		[[nodiscard]] static pair<const TypeId *, uiw> Excludes()
+		[[nodiscard]] static pair<const StableTypeId *, uiw> Excludes()
         {
-            static constexpr TypeId excludes[] = {GetTypeId()};
+            static constexpr StableTypeId excludes[] = {GetTypeId()};
             return {excludes, CountOf(excludes)};
         }
     };
+
+    #define COMPONENT(name) struct name : public _BaseComponent<Hash::FNVHashCT<Hash::Precision::P64, char, CountOf(TOSTR(name)), true>(TOSTR(name))>
 
 	struct _SubtractiveComponentBase
 	{};

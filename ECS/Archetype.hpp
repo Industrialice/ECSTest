@@ -17,8 +17,8 @@ namespace ECSTest
 
     public:
         ArchetypeShort() = default;
-        void Add(TypeId type);
-        void Subtract(TypeId type);
+        void Add(StableTypeId type);
+        void Subtract(StableTypeId type);
         [[nodiscard]] ui64 Hash() const;
         [[nodiscard]] static ArchetypeShort FromLong(const Archetype &source);
         [[nodiscard]] bool operator == (const ArchetypeShort &other) const;
@@ -37,8 +37,8 @@ namespace ECSTest
 
     public:
         Archetype() = default;
-        void Add(TypeId type, ui32 index);
-        void Subtract(TypeId type, ui32 index);
+        void Add(StableTypeId type, ui32 index);
+        void Subtract(StableTypeId type, ui32 index);
         [[nodiscard]] ui64 Hash() const;
         [[nodiscard]] ArchetypeShort ToShort() const;
         [[nodiscard]] bool operator == (const Archetype &other) const;

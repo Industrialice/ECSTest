@@ -30,7 +30,6 @@
     <ClInclude Include="System.hpp" />
     <ClInclude Include="SystemHelpers.hpp" />
     <ClInclude Include="SystemsManager.hpp" />
-    <ClInclude Include="TypeIdentifiable.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Archetype.cpp" />

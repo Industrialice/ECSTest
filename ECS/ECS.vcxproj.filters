@@ -32,9 +32,6 @@
     <ClInclude Include="SystemsManager.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="TypeIdentifiable.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="DIWRSpinLock.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>

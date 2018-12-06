@@ -5,12 +5,12 @@ using namespace ECSTest;
 
 // ArchetypeShort
 
-void ArchetypeShort::Add(TypeId type)
+void ArchetypeShort::Add(StableTypeId type)
 {
     _hash ^= type.Hash() & MainPartMask;
 }
 
-void ArchetypeShort::Subtract(TypeId type)
+void ArchetypeShort::Subtract(StableTypeId type)
 {
     Add(type);
 }
@@ -43,12 +43,12 @@ bool ECSTest::ArchetypeShort::operator < (const ArchetypeShort &other) const
 
 // Archetype
 
-void Archetype::Add(TypeId type, ui32 index)
+void Archetype::Add(StableTypeId type, ui32 index)
 {
     _hash ^= type.Hash() + ((ui64)index << ExtraPartStartBit);
 }
 
-void Archetype::Subtract(TypeId type, ui32 index)
+void Archetype::Subtract(StableTypeId type, ui32 index)
 {
     Add(type, index);
 }

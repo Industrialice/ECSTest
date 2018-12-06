@@ -8,7 +8,7 @@ using namespace ECSTest;
 //	instance->_manager->RemoveListener(*(ListenerHandle *)handle);
 //}
 //
-//auto SystemsManager::OnSystemExecuted(TypeId systemType, OnSystemExecutedCallbackType callback) -> ListenerHandle
+//auto SystemsManager::OnSystemExecuted(StableTypeId systemType, OnSystemExecutedCallbackType callback) -> ListenerHandle
 //{
 //	auto id = _onSystemExecutedCurrentId;
 //	++_onSystemExecutedCurrentId;
@@ -63,7 +63,7 @@ using namespace ECSTest;
 //	HARDBREAK;
 //}
 //
-//void SystemsManager::Register(System &system, optional<ui32> stepMicroSeconds, const vector<TypeId> &runBefore, const vector<TypeId> &runAfter, std::thread::id affinityThread)
+//void SystemsManager::Register(System &system, optional<ui32> stepMicroSeconds, const vector<StableTypeId> &runBefore, const vector<StableTypeId> &runAfter, std::thread::id affinityThread)
 //{
 //}
 
@@ -111,7 +111,7 @@ void SystemsManager::Register(unique_ptr<System> system, PipelineGroup pipelineG
     _pipelines[pipelineGroup.index].systems.push_back(move(system));
 }
 
-void SystemsManager::Unregister(TypeId systemType)
+void SystemsManager::Unregister(StableTypeId systemType)
 {
     if (_entitiesLocations.size())
     {

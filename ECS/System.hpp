@@ -16,13 +16,13 @@ namespace ECSTest
 
         struct RequestedComponent
         {
-            TypeId type;
+            StableTypeId type;
             bool isWriteAccess;
 			ComponentAvailability isRequired;
         };
 
 		[[nodiscard]] virtual pair<const RequestedComponent *, uiw> RequestedComponents() const = 0;
-		[[nodiscard]] virtual TypeId Type() const = 0;
+		[[nodiscard]] virtual StableTypeId Type() const = 0;
 		[[nodiscard]] virtual struct IndirectSystem *AsIndirectSystem();
 		[[nodiscard]] virtual const struct IndirectSystem *AsIndirectSystem() const;
 		[[nodiscard]] virtual struct DirectSystem *AsDirectSystem();
@@ -51,7 +51,7 @@ namespace ECSTest
 	public:
 		using TypeIdentifiable<T>::GetTypeId;
 
-		[[nodiscard]] virtual TypeId Type() const override final
+		[[nodiscard]] virtual StableTypeId Type() const override final
 		{
 			return GetTypeId();
 		}
