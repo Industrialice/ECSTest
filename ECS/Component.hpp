@@ -39,9 +39,9 @@ namespace ECSTest
 
 #ifdef DEBUG
     #define COMPONENT(name) struct name : public _BaseComponent<Hash::FNVHashCT<Hash::Precision::P64, char, CountOf(TOSTR(name)), true>(TOSTR(name)), \
-        CompileTimeStrings::EncodeASCII(TOSTR(name), CountOf(TOSTR(name)), 0), \
-        CompileTimeStrings::EncodeASCII(TOSTR(name), CountOf(TOSTR(name)), 7), \
-        CompileTimeStrings::EncodeASCII(TOSTR(name), CountOf(TOSTR(name)), 14)>
+        CompileTimeStrings::EncodeASCII(TOSTR(name), CountOf(TOSTR(name)), CompileTimeStrings::CharsPerNumber * 0), \
+        CompileTimeStrings::EncodeASCII(TOSTR(name), CountOf(TOSTR(name)), CompileTimeStrings::CharsPerNumber * 1), \
+        CompileTimeStrings::EncodeASCII(TOSTR(name), CountOf(TOSTR(name)), CompileTimeStrings::CharsPerNumber * 2)>
 #else
     #define COMPONENT(name) struct name : public _BaseComponent<Hash::FNVHashCT<Hash::Precision::P64, char, CountOf(TOSTR(name)), true>(TOSTR(name))>
 #endif
