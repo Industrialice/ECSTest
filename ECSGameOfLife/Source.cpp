@@ -195,7 +195,7 @@ template <typename... CompanyComponents> void GenerateEmployees(GameOfLifeEntiti
             gender.isMale = rand() % 2 == 0;
             StreamComponent(gender, preStreamed);
             ComponentDateOfBirth dateOfBirth;
-            dateOfBirth.dateOfBirth = rand() % 10000;
+            dateOfBirth.dateOfBirth = (rand() % (30 * 365)) + (20 * 365);
             StreamComponent(dateOfBirth, preStreamed);
             ComponentEmployee employee;
             employee.employer = companyId;
