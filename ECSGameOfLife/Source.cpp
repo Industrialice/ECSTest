@@ -90,7 +90,7 @@ template <ui32 N, typename... CompanyComponents> bool IsMatching(const std::vari
             {
                 if constexpr (std::is_same_v<componentType, ComponentProgrammer>)
                 {
-                    if (companyComponent.language.Contains(employeeComponent->language))
+                    if (companyComponent.language.Intersects(employeeComponent->language))
                     {
                         if (companyComponent.skillLevel <= employeeComponent->skillLevel)
                         {
@@ -100,14 +100,14 @@ template <ui32 N, typename... CompanyComponents> bool IsMatching(const std::vari
                 }
                 else if constexpr (std::is_same_v<componentType, ComponentDesigner>)
                 {
-                    if (companyComponent.area.Contains(employeeComponent->area))
+                    if (companyComponent.area.Intersects(employeeComponent->area))
                     {
                         return true;
                     }
                 }
                 else if constexpr (std::is_same_v<componentType, ComponentArtist>)
                 {
-                    if (companyComponent.area.Contains(employeeComponent->area))
+                    if (companyComponent.area.Intersects(employeeComponent->area))
                     {
                         return true;
                     }
@@ -138,9 +138,9 @@ template <typename... CompanyComponents> void GenerateEmployees(GameOfLifeEntiti
             for (ui32 areaIndex = 0; areaIndex < areasCount; ++areaIndex)
             {
                 int newArea = rand() % 3;
-                if (newArea == 0) artist.area += ComponentArtist::Area::Concept;
-                if (newArea == 1) artist.area += ComponentArtist::Area::ThreeD;
-                if (newArea == 2) artist.area += ComponentArtist::Area::TwoD;
+                if (newArea == 0) artist.area.Add(ComponentArtist::Areas::Concept);
+                if (newArea == 1) artist.area.Add(ComponentArtist::Areas::ThreeD);
+                if (newArea == 2) artist.area.Add(ComponentArtist::Areas::TwoD);
             }
             profession = artist;
         }
@@ -153,8 +153,8 @@ template <typename... CompanyComponents> void GenerateEmployees(GameOfLifeEntiti
             for (ui32 areaIndex = 0; areaIndex < areasCount; ++areaIndex)
             {
                 int newArea = rand() % 2;
-                if (newArea == 0) design.area += ComponentDesigner::Area::UXUI;
-                if (newArea == 1) design.area += ComponentDesigner::Area::Level;
+                if (newArea == 0) design.area.Add(ComponentDesigner::Areas::UXUI);
+                if (newArea == 1) design.area.Add(ComponentDesigner::Areas::Level);
             }
             profession = design;
         }
@@ -170,13 +170,13 @@ template <typename... CompanyComponents> void GenerateEmployees(GameOfLifeEntiti
             for (ui32 areaIndex = 0; areaIndex < areasCount; ++areaIndex)
             {
                 int newArea = rand() % 7;
-                if (newArea == 0) programmer.language += ComponentProgrammer::Language::C;
-                if (newArea == 1) programmer.language += ComponentProgrammer::Language::CPP;
-                if (newArea == 2) programmer.language += ComponentProgrammer::Language::CS;
-                if (newArea == 3) programmer.language += ComponentProgrammer::Language::Java;
-                if (newArea == 4) programmer.language += ComponentProgrammer::Language::JS;
-                if (newArea == 5) programmer.language += ComponentProgrammer::Language::PHP;
-                if (newArea == 6) programmer.language += ComponentProgrammer::Language::Python;
+                if (newArea == 0) programmer.language.Add(ComponentProgrammer::Languages::C);
+                if (newArea == 1) programmer.language.Add(ComponentProgrammer::Languages::CPP);
+                if (newArea == 2) programmer.language.Add(ComponentProgrammer::Languages::CS);
+                if (newArea == 3) programmer.language.Add(ComponentProgrammer::Languages::Java);
+                if (newArea == 4) programmer.language.Add(ComponentProgrammer::Languages::JS);
+                if (newArea == 5) programmer.language.Add(ComponentProgrammer::Languages::PHP);
+                if (newArea == 6) programmer.language.Add(ComponentProgrammer::Languages::Python);
             }
             int skillLevelRand = rand() % 50;
             if (skillLevelRand > 35) programmer.skillLevel = ComponentProgrammer::SkillLevel::Middle;
@@ -244,9 +244,9 @@ static void GenerateScene(SystemsManager &manager, GameOfLifeEntities &stream)
 	} microsoft;
 	microsoft.entityId = entityId++;
 	microsoft.company.name = {"Microsoft"};
-	microsoft.programmer.language = ComponentProgrammer::Language::C + ComponentProgrammer::Language::CPP + ComponentProgrammer::Language::CS;
+	microsoft.programmer.language = ComponentProgrammer::Languages::C.Combined(ComponentProgrammer::Languages::CPP).Combined(ComponentProgrammer::Languages::CS);
 	microsoft.programmer.skillLevel = ComponentProgrammer::SkillLevel::Junior;
-	microsoft.artist.area = ComponentArtist::Area::TwoD + ComponentArtist::Area::Concept;
+	microsoft.artist.area = ComponentArtist::Areas::TwoD.Combined(ComponentArtist::Areas::Concept);
 	stream.AddEntity(Stream(microsoft.entityId, microsoft.company, microsoft.programmer, microsoft.artist));
     GenerateEmployees(stream, entityId, microsoft.entityId, microsoft.company, microsoft.programmer, microsoft.artist);
 
@@ -260,10 +260,10 @@ static void GenerateScene(SystemsManager &manager, GameOfLifeEntities &stream)
     } ea;
     ea.entityId = entityId++;
     ea.company.name = {"EA"};
-    ea.programmer.language = ComponentProgrammer::Language::CPP;
+    ea.programmer.language = ComponentProgrammer::Languages::CPP;
     ea.programmer.skillLevel = ComponentProgrammer::SkillLevel::Junior;
-    ea.artist.area = ComponentArtist::Area::Concept + ComponentArtist::Area::ThreeD + ComponentArtist::Area::TwoD;
-    ea.designer.area = ComponentDesigner::Area::Level + ComponentDesigner::Area::UXUI;
+    ea.artist.area = ComponentArtist::Areas::Concept.Combined(ComponentArtist::Areas::ThreeD).Combined(ComponentArtist::Areas::TwoD);
+    ea.designer.area = ComponentDesigner::Areas::Level.Combined(ComponentDesigner::Areas::UXUI);
     stream.AddEntity(Stream(ea.entityId, ea.company, ea.programmer, ea.artist, ea.designer));
     GenerateEmployees(stream, entityId, ea.entityId, ea.company, ea.programmer, ea.artist, ea.designer);
 }

@@ -6,13 +6,14 @@ namespace ECSTest
 {
 	COMPONENT(ComponentDesigner)
     {
-		ENUM_COMBINABLE(Area, ui32,
-            Undefined,
-			Level = Funcs::BitPos(0),
-			UXUI = Funcs::BitPos(1));
+        struct Areas
+        {
+            static constexpr struct Area : EnumCombinable<Area, ui32, true>
+            {} Undefined = Area::Create(0),
+                Level = Area::Create(1 << 0),
+                UXUI = Area::Create(1 << 1);
+        };
 
-        Area area;
+        Areas::Area area;
     };
-
-	ENUM_COMBINABLE_OPS(ComponentDesigner::Area, ui32);
 }

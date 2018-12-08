@@ -6,19 +6,20 @@ namespace ECSTest
 {
 	COMPONENT(ComponentProgrammer)
     {
-		ENUM_COMBINABLE(Language, ui32,
-            Undefined,
-			CPP = Funcs::BitPos(0),
-			CS = Funcs::BitPos(1),
-			C = Funcs::BitPos(2),
-			PHP = Funcs::BitPos(3),
-			JS = Funcs::BitPos(4),
-			Java = Funcs::BitPos(5),
-			Python = Funcs::BitPos(6));
+        struct Languages
+        {
+            static constexpr struct Language : EnumCombinable<Language, ui32, true>
+            {} Undefined = Language::Create(0),
+                CPP = Language::Create(1 << 0),
+                CS = Language::Create(1 << 1),
+                C = Language::Create(1 << 2),
+                PHP = Language::Create(1 << 3),
+                JS = Language::Create(1 << 4),
+                Java = Language::Create(1 << 5),
+                Python = Language::Create(1 << 6);
+        };
 
-        Language language;
+        Languages::Language language;
         enum class SkillLevel { Junior, Middle, Senior } skillLevel;
     };
-
-	ENUM_COMBINABLE_OPS(ComponentProgrammer::Language, ui32);
 }
