@@ -15,6 +15,9 @@
     <Filter Include="System Headers">
       <UniqueIdentifier>{529a79ae-1afc-4f8b-a9ad-ab3d1e95fa48}</UniqueIdentifier>
     </Filter>
+    <Filter Include="System Sources">
+      <UniqueIdentifier>{a2c449d4-b439-4ee4-83ef-0d6dbfaf3346}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Source.cpp">
@@ -22,6 +25,9 @@
     </ClCompile>
     <ClCompile Include="PreHeader.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SystemGameInfo.cpp">
+      <Filter>System Sources</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -60,6 +66,9 @@
     </ClInclude>
     <ClInclude Include="ComponentDesigner.hpp">
       <Filter>Component Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="SystemGameInfo.hpp">
+      <Filter>System Headers</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -231,7 +231,7 @@ auto SystemsManager::FindArchetypeGroup(Archetype archetype, const vector<ui16> 
         componentArray.alignmentOf = component.alignmentOf;
         componentArray.sizeOf = component.sizeOf;
         componentArray.type = component.type;
-        componentArray.excludes = component.excludes; // TODO: check excludes
+        componentArray.isUnique = component.isUnique; // TODO: check uniquiness
         ++componentArray.stride;
     }
 
@@ -244,6 +244,11 @@ auto SystemsManager::FindArchetypeGroup(Archetype archetype, const vector<ui16> 
         // allocate memory
 		ASSUME(componentArray.sizeOf > 0 && componentArray.stride > 0 && group.reservedCount > 0 && componentArray.alignmentOf > 0);
         componentArray.data.reset((ui8 *)_aligned_malloc(componentArray.sizeOf * componentArray.stride * group.reservedCount, componentArray.alignmentOf));
+
+        if (!componentArray.isUnique)
+        {
+            componentArray.ids.reset((ui32 *)malloc(sizeof(ui32) * componentArray.stride * group.reservedCount));
+        }
 
         // and also register component type locations
         ComponentLocation location = {&group, index};
@@ -268,6 +273,13 @@ void SystemsManager::AddEntityToArchetypeGroup(ArchetypeGroup &group, const Enti
             void *oldPtr = componentArray.data.release();
             void *newPtr = _aligned_realloc(oldPtr, componentArray.sizeOf * componentArray.stride * group.reservedCount, componentArray.alignmentOf);
             componentArray.data.reset((ui8 *)newPtr);
+
+            if (!componentArray.isUnique)
+            {
+                ui32 *oldUPtr = componentArray.ids.release();
+                ui32 *newUPtr = (ui32 *)realloc(oldUPtr, sizeof(ui32) * componentArray.stride * group.reservedCount);
+                componentArray.ids.reset(newUPtr);
+            }
         }
     }
 
@@ -280,6 +292,12 @@ void SystemsManager::AddEntityToArchetypeGroup(ArchetypeGroup &group, const Enti
         auto &componentArray = *std::find_if(group.components.get(), group.components.get() + group.uniqueTypedComponentsCount, pred);
 
         memcpy(componentArray.data.get() + componentArray.sizeOf * componentArray.stride * group.entitiesCount, component.data, componentArray.sizeOf);
+
+        if (!componentArray.isUnique)
+        {
+            ++_lastComponentID;
+            componentArray.ids[componentArray.stride * group.entitiesCount] = _lastComponentID;
+        }
     }
 
     ++group.entitiesCount;

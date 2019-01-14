@@ -7,6 +7,15 @@ namespace ECSTest
     class System
     {
     public:
+        enum MessageType
+        {
+            ComponentChanged,
+            ComponentRemoved,
+            ComponentAdded,
+            EntityRemoved,
+            EntityAdded
+        };
+
         enum ComponentAvailability
         {
             Required,
@@ -34,9 +43,7 @@ namespace ECSTest
 	{
 		[[nodiscard]] virtual struct IndirectSystem *AsIndirectSystem() override final;
 		[[nodiscard]] virtual const struct IndirectSystem *AsIndirectSystem() const override final;
-        virtual void OnChanged(const shared_ptr<vector<Component>> &components) = 0;
-        virtual void Commit() = 0;
-        virtual void RemoveAll() = 0;
+        virtual void ProcessMessages(MessageType type, const void *messageHeader) = 0;
         virtual void Update() = 0;
 	};
 
@@ -46,24 +53,34 @@ namespace ECSTest
 		[[nodiscard]] virtual const struct DirectSystem *AsDirectSystem() const override final;
 	};
 
-	template <typename T> class _SystemTypeIdentifiable : public System, public TypeIdentifiable<T>
-	{
-	public:
-		using TypeIdentifiable<T>::GetTypeId;
+    template <typename BaseSystem, typename Type> struct _SystemTypeIdentefiable : public BaseSystem, public Type
+    {
+    public:
+        using Type::GetTypeId;
 
-		[[nodiscard]] virtual StableTypeId Type() const override final
-		{
-			return GetTypeId();
-		}
-	};
+        [[nodiscard]] virtual StableTypeId Type() const override final
+        {
+            return GetTypeId();
+        }
+    };
 
-	template <typename T> struct _IndirectSystem : public IndirectSystem, public _SystemTypeIdentifiable<T>
-	{
-	};
+    #ifdef DEBUG
+        #define INDIRECT_SYSTEM(name) struct name final : public _SystemTypeIdentefiable<IndirectSystem, StableTypeIdentifiable<Hash::FNVHashCT<Hash::Precision::P64, char, CountOf(TOSTR(name)), true>(TOSTR(name)), \
+            CompileTimeStrings::EncodeASCII(TOSTR(name), CountOf(TOSTR(name)), CompileTimeStrings::CharsPerNumber * 0), \
+            CompileTimeStrings::EncodeASCII(TOSTR(name), CountOf(TOSTR(name)), CompileTimeStrings::CharsPerNumber * 1), \
+            CompileTimeStrings::EncodeASCII(TOSTR(name), CountOf(TOSTR(name)), CompileTimeStrings::CharsPerNumber * 2)>>
+    #else
+        #define INDIRECT_SYSTEM(name) struct name final : public _SystemTypeIdentefiable<IndirectSystem, StableTypeIdentifiable<Hash::FNVHashCT<Hash::Precision::P64, char, CountOf(TOSTR(name)), true>(TOSTR(name))>>
+    #endif
 
-	template <typename T> struct _DirectSystem : public DirectSystem, public _SystemTypeIdentifiable<T>
-	{
-	};
+    #ifdef DEBUG
+        #define DIRECT_SYSTEM(name) struct name final : public _SystemTypeIdentefiable<DirectSystem, StableTypeIdentifiable<Hash::FNVHashCT<Hash::Precision::P64, char, CountOf(TOSTR(name)), true>(TOSTR(name)), \
+            CompileTimeStrings::EncodeASCII(TOSTR(name), CountOf(TOSTR(name)), CompileTimeStrings::CharsPerNumber * 0), \
+            CompileTimeStrings::EncodeASCII(TOSTR(name), CountOf(TOSTR(name)), CompileTimeStrings::CharsPerNumber * 1), \
+            CompileTimeStrings::EncodeASCII(TOSTR(name), CountOf(TOSTR(name)), CompileTimeStrings::CharsPerNumber * 2)>>
+    #else
+        #define DIRECT_SYSTEM(name) struct name final : public _SystemTypeIdentefiable<DirectSystem, StableTypeIdentifiable<Hash::FNVHashCT<Hash::Precision::P64, char, CountOf(TOSTR(name)), true>(TOSTR(name))>>
+    #endif
 }
 
 #include "SystemHelpers.hpp"

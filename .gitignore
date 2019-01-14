@@ -223,3 +223,4 @@ GeneratedArtifacts/
 _Pvt_Extensions/
 ModelManifest.xml
 /x64_Debug
+/Win32_Debug

@@ -5,7 +5,7 @@
 #include "Archetype.hpp"
 #include "DIWRSpinLock.hpp"
 #include "EntitiesStream.hpp"
-#include <ListenerHandle.hpp>
+//#include <ListenerHandle.hpp>
 
 namespace ECSTest
 {
@@ -54,10 +54,11 @@ namespace ECSTest
                 ui16 sizeOf{}; // of each component
                 ui16 alignmentOf{}; // of each component
                 unique_ptr<ui8[], AlignedMallocDeleter> data{}; // each component can be safely casted into class Component
+                unique_ptr<ui32[], MallocDeleter> ids{}; // ComponentID, used only for components that allow multiple components of that type to be attached to an entity
                 // must lock it first before accessing `data` if you don't have exclusive
                 // access to this group, other fields can be accessed without this lock
                 DIWRSpinLock lock{};
-                pair<const StableTypeId *, uiw> excludes{}; // assumed to point at static memory
+                bool isUnique{}; // indicates whether other components of the same type can be attached to an entity
             };
 
             unique_ptr<ComponentArray[]> components{};
@@ -134,6 +135,8 @@ namespace ECSTest
         //vector<PendingOnSystemExecutedData> _pendingOnSystemExecutedDatas{};
         //ui64 _onSystemExecutedCurrentId = 0;
         //shared_ptr<ListenerLocation> _listenerLocation = make_shared<ListenerLocation>(*this);
+
+        std::atomic<ui32> _lastComponentID = {0};
 
     private:
         ArchetypeGroup &FindArchetypeGroup(Archetype archetype, const vector<ui16> &assignedIndexes, const Array<EntitiesStream::ComponentDesc> components);

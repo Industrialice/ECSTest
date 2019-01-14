@@ -17,9 +17,6 @@
     <ClInclude Include="Component.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="FunctionInfo.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="PreHeader.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>

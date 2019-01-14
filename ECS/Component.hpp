@@ -2,48 +2,38 @@
 
 #include "TypeIdentifiable.hpp"
 
+#ifdef DEBUG
+    #define IDINPUT <ui64 stableId, ui64 encoded0, ui64 encoded1, ui64 encoded2>
+    #define IDOUTPUT <stableId, encoded0, encoded1, encoded2>
+#else
+    #define IDINPUT <ui64 stableId>
+    #define IDOUTPUT <stableId>
+#endif
+
 namespace ECSTest
 {
     class Component
     {
     };
 
-    template 
-    #ifdef DEBUG
-        <ui64 stableId, ui64 encoded0, ui64 encoded1, ui64 encoded2>
-    #else
-        <ui64 stableId>
-    #endif
-        class EMPTY_BASES _BaseComponent : public Component, public StableTypeIdentifiable
-    #ifdef DEBUG
-        <stableId, encoded0, encoded1, encoded2>
-    #else
-        <stableId>
-    #endif
+    template IDINPUT class EMPTY_BASES _BaseComponent : public Component, public StableTypeIdentifiable IDOUTPUT
     {
     public:
-        using StableTypeIdentifiable
-        #ifdef DEBUG
-            <stableId, encoded0, encoded1, encoded2>
-        #else
-            <stableId>
-        #endif
-            ::GetTypeId;
+        using StableTypeIdentifiable IDOUTPUT ::GetTypeId;
 
-		[[nodiscard]] static pair<const StableTypeId *, uiw> Excludes()
+		[[nodiscard]] static constexpr bool IsUnique()
         {
-            static constexpr StableTypeId excludes[] = {GetTypeId()};
-            return {excludes, CountOf(excludes)};
+            return true;
         }
     };
 
 #ifdef DEBUG
-    #define COMPONENT(name) struct name : public _BaseComponent<Hash::FNVHashCT<Hash::Precision::P64, char, CountOf(TOSTR(name)), true>(TOSTR(name)), \
+    #define COMPONENT(name) struct name final : public _BaseComponent<Hash::FNVHashCT<Hash::Precision::P64, char, CountOf(TOSTR(name)), true>(TOSTR(name)), \
         CompileTimeStrings::EncodeASCII(TOSTR(name), CountOf(TOSTR(name)), CompileTimeStrings::CharsPerNumber * 0), \
         CompileTimeStrings::EncodeASCII(TOSTR(name), CountOf(TOSTR(name)), CompileTimeStrings::CharsPerNumber * 1), \
         CompileTimeStrings::EncodeASCII(TOSTR(name), CountOf(TOSTR(name)), CompileTimeStrings::CharsPerNumber * 2)>
 #else
-    #define COMPONENT(name) struct name : public _BaseComponent<Hash::FNVHashCT<Hash::Precision::P64, char, CountOf(TOSTR(name)), true>(TOSTR(name))>
+    #define COMPONENT(name) struct name final : public _BaseComponent<Hash::FNVHashCT<Hash::Precision::P64, char, CountOf(TOSTR(name)), true>(TOSTR(name))>
 #endif
 
 	struct _SubtractiveComponentBase
@@ -54,3 +44,6 @@ namespace ECSTest
 		using ComponentType = T;
 	};
 }
+
+#undef IDINPUT
+#undef IDOUTPUT

@@ -23,7 +23,7 @@ namespace ECSTest
 		using type = T;
 	};
 
-    template <auto Method, typename types = typename FunctionInfo<decltype(Method)>::args, uiw count = std::tuple_size_v<types>> struct _AcceptCaller
+    template <auto Method, typename types = typename StdLib::FunctionInfo<decltype(Method)>::args, uiw count = std::tuple_size_v<types>> struct _AcceptCaller
     {
         template <typename T> static FORCEINLINE auto Convert(void *arg) -> decltype(auto)
         {
@@ -151,7 +151,7 @@ namespace ECSTest
 		return {componentType::GetTypeId(), !std::is_const_v<TPure>, availability};
     }
 
-    template <auto Method, typename T = typename FunctionInfo<decltype(Method)>::args, uiw size = std::tuple_size_v<T>> struct _TupleToComponents;
+    template <auto Method, typename T = typename StdLib::FunctionInfo<decltype(Method)>::args, uiw size = std::tuple_size_v<T>> struct _TupleToComponents;
 
     template <auto Method, typename T> struct _TupleToComponents<Method, T, 1>
     {

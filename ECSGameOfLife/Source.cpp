@@ -59,7 +59,7 @@ template <typename T> void StreamComponent(const T &component, GameOfLifeEntitie
 	auto componentData = make_unique<ui8[]>(sizeof(T));
 	memcpy(componentData.get(), &component, sizeof(T));
 	desc.alignmentOf = alignof(T);
-	desc.excludes = T::Excludes();
+	desc.isUnique = T::IsUnique();
 	desc.sizeOf = sizeof(T);
 	desc.type = T::GetTypeId();
 	desc.data = componentData.get();
@@ -279,6 +279,5 @@ int main()
 
 	manager.Start({}, ToArray(stream));
 
-    printf("done\n");
-    getchar();
+    system("pause");
 }

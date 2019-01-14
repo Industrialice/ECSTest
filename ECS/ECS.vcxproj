@@ -25,7 +25,6 @@
     <ClInclude Include="DIWRSpinLock.hpp" />
     <ClInclude Include="EntitiesStream.hpp" />
     <ClInclude Include="EntityID.hpp" />
-    <ClInclude Include="FunctionInfo.hpp" />
     <ClInclude Include="PreHeader.hpp" />
     <ClInclude Include="System.hpp" />
     <ClInclude Include="SystemHelpers.hpp" />
@@ -90,6 +89,7 @@
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\GeneralPropertySheet.props" />
+    <Import Project="..\ReleasePropertySheet.props" />
   </ImportGroup>
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
@@ -99,6 +99,7 @@
   <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
     <Import Project="..\GeneralPropertySheet.props" />
+    <Import Project="..\ReleasePropertySheet.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup />

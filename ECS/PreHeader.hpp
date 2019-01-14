@@ -12,6 +12,7 @@
 #include <array>
 #include <unordered_map>
 #include <map>
+#include <cstdlib>
 
 using std::vector;
 using std::shared_ptr;
@@ -32,8 +33,15 @@ using namespace std::literals;
 #include <MatrixMathTypes.hpp>
 using namespace StdLib;
 
-#include "FunctionInfo.hpp"
 #include "Array.hpp"
+
+struct MallocDeleter
+{
+    void operator()(void *ptr)
+    {
+        free(ptr);
+    }
+};
 
 struct AlignedMallocDeleter
 {
