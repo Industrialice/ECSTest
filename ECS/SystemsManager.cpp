@@ -1,5 +1,6 @@
 #include "PreHeader.hpp"
 #include "SystemsManager.hpp"
+#include <set>
 
 using namespace ECSTest;
 
@@ -135,41 +136,30 @@ void SystemsManager::Unregister(StableTypeId systemType)
     SOFTBREAK; // system not found
 }
 
-static void ComputeComponentIndexes(vector<ui16> &assignedIndexes, const Array<EntitiesStream::ComponentDesc> components)
-{
-    assignedIndexes.resize(components.size());
-
-    if (components.size() == 0)
-    {
-        return;
-    }
-
-    for (uiw outer = 0; outer < components.size() - 1; ++outer)
-    {
-        ui16 index = 0;
-        for (uiw inner = outer + 1; inner < components.size(); ++inner)
-        {
-            if (components[outer].type == components[inner].type)
-            {
-                ++index;
-            }
-        }
-
-        assignedIndexes[outer] = index;
-    }
-
-    // can skip this, it's already 0
-    //assignedIndexes.back() = 0;
-}
-
-static Archetype ComputeArchetype(const vector<ui16> &assignedIndexes, const Array<EntitiesStream::ComponentDesc> components)
+static Archetype ComputeArchetype(const vector<ui32> &assignedIDs, const Array<EntitiesStream::ComponentDesc> components)
 {
     Archetype archetype;
     for (uiw index = 0; index < components.size(); ++index)
     {
-        archetype.Add(components[index].type, assignedIndexes[index]);
+        archetype.Add(components[index].type, assignedIDs[index]);
     }
     return archetype;
+}
+
+void SystemsManager::AssignComponentIDs(vector<ui32> &assignedIDs, const Array<EntitiesStream::ComponentDesc> components)
+{
+    assignedIDs.resize(components.size());
+    for (uiw index = 0; index < components.size(); ++index)
+    {
+        if (components[index].isUnique)
+        {
+            assignedIDs[index] = 0;
+        }
+        else
+        {
+            assignedIDs[index] = ++_lastComponentID;
+        }
+    }
 }
 
 void SystemsManager::Start(vector<std::thread> &&threads, Array<EntitiesStream> streams)
@@ -182,18 +172,21 @@ void SystemsManager::Start(vector<std::thread> &&threads, Array<EntitiesStream> 
         _workerThreads[index]._thread = move(threads[index]);
     }
 
-    vector<ui16> assignedIndexes;
+    MessageBuilder messageBulder;
+    vector<ui32> assignedIDs;
 
     for (auto &stream : streams)
     {
         while (auto entity = stream.Next())
         {
-            ComputeComponentIndexes(assignedIndexes, entity->components);
-            Archetype entityArchetype = ComputeArchetype(assignedIndexes, entity->components);
-            ArchetypeGroup &archetypeGroup = FindArchetypeGroup(entityArchetype, assignedIndexes, entity->components);
-            AddEntityToArchetypeGroup(archetypeGroup, *entity);
+            AssignComponentIDs(assignedIDs, entity->components);
+            Archetype entityArchetype = ComputeArchetype(assignedIDs, entity->components);
+            ArchetypeGroup &archetypeGroup = FindArchetypeGroup(entityArchetype, assignedIDs, entity->components);
+            AddEntityToArchetypeGroup(entityArchetype, archetypeGroup, *entity, assignedIDs, messageBulder);
         }
     }
+
+    // TODO: now dispatch the messages from messageBuilder
 }
 
 void SystemsManager::StreamIn(Array<EntitiesStream> streams)
@@ -201,7 +194,7 @@ void SystemsManager::StreamIn(Array<EntitiesStream> streams)
     NOIMPL;
 }
 
-auto SystemsManager::FindArchetypeGroup(Archetype archetype, const vector<ui16> &assignedIndexes, const Array<EntitiesStream::ComponentDesc> components) -> ArchetypeGroup &
+auto SystemsManager::FindArchetypeGroup(Archetype archetype, const vector<ui32> &assignedIDs, const Array<EntitiesStream::ComponentDesc> components) -> ArchetypeGroup &
 {
     auto searchResult = _archetypeGroups.find(archetype);
     if (searchResult != _archetypeGroups.end())
@@ -217,7 +210,13 @@ auto SystemsManager::FindArchetypeGroup(Archetype archetype, const vector<ui16> 
 
     _archetypeGroupsShort.emplace(archetype.ToShort(), &group);
 
-    group.uniqueTypedComponentsCount = (ui16)std::count(assignedIndexes.begin(), assignedIndexes.end(), 0);
+    std::set<StableTypeId> uniqueTypes;
+    for (const auto &component : components)
+    {
+        uniqueTypes.insert(component.type);
+    }
+
+    group.uniqueTypedComponentsCount = (ui16)uniqueTypes.size();
     group.components = make_unique<ArchetypeGroup::ComponentArray[]>(group.uniqueTypedComponentsCount);
 
     for (const auto &component : components)
@@ -231,7 +230,7 @@ auto SystemsManager::FindArchetypeGroup(Archetype archetype, const vector<ui16> 
         componentArray.alignmentOf = component.alignmentOf;
         componentArray.sizeOf = component.sizeOf;
         componentArray.type = component.type;
-        componentArray.isUnique = component.isUnique; // TODO: check uniquiness
+        componentArray.isUnique = component.isUnique; // TODO: ensure uniquiness
         ++componentArray.stride;
     }
 
@@ -258,7 +257,7 @@ auto SystemsManager::FindArchetypeGroup(Archetype archetype, const vector<ui16> 
     return group;
 }
 
-void SystemsManager::AddEntityToArchetypeGroup(ArchetypeGroup &group, const EntitiesStream::StreamedEntity &entity)
+void SystemsManager::AddEntityToArchetypeGroup(Archetype archetype, ArchetypeGroup &group, const EntitiesStream::StreamedEntity &entity, const vector<ui32> &assignedIDs, MessageBuilder &messageBuilder)
 {
     if (group.entitiesCount == group.reservedCount)
     {
@@ -283,8 +282,12 @@ void SystemsManager::AddEntityToArchetypeGroup(ArchetypeGroup &group, const Enti
         }
     }
 
-    for (const auto &component : entity.components)
+    auto &componentBuilder = messageBuilder.EntityAdded(entity.entityId);
+
+    for (uiw index = 0; index < entity.components.size(); ++index)
     {
+        const auto &component = entity.components[index];
+
         auto pred = [&component](const ArchetypeGroup::ComponentArray &stored)
         {
             return stored.type == component.type;
@@ -293,11 +296,13 @@ void SystemsManager::AddEntityToArchetypeGroup(ArchetypeGroup &group, const Enti
 
         memcpy(componentArray.data.get() + componentArray.sizeOf * componentArray.stride * group.entitiesCount, component.data, componentArray.sizeOf);
 
+        ui32 componentId = 0;
         if (!componentArray.isUnique)
         {
-            ++_lastComponentID;
-            componentArray.ids[componentArray.stride * group.entitiesCount] = _lastComponentID;
+            componentArray.ids[componentArray.stride * group.entitiesCount] = assignedIDs[index];
         }
+
+        componentBuilder.AddComponent(component, assignedIDs[index]);
     }
 
     ++group.entitiesCount;

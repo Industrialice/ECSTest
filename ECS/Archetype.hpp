@@ -13,7 +13,7 @@ namespace ECSTest
         ui64 _hash{};
 
         static constexpr ui64 MainPartStartBit = 0;
-        static constexpr ui64 MainPartMask = 0x0000'FFFF'FFFF'FFFFULL;
+        static constexpr ui64 MainPartMask = 0x0000'0000'FFFF'FFFFULL;
 
     public:
         ArchetypeShort() = default;
@@ -32,13 +32,13 @@ namespace ECSTest
 
         ui64 _hash{};
 
-        static constexpr ui64 ExtraPartStartBit = 48;
-        static constexpr ui64 ExtraPartMask = 0xFFFF'0000'0000'0000ULL;
+        static constexpr ui64 ExtraPartStartBit = 32;
+        static constexpr ui64 ExtraPartMask = 0xFFFF'FFFF'0000'0000ULL;
 
     public:
         Archetype() = default;
-        void Add(StableTypeId type, ui32 index);
-        void Subtract(StableTypeId type, ui32 index);
+        void Add(StableTypeId type, ui32 componentID);
+        void Subtract(StableTypeId type, ui32 componentID);
         [[nodiscard]] ui64 Hash() const;
         [[nodiscard]] ArchetypeShort ToShort() const;
         [[nodiscard]] bool operator == (const Archetype &other) const;

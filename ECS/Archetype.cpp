@@ -43,14 +43,14 @@ bool ECSTest::ArchetypeShort::operator < (const ArchetypeShort &other) const
 
 // Archetype
 
-void Archetype::Add(StableTypeId type, ui32 index)
+void Archetype::Add(StableTypeId type, ui32 componentID)
 {
-    _hash ^= type.Hash() + ((ui64)index << ExtraPartStartBit);
+    _hash ^= (type.Hash() & ArchetypeShort::MainPartMask) + ((ui64)componentID << ExtraPartStartBit);
 }
 
-void Archetype::Subtract(StableTypeId type, ui32 index)
+void Archetype::Subtract(StableTypeId type, ui32 componentID)
 {
-    Add(type, index);
+    Add(type, componentID);
 }
 
 ui64 Archetype::Hash() const

@@ -13,7 +13,7 @@ namespace ECSTest
             StableTypeId type{};
             ui16 sizeOf{};
             ui16 alignmentOf{};
-			ui8 *data{};
+			const ui8 *data{};
             bool isUnique{};
         };
 

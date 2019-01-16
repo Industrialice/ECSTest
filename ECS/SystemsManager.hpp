@@ -5,6 +5,7 @@
 #include "Archetype.hpp"
 #include "DIWRSpinLock.hpp"
 #include "EntitiesStream.hpp"
+#include "MessageBuilder.hpp"
 //#include <ListenerHandle.hpp>
 
 namespace ECSTest
@@ -139,7 +140,8 @@ namespace ECSTest
         std::atomic<ui32> _lastComponentID = {0};
 
     private:
-        ArchetypeGroup &FindArchetypeGroup(Archetype archetype, const vector<ui16> &assignedIndexes, const Array<EntitiesStream::ComponentDesc> components);
-        void AddEntityToArchetypeGroup(ArchetypeGroup &group, const EntitiesStream::StreamedEntity &entity);
+        void AssignComponentIDs(vector<ui32> &assignedIDs, const Array<EntitiesStream::ComponentDesc> components);
+        ArchetypeGroup &FindArchetypeGroup(Archetype archetype, const vector<ui32> &assignedIDs, const Array<EntitiesStream::ComponentDesc> components);
+        void AddEntityToArchetypeGroup(Archetype archetype, ArchetypeGroup &group, const EntitiesStream::StreamedEntity &entity, const vector<ui32> &assignedIDs, MessageBuilder &messageBuilder);
     };
 }
