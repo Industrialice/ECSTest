@@ -68,10 +68,10 @@ using namespace ECSTest;
 //{
 //}
 
-auto SystemsManager::CreatePipelineGroup(optional<ui32> stepMicroSeconds, bool isMergeWithExisting) -> PipelineGroup
+auto SystemsManager::CreatePipelineGroup(optional<ui32> stepMicroSeconds, bool isMergeIfSuchPipelineExists) -> PipelineGroup
 {
     PipelineGroup group;
-    if (isMergeWithExisting)
+    if (isMergeIfSuchPipelineExists)
     {
         for (ui32 index = 0; index < (ui32)_pipelines.size(); ++index)
         {
@@ -83,7 +83,7 @@ auto SystemsManager::CreatePipelineGroup(optional<ui32> stepMicroSeconds, bool i
         }
     }
     group.index = (ui32)_pipelines.size();
-    _pipelines.push_back({stepMicroSeconds});
+	_pipelines.push_back({{}, {}, stepMicroSeconds});
     return group;
 }
 
@@ -97,11 +97,11 @@ void SystemsManager::Register(unique_ptr<System> system, PipelineGroup pipelineG
 
     ASSUME(pipelineGroup.index < _pipelines.size());
 
-	for (auto &[step, systems, thread] : _pipelines)
+	for (auto &[executionFrame, systems, step, thread] : _pipelines)
 	{
 		for (const auto &existingSystem : systems)
 		{
-			if (existingSystem->Type() == system->Type())
+			if (existingSystem.system->Type() == system->Type())
 			{
 				SOFTBREAK; // system with such type already exists
 				return;
@@ -109,7 +109,7 @@ void SystemsManager::Register(unique_ptr<System> system, PipelineGroup pipelineG
 		}
 	}
 
-    _pipelines[pipelineGroup.index].systems.push_back(move(system));
+	_pipelines[pipelineGroup.index].systems.push_back({move(system), 0});
 }
 
 void SystemsManager::Unregister(StableTypeId systemType)
@@ -120,11 +120,11 @@ void SystemsManager::Unregister(StableTypeId systemType)
         return;
     }
 
-    for (auto &[step, systems, thread] : _pipelines)
+    for (auto &[executionFrame, systems, step, thread] : _pipelines)
     {
         for (auto &system : systems)
         {
-            if (system->Type() == systemType)
+            if (system.system->Type() == systemType)
             {
                 auto diff = &system - &systems.front();
                 systems.erase(systems.begin() + diff);
@@ -136,9 +136,9 @@ void SystemsManager::Unregister(StableTypeId systemType)
     SOFTBREAK; // system not found
 }
 
-static Archetype ComputeArchetype(const vector<ui32> &assignedIDs, const Array<EntitiesStream::ComponentDesc> components)
+static ArchetypeFull ComputeArchetype(const vector<ui32> &assignedIDs, const Array<EntitiesStream::ComponentDesc> components)
 {
-    Archetype archetype;
+    ArchetypeFull archetype;
     for (uiw index = 0; index < components.size(); ++index)
     {
         archetype.Add(components[index].type, assignedIDs[index]);
@@ -180,13 +180,28 @@ void SystemsManager::Start(vector<std::thread> &&threads, Array<EntitiesStream> 
         while (auto entity = stream.Next())
         {
             AssignComponentIDs(assignedIDs, entity->components);
-            Archetype entityArchetype = ComputeArchetype(assignedIDs, entity->components);
+            ArchetypeFull entityArchetype = ComputeArchetype(assignedIDs, entity->components);
             ArchetypeGroup &archetypeGroup = FindArchetypeGroup(entityArchetype, assignedIDs, entity->components);
             AddEntityToArchetypeGroup(entityArchetype, archetypeGroup, *entity, assignedIDs, messageBulder);
         }
     }
 
-    // TODO: now dispatch the messages from messageBuilder
+	auto &entityAddedStream = messageBulder.EntityAddedStream();
+	for (auto &[archetype, messages] : entityAddedStream._data)
+	{
+		MessageStreamEntityAdded stream = {messages};
+		for (auto &pipeline : _pipelines)
+		{
+			for (auto &system : pipeline.systems)
+			{
+				IndirectSystem *indirect = system.system->AsIndirectSystem();
+				if (indirect && IsSystemAcceptArchetype(archetype, indirect->RequestedComponents()))
+				{
+					indirect->ProcessMessages(archetype, stream);
+				}
+			}
+		}
+	}
 }
 
 void SystemsManager::StreamIn(Array<EntitiesStream> streams)
@@ -194,7 +209,7 @@ void SystemsManager::StreamIn(Array<EntitiesStream> streams)
     NOIMPL;
 }
 
-auto SystemsManager::FindArchetypeGroup(Archetype archetype, const vector<ui32> &assignedIDs, const Array<EntitiesStream::ComponentDesc> components) -> ArchetypeGroup &
+auto SystemsManager::FindArchetypeGroup(ArchetypeFull archetype, const vector<ui32> &assignedIDs, const Array<EntitiesStream::ComponentDesc> components) -> ArchetypeGroup &
 {
     auto searchResult = _archetypeGroups.find(archetype);
     if (searchResult != _archetypeGroups.end())
@@ -210,10 +225,13 @@ auto SystemsManager::FindArchetypeGroup(Archetype archetype, const vector<ui32> 
 
     _archetypeGroupsShort.emplace(archetype.ToShort(), &group);
 
-    std::set<StableTypeId> uniqueTypes;
+    vector<StableTypeId> uniqueTypes;
     for (const auto &component : components)
     {
-        uniqueTypes.insert(component.type);
+		if (std::find(uniqueTypes.begin(), uniqueTypes.end(), component.type) == uniqueTypes.end())
+		{
+			uniqueTypes.push_back(component.type);
+		}
     }
 
     group.uniqueTypedComponentsCount = (ui16)uniqueTypes.size();
@@ -253,11 +271,14 @@ auto SystemsManager::FindArchetypeGroup(Archetype archetype, const vector<ui32> 
         ComponentLocation location = {&group, index};
         _archetypeGroupsComponents.emplace(componentArray.type, location);
     }
+
+	// also add that archetype to the library
+	_archetypeReflector.AddToLibrary(archetype.ToShort(), move(uniqueTypes));
     
     return group;
 }
 
-void SystemsManager::AddEntityToArchetypeGroup(Archetype archetype, ArchetypeGroup &group, const EntitiesStream::StreamedEntity &entity, const vector<ui32> &assignedIDs, MessageBuilder &messageBuilder)
+void SystemsManager::AddEntityToArchetypeGroup(ArchetypeFull archetype, ArchetypeGroup &group, const EntitiesStream::StreamedEntity &entity, const vector<ui32> &assignedIDs, MessageBuilder &messageBuilder)
 {
     if (group.entitiesCount == group.reservedCount)
     {
@@ -306,4 +327,33 @@ void SystemsManager::AddEntityToArchetypeGroup(Archetype archetype, ArchetypeGro
     }
 
     ++group.entitiesCount;
+}
+
+bool SystemsManager::IsSystemAcceptArchetype(Archetype archetype, Array<const System::RequestedComponent> systemComponents) const
+{
+	auto reflected = _archetypeReflector.Reflect(archetype);
+	for (auto &requested : systemComponents)
+	{
+		if (requested.requirement == System::ComponentRequirement::Optional)
+		{
+			continue;
+		}
+		bool isFound = reflected.find(requested.type) != reflected.end();
+		if (requested.requirement == System::ComponentRequirement::Subtractive)
+		{
+			if (isFound)
+			{
+				return false;
+			}
+		}
+		else
+		{
+			ASSUME(requested.requirement == System::ComponentRequirement::Required);
+			if (!isFound)
+			{
+				return false;
+			}
+		}
+	}
+	return true;
 }

@@ -2,6 +2,13 @@
 
 namespace StdLib
 {
+	/* This lock supports 3 types of locking:
+	   Read: will wait if it's Exclusively locked, otherwise works with
+	     other types of locks.
+	   Exclusive: doesn't allow any other locks to be held simultaneously
+	   Inclusive: only one Inclusive lock can be held at a time, but it doesn't
+	     preclude Read locks. Can be promoted to Exclusive.
+	*/
     class DIWRSpinLock
     {
         using atomicType = i32;

@@ -2,10 +2,7 @@
 
 namespace ECSTest
 {
-	struct _ArrayBase
-	{};
-
-	template <typename T> class Array : public _ArrayBase
+	template <typename T> class Array
 	{
 		T *_items{};
 		uiw _count = 0;
@@ -13,12 +10,9 @@ namespace ECSTest
 	public:
 		using ItemType = T;
 
-        Array() = default;
+		constexpr Array() = default;
 
-		/*Array(const Array &source) : _items(source._items), _count(source._count)
-		{}*/
-
-		Array(T *items, uiw count) : _items(items), _count(count)
+		constexpr Array(T *items, uiw count) : _items(items), _count(count)
 		{}
 
 		[[nodiscard]] pair<T *, uiw> GetItems()
@@ -78,6 +72,16 @@ namespace ECSTest
             return _items[index];
         }
 
+		T *find(const T &value)
+		{
+			return std::find(begin(), end(), value);
+		}
+
+		const T *find(const T &value) const
+		{
+			return std::find(begin(), end(), value);
+		}
+
 		template <typename E, typename = std::enable_if_t<std::is_base_of_v<E, T>>> operator Array<E>() const
 		{
 			return {_items, _count};
@@ -86,11 +90,51 @@ namespace ECSTest
 
 	template <typename T> Array<T> ToArray(T &value)
 	{
-		return Array(&value, 1);
+		return {&value, 1};
 	}
 
 	template <typename T> Array<T> ToArray(vector<T> &value)
 	{
-		return Array(value.data(), value.size());
+		return {value.data(), value.size()};
+	}
+
+	template <typename T> Array<const T> ToArray(vector<const T> &value)
+	{
+		return {value.data(), value.size()};
+	}
+
+	template <typename T> Array<const T> ToArray(const vector<T> &value)
+	{
+		return {value.data(), value.size()};
+	}
+
+	template <typename T> Array<const T> ToArray(const vector<const T> &value)
+	{
+		return {value.data(), value.size()};
+	}
+
+	template <typename T, uiw size> Array<T> ToArray(std::array<T, size> &value)
+	{
+		return {value.data(), size};
+	}
+
+	template <typename T, uiw size> Array<const T> ToArray(const std::array<T, size> &value)
+	{
+		return {value.data(), size};
+	}
+
+	template <typename T, uiw size> Array<const T> ToArray(const std::array<const T, size> &value)
+	{
+		return {value.data(), size};
+	}
+
+	template <typename T, uiw size> Array<T> ToArray(T (&value)[size])
+	{
+		return {value, size};
+	}
+
+	template <typename T, uiw size> Array<const T> ToArray(const T (&value)[size])
+	{
+		return {value, size};
 	}
 }

@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Archetype.hpp" />
+    <ClInclude Include="ArchetypeReflector.hpp" />
     <ClInclude Include="Array.hpp" />
     <ClInclude Include="Component.hpp" />
     <ClInclude Include="DIWRSpinLock.hpp" />
@@ -33,6 +34,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Archetype.cpp" />
+    <ClCompile Include="ArchetypeReflector.cpp" />
     <ClCompile Include="DIWRSpinLock.cpp" />
     <ClCompile Include="EntityID.cpp" />
     <ClCompile Include="MessageBuilder.cpp" />

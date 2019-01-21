@@ -6,6 +6,7 @@
 #include "DIWRSpinLock.hpp"
 #include "EntitiesStream.hpp"
 #include "MessageBuilder.hpp"
+#include "ArchetypeReflector.hpp"
 //#include <ListenerHandle.hpp>
 
 namespace ECSTest
@@ -103,10 +104,17 @@ namespace ECSTest
             std::atomic<bool> _isExiting{false};
         };
 
+		struct ManagedSystem
+		{
+			unique_ptr<System> system;
+			ui32 executedAt;
+		};
+
         struct Pipeline
         {
+			ui32 executionFrame;
+			vector<ManagedSystem> systems{};
             optional<ui32> stepMicroSeconds{};
-            vector<unique_ptr<System>> systems{};
             std::thread schedulerThread{};
         };
 
@@ -116,11 +124,11 @@ namespace ECSTest
         DIWRSpinLock _entitiesLocationsLock{};
 
         // stores all antities and their components grouped by archetype
-        std::unordered_map<Archetype, ArchetypeGroup> _archetypeGroups{};
+        std::unordered_map<ArchetypeFull, ArchetypeGroup> _archetypeGroups{};
         // similar archetypes, like containing entities with multiple components of the same type,
         // will be considered as same archetype, so if you don't care about the components count,
         // just about their presence, use this
-        std::unordered_multimap<ArchetypeShort, ArchetypeGroup *> _archetypeGroupsShort{};
+        std::unordered_multimap<Archetype, ArchetypeGroup *> _archetypeGroupsShort{};
         // used to match component types and archetype groups
         std::unordered_multimap<StableTypeId, ComponentLocation> _archetypeGroupsComponents{};
         // this lock is shared between all archetype groups arrays
@@ -136,12 +144,15 @@ namespace ECSTest
         //vector<PendingOnSystemExecutedData> _pendingOnSystemExecutedDatas{};
         //ui64 _onSystemExecutedCurrentId = 0;
         //shared_ptr<ListenerLocation> _listenerLocation = make_shared<ListenerLocation>(*this);
-
+		
         std::atomic<ui32> _lastComponentID = {0};
+
+		ArchetypeReflector _archetypeReflector{};
 
     private:
         void AssignComponentIDs(vector<ui32> &assignedIDs, const Array<EntitiesStream::ComponentDesc> components);
-        ArchetypeGroup &FindArchetypeGroup(Archetype archetype, const vector<ui32> &assignedIDs, const Array<EntitiesStream::ComponentDesc> components);
-        void AddEntityToArchetypeGroup(Archetype archetype, ArchetypeGroup &group, const EntitiesStream::StreamedEntity &entity, const vector<ui32> &assignedIDs, MessageBuilder &messageBuilder);
-    };
+        ArchetypeGroup &FindArchetypeGroup(ArchetypeFull archetype, const vector<ui32> &assignedIDs, const Array<EntitiesStream::ComponentDesc> components);
+        void AddEntityToArchetypeGroup(ArchetypeFull archetype, ArchetypeGroup &group, const EntitiesStream::StreamedEntity &entity, const vector<ui32> &assignedIDs, MessageBuilder &messageBuilder);
+		bool IsSystemAcceptArchetype(Archetype archetype, Array<const System::RequestedComponent> systemComponents) const;
+	};
 }

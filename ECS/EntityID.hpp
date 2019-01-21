@@ -6,7 +6,11 @@ namespace ECSTest
 {
 	class EntityID
 	{
-		ui32 _id = ui32_max;
+	public:
+		static constexpr ui32 invalidId = ui32_max;
+
+	private:
+		ui32 _id = invalidId;
 
 	public:
         EntityID() = default;

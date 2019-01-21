@@ -4,11 +4,11 @@
 
 namespace ECSTest
 {
-    class Archetype;
+    class ArchetypeFull;
 
-    class ArchetypeShort
+    class Archetype
     {
-        friend Archetype;
+        friend ArchetypeFull;
 
         ui64 _hash{};
 
@@ -16,19 +16,19 @@ namespace ECSTest
         static constexpr ui64 MainPartMask = 0x0000'0000'FFFF'FFFFULL;
 
     public:
-        ArchetypeShort() = default;
+        Archetype() = default;
         void Add(StableTypeId type);
         void Subtract(StableTypeId type);
         [[nodiscard]] ui64 Hash() const;
-        [[nodiscard]] static ArchetypeShort FromLong(const Archetype &source);
-        [[nodiscard]] bool operator == (const ArchetypeShort &other) const;
-        [[nodiscard]] bool operator != (const ArchetypeShort &other) const;
-        [[nodiscard]] bool operator < (const ArchetypeShort &other) const;
+        [[nodiscard]] static Archetype FromFull(const ArchetypeFull &source);
+        [[nodiscard]] bool operator == (const Archetype &other) const;
+        [[nodiscard]] bool operator != (const Archetype &other) const;
+        [[nodiscard]] bool operator < (const Archetype &other) const;
     };
 
-    class Archetype
+    class ArchetypeFull
     {
-        friend ArchetypeShort;
+        friend Archetype;
 
         ui64 _hash{};
 
@@ -36,22 +36,22 @@ namespace ECSTest
         static constexpr ui64 ExtraPartMask = 0xFFFF'FFFF'0000'0000ULL;
 
     public:
-        Archetype() = default;
+        ArchetypeFull() = default;
         void Add(StableTypeId type, ui32 componentID);
         void Subtract(StableTypeId type, ui32 componentID);
         [[nodiscard]] ui64 Hash() const;
-        [[nodiscard]] ArchetypeShort ToShort() const;
-        [[nodiscard]] bool operator == (const Archetype &other) const;
-        [[nodiscard]] bool operator != (const Archetype &other) const;
-        [[nodiscard]] bool operator < (const Archetype &other) const;
+        [[nodiscard]] Archetype ToShort() const;
+        [[nodiscard]] bool operator == (const ArchetypeFull &other) const;
+        [[nodiscard]] bool operator != (const ArchetypeFull &other) const;
+        [[nodiscard]] bool operator < (const ArchetypeFull &other) const;
     };
 }
 
 namespace std
 {
-    template <> struct hash<ECSTest::ArchetypeShort>
+    template <> struct hash<ECSTest::Archetype>
     {
-        size_t operator()(const ECSTest::ArchetypeShort &value) const
+        size_t operator()(const ECSTest::Archetype &value) const
         {
             if constexpr (sizeof(size_t) == 4)
             {
@@ -66,9 +66,9 @@ namespace std
         }
     };
 
-    template <> struct hash<ECSTest::Archetype>
+    template <> struct hash<ECSTest::ArchetypeFull>
     {
-        size_t operator()(const ECSTest::Archetype &value) const
+        size_t operator()(const ECSTest::ArchetypeFull &value) const
         {
             if constexpr (sizeof(size_t) == 4)
             {

@@ -29,5 +29,5 @@ bool EntityID::operator < (const EntityID &other) const
 
 bool EntityID::IsValid() const
 {
-	return _id != ui32_max;
+	return _id != invalidId;
 }

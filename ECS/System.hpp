@@ -1,22 +1,14 @@
 #pragma once
 
 #include "Component.hpp"
+#include "MessageBuilder.hpp"
 
 namespace ECSTest
 {
     class System
     {
     public:
-        enum MessageType
-        {
-            ComponentChanged,
-            ComponentRemoved,
-            ComponentAdded,
-            EntityRemoved,
-            EntityAdded
-        };
-
-        enum ComponentAvailability
+        enum ComponentRequirement
         {
             Required,
             Optional,
@@ -27,30 +19,31 @@ namespace ECSTest
         {
             StableTypeId type;
             bool isWriteAccess;
-			ComponentAvailability isRequired;
+			ComponentRequirement requirement;
         };
 
-		[[nodiscard]] virtual pair<const RequestedComponent *, uiw> RequestedComponents() const = 0;
+		[[nodiscard]] virtual Array<const RequestedComponent> RequestedComponents() const = 0;
 		[[nodiscard]] virtual StableTypeId Type() const = 0;
 		[[nodiscard]] virtual struct IndirectSystem *AsIndirectSystem();
 		[[nodiscard]] virtual const struct IndirectSystem *AsIndirectSystem() const;
 		[[nodiscard]] virtual struct DirectSystem *AsDirectSystem();
 		[[nodiscard]] virtual const struct DirectSystem *AsDirectSystem() const;
-        virtual void Accept(void **array) = 0;
 	};
 
 	struct IndirectSystem : public System
 	{
-		[[nodiscard]] virtual struct IndirectSystem *AsIndirectSystem() override final;
-		[[nodiscard]] virtual const struct IndirectSystem *AsIndirectSystem() const override final;
-        virtual void ProcessMessages(MessageType type, const void *messageHeader) = 0;
-        virtual void Update() = 0;
+		[[nodiscard]] virtual IndirectSystem *AsIndirectSystem() override final;
+		[[nodiscard]] virtual const IndirectSystem *AsIndirectSystem() const override final;
+		virtual void ProcessMessages(Archetype achetype, MessageStreamEntityRemoved &stream) = 0;
+		virtual void ProcessMessages(Archetype achetype, MessageStreamEntityAdded &stream) = 0;
+        virtual void Update(MessageBuilder &messageBuilder) = 0;
 	};
 
 	struct DirectSystem : public System
 	{
-		[[nodiscard]] virtual struct DirectSystem *AsDirectSystem() override final;
-		[[nodiscard]] virtual const struct DirectSystem *AsDirectSystem() const override final;
+		[[nodiscard]] virtual DirectSystem *AsDirectSystem() override final;
+		[[nodiscard]] virtual const DirectSystem *AsDirectSystem() const override final;
+		virtual void Accept(void **array) = 0;
 	};
 
     template <typename BaseSystem, typename Type> struct _SystemTypeIdentefiable : public BaseSystem, public Type

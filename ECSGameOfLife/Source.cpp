@@ -16,6 +16,8 @@
 #include "ComponentProgrammer.hpp"
 #include "ComponentSpouse.hpp"
 
+#include "SystemGameInfo.hpp"
+
 using namespace ECSTest;
 
 class GameOfLifeEntities : public EntitiesStream
@@ -277,7 +279,12 @@ int main()
 
 	GenerateScene(manager, stream);
 
-	manager.Start({}, ToArray(stream));
+	auto gameInfoPipelineGroup = manager.CreatePipelineGroup(1000'0000, true);
+	manager.Register(make_unique<SystemGameInfo>(), gameInfoPipelineGroup);
+
+	vector<std::thread> workers(SystemInfo::LogicalCPUCores());
+
+	manager.Start(move(workers), ToArray(stream));
 
     system("pause");
 }

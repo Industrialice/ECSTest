@@ -23,7 +23,10 @@ namespace ECSTest
 		using type = T;
 	};
 
-    template <auto Method, typename types = typename StdLib::FunctionInfo<decltype(Method)>::args, uiw count = std::tuple_size_v<types>> struct _AcceptCaller
+	template <typename T> constexpr bool _IsArray(Array<T>) { return true; }
+	template <typename T> constexpr bool _IsArray(T) { return false; }
+
+    template <auto Method, typename types = typename FunctionInfo::Info<decltype(Method)>::args, uiw count = std::tuple_size_v<types>> struct _AcceptCaller
     {
         template <typename T> static FORCEINLINE auto Convert(void *arg) -> decltype(auto)
         {
@@ -31,7 +34,7 @@ namespace ECSTest
 
 			static constexpr bool isRefOrPtr = std::is_reference_v<T> || std::is_pointer_v<T>;
 			static constexpr bool isSubtractive = std::is_base_of_v<_SubtractiveComponentBase, pureType>;
-			static constexpr bool isArray = std::is_base_of_v<_ArrayBase, pureType>;
+			static constexpr bool isArray = _IsArray(pureType());
             static_assert(isSubtractive || isRefOrPtr, "Type must be either reference or pointer");
 			static_assert(!isSubtractive || !isRefOrPtr, "Subtractive component cannot be passed by reference or pointer");
 			static_assert(isSubtractive || isArray, "Non-subtractive components must be passed using Array<T>");
@@ -135,25 +138,32 @@ namespace ECSTest
     {
         using TPure = std::remove_pointer_t<std::remove_reference_t<T>>;
 		using componentType = typename _GetComponentType<std::remove_cv_t<TPure>>::type;
-		System::ComponentAvailability availability;
-		if constexpr (std::is_reference_v<T>)
-		{
-			availability = System::ComponentAvailability::Required;
-		}
-		else if constexpr (std::is_pointer_v<T>)
-		{
-			availability = System::ComponentAvailability::Optional;
-		}
-		else if constexpr (std::is_base_of_v<_SubtractiveComponentBase, T>)
-		{
-			availability = System::ComponentAvailability::Subtractive;
-		}
+		constexpr System::ComponentRequirement availability =
+			std::is_reference_v<T> ?
+			System::ComponentRequirement::Required :
+			(std::is_pointer_v<T> ?
+				System::ComponentRequirement::Optional :
+				(std::is_base_of_v<_SubtractiveComponentBase, T> ?
+					System::ComponentRequirement::Subtractive :
+					(System::ComponentRequirement)i8_max));
+		static_assert((i32)availability != i8_max);
 		return {componentType::GetTypeId(), !std::is_const_v<TPure>, availability};
     }
 
-    template <auto Method, typename T = typename StdLib::FunctionInfo<decltype(Method)>::args, uiw size = std::tuple_size_v<T>> struct _TupleToComponents;
+    template <typename T, uiw size = std::tuple_size_v<T>> struct _TupleToComponents;
 
-    template <auto Method, typename T> struct _TupleToComponents<Method, T, 1>
+	template <typename T> struct _TupleToComponents<T, 0>
+	{
+		static constexpr std::array<System::RequestedComponent, 1> Convert()
+		{
+			return
+			{
+				System::RequestedComponent{{}, false, System::ComponentRequirement::Optional} // kind of hacky
+			};
+		}
+	};
+
+    template <typename T> struct _TupleToComponents<T, 1>
     {
         static constexpr std::array<System::RequestedComponent, 1> Convert()
         {
@@ -164,7 +174,7 @@ namespace ECSTest
         }
     };
 
-    template <auto Method, typename T> struct _TupleToComponents<Method, T, 2>
+    template <typename T> struct _TupleToComponents<T, 2>
     {
         static constexpr std::array<System::RequestedComponent, 2> Convert()
         {
@@ -176,7 +186,7 @@ namespace ECSTest
         }
     };
 
-    template <auto Method, typename T> struct _TupleToComponents<Method, T, 3>
+    template <typename T> struct _TupleToComponents<T, 3>
     {
         static constexpr std::array<System::RequestedComponent, 3> Convert()
         {
@@ -189,7 +199,7 @@ namespace ECSTest
         }
     };
 
-    template <auto Method, typename T> struct _TupleToComponents<Method, T, 4>
+    template <typename T> struct _TupleToComponents<T, 4>
     {
         static constexpr std::array<System::RequestedComponent, 4> Convert()
         {
@@ -203,7 +213,7 @@ namespace ECSTest
         }
     };
 
-    template <auto Method, typename T> struct _TupleToComponents<Method, T, 5>
+    template <typename T> struct _TupleToComponents<T, 5>
     {
         static constexpr std::array<System::RequestedComponent, 5> Convert()
         {
@@ -218,7 +228,7 @@ namespace ECSTest
         }
     };
 
-    template <auto Method, typename T> struct _TupleToComponents<Method, T, 6>
+    template <typename T> struct _TupleToComponents<T, 6>
     {
         static constexpr std::array<System::RequestedComponent, 6> Convert()
         {
@@ -236,40 +246,33 @@ namespace ECSTest
 }
 
 #define DIRECT_ACCEPT_COMPONENTS(...) \
-    virtual pair<const RequestedComponent *, uiw> RequestedComponents() const override \
+    virtual Array<const RequestedComponent> RequestedComponents() const override \
     { \
         using thisType = std::remove_reference_t<std::remove_cv_t<decltype(*this)>>; \
-        auto arr = _TupleToComponents<&thisType::Accept>::Convert(); \
+		using types = typename FunctionInfo::Info<decltype(&thisType::Acceptor)>::args; \
+        static constexpr auto arr = _TupleToComponents<types>::Convert(); \
         return {arr.data(), arr.size()}; \
     } \
     \
     virtual void Accept(void **array) override \
     { \
         using thisType = std::remove_reference_t<std::remove_cv_t<decltype(*this)>>; \
-		using types = typename FunctionInfo<decltype(&thisType::Accept)>::args; \
+		using types = typename FunctionInfo::Info<decltype(&thisType::Acceptor)>::args; \
 		static constexpr uiw count = std::tuple_size_v<types>; \
-        _AcceptCaller<&thisType::Accept, types>::Call(this, array, std::integral_constant<uiw, count>()); \
+        _AcceptCaller<&thisType::Acceptor, types>::Call(this, array, std::integral_constant<uiw, count>()); \
     } \
-    void Accept(__VA_ARGS__)
+    void Acceptor(__VA_ARGS__)
 
 #define INDIRECT_ACCEPT_COMPONENTS(...) \
-    virtual pair<const RequestedComponent *, uiw> RequestedComponents() const override \
+    virtual Array<const RequestedComponent> RequestedComponents() const override \
     { \
         using thisType = std::remove_reference_t<std::remove_cv_t<decltype(*this)>>; \
-        auto arr = _TupleToComponents<&thisType::Accept>::Convert(); \
+		struct Local { static void Temp(__VA_ARGS__); }; \
+		using types = typename FunctionInfo::Info<decltype(Local::Temp)>::args; \
+        static constexpr auto arr = _TupleToComponents<types>::Convert(); \
         return {arr.data(), arr.size()}; \
     } \
     \
-    virtual void Accept(void **array) override \
-    { \
-        using thisType = std::remove_reference_t<std::remove_cv_t<decltype(*this)>>; \
-		using types = typename FunctionInfo<decltype(&thisType::Accept)>::args; \
-		static constexpr uiw count = std::tuple_size_v<types>; \
-        _AcceptCaller<&thisType::Accept, types>::Call(this, array, std::integral_constant<uiw, count>()); \
-    } \
-    virtual void Remove(Entity *entity) override; \
-    virtual void Commit() override; \
-    virtual void Clear() override; \
-    virtual void OnChanged(const shared_ptr<vector<Component>> &components) override; \
-    virtual void Update() override; \
-    void Acceptor(__VA_ARGS__)
+	virtual void ProcessMessages(Archetype achetype, MessageStreamEntityRemoved &stream) override; \
+	virtual void ProcessMessages(Archetype achetype, MessageStreamEntityAdded &stream) override; \
+    virtual void Update(MessageBuilder &messageBuilder) override;
