@@ -15,7 +15,7 @@
 #include <cstdlib>
 
 #include <StdMiscellaneousLib.hpp>
-#include <MatrixMathTypes.hpp>
+
 using namespace StdLib;
 
 using std::vector;
@@ -34,21 +34,3 @@ using std::make_shared;
 using std::make_unique;
 using namespace std::literals;
 using std::nullopt;
-
-#include "Array.hpp"
-
-struct MallocDeleter
-{
-    void operator()(void *ptr)
-    {
-        free(ptr);
-    }
-};
-
-struct AlignedMallocDeleter
-{
-    void operator()(void *ptr)
-    {
-        _aligned_free(ptr);
-    }
-};

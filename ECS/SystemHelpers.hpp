@@ -2,6 +2,11 @@
 
 namespace ECSTest
 {
+    constexpr bool operator < (const System::RequestedComponent &left, const System::RequestedComponent &right)
+    {
+        return std::tie(left.isWriteAccess, left.requirement, left.type) < std::tie(right.isWriteAccess, right.requirement, right.type);
+    }
+
 	template <typename T> struct _GetComponentType
 	{
 		using type = T;
@@ -138,14 +143,14 @@ namespace ECSTest
     {
         using TPure = std::remove_pointer_t<std::remove_reference_t<T>>;
 		using componentType = typename _GetComponentType<std::remove_cv_t<TPure>>::type;
-		constexpr System::ComponentRequirement availability =
+		constexpr System::RequirementForComponent availability =
 			std::is_reference_v<T> ?
-			System::ComponentRequirement::Required :
+			System::RequirementForComponent::Required :
 			(std::is_pointer_v<T> ?
-				System::ComponentRequirement::Optional :
+				System::RequirementForComponent::Optional :
 				(std::is_base_of_v<_SubtractiveComponentBase, T> ?
-					System::ComponentRequirement::Subtractive :
-					(System::ComponentRequirement)i8_max));
+					RequirementForComponent::Subtractive :
+					(RequirementForComponent)i8_max));
 		static_assert((i32)availability != i8_max);
 		return {componentType::GetTypeId(), !std::is_const_v<TPure>, availability};
     }
@@ -158,7 +163,7 @@ namespace ECSTest
 		{
 			return
 			{
-				System::RequestedComponent{{}, false, System::ComponentRequirement::Optional} // kind of hacky
+				System::RequestedComponent{{}, false, RequirementForComponent::Optional} // kind of hacky
 			};
 		}
 	};
@@ -251,7 +256,8 @@ namespace ECSTest
         using thisType = std::remove_reference_t<std::remove_cv_t<decltype(*this)>>; \
 		using types = typename FunctionInfo::Info<decltype(&thisType::Acceptor)>::args; \
         static constexpr auto arr = _TupleToComponents<types>::Convert(); \
-        return {arr.data(), arr.size()}; \
+        static constexpr auto arrSorted = Funcs::SortCompileTime(arr); \
+        return {arrSorted.data(), arrSorted.size()}; \
     } \
     \
     virtual void Accept(void **array) override \
@@ -270,9 +276,10 @@ namespace ECSTest
 		struct Local { static void Temp(__VA_ARGS__); }; \
 		using types = typename FunctionInfo::Info<decltype(Local::Temp)>::args; \
         static constexpr auto arr = _TupleToComponents<types>::Convert(); \
-        return {arr.data(), arr.size()}; \
+        static constexpr auto arrSorted = Funcs::SortCompileTime(arr); \
+        return {arrSorted.data(), arrSorted.size()}; \
     } \
     \
 	virtual void ProcessMessages(Archetype achetype, MessageStreamEntityRemoved &stream) override; \
 	virtual void ProcessMessages(Archetype achetype, MessageStreamEntityAdded &stream) override; \
-    virtual void Update(MessageBuilder &messageBuilder) override;
+    virtual void Update(MessageBuilder &messageBuilder) override

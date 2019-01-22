@@ -3,11 +3,10 @@
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <IncludePath>../ECS;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)\$(Platform)_$(Configuration)\;$(VisualStudioDir)\Projects\StdLib2018\$(Configuration)_$(Platform)\;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)\ECS\;$(SolutionDir)\ECSGameOfLife\;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)\$(Platform)_$(Configuration)\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup>
-    <Link />
     <Link>
       <AdditionalDependencies>ECS.lib;Core.lib;PlatformAbstraction.lib;Miscellaneous.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>

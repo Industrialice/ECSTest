@@ -211,19 +211,19 @@ void SystemsManager::StreamIn(Array<EntitiesStream> streams)
 
 auto SystemsManager::FindArchetypeGroup(ArchetypeFull archetype, const vector<ui32> &assignedIDs, const Array<EntitiesStream::ComponentDesc> components) -> ArchetypeGroup &
 {
-    auto searchResult = _archetypeGroups.find(archetype);
-    if (searchResult != _archetypeGroups.end())
+    auto searchResult = _archetypeGroupsFull.find(archetype);
+    if (searchResult != _archetypeGroupsFull.end())
     {
         return searchResult->second;
     }
 
     // such group doesn't exist yet, adding a new one
 
-    auto [insertedWhere, insertedResult] = _archetypeGroups.try_emplace(archetype);
+    auto [insertedWhere, insertedResult] = _archetypeGroupsFull.try_emplace(archetype);
     ASSUME(insertedResult);
     ArchetypeGroup &group = insertedWhere->second;
 
-    _archetypeGroupsShort.emplace(archetype.ToShort(), &group);
+    _archetypeGroups.emplace(archetype.ToShort(), &group);
 
     vector<StableTypeId> uniqueTypes;
     for (const auto &component : components)
@@ -334,12 +334,12 @@ bool SystemsManager::IsSystemAcceptArchetype(Archetype archetype, Array<const Sy
 	auto reflected = _archetypeReflector.Reflect(archetype);
 	for (auto &requested : systemComponents)
 	{
-		if (requested.requirement == System::ComponentRequirement::Optional)
+		if (requested.requirement == RequirementForComponent::Optional)
 		{
 			continue;
 		}
 		bool isFound = reflected.find(requested.type) != reflected.end();
-		if (requested.requirement == System::ComponentRequirement::Subtractive)
+		if (requested.requirement == RequirementForComponent::Subtractive)
 		{
 			if (isFound)
 			{
@@ -348,7 +348,7 @@ bool SystemsManager::IsSystemAcceptArchetype(Archetype archetype, Array<const Sy
 		}
 		else
 		{
-			ASSUME(requested.requirement == System::ComponentRequirement::Required);
+			ASSUME(requested.requirement == RequirementForComponent::Required);
 			if (!isFound)
 			{
 				return false;

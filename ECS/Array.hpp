@@ -30,6 +30,30 @@ namespace ECSTest
 			return _count;
 		}
 
+        [[nodiscard]] T &front()
+        {
+            ASSUME(_count > 0);
+            return _items[0];
+        }
+
+        [[nodiscard]] const T &front() const
+        {
+            ASSUME(_count > 0);
+            return _items[0];
+        }
+
+        [[nodiscard]] T &back()
+        {
+            ASSUME(_count > 0);
+            return _items[_count - 1];
+        }
+
+        [[nodiscard]] const T &back() const
+        {
+            ASSUME(_count > 0);
+            return _items[_count - 1];
+        }
+
         [[nodiscard]] T *begin()
         {
             return _items;
@@ -93,6 +117,16 @@ namespace ECSTest
 		return {&value, 1};
 	}
 
+    template <typename T> Array<T> ToArray(T *value, uiw count)
+    {
+        return {value, count};
+    }
+
+    template <typename T> Array<const T> ToArray(const T *value, uiw count)
+    {
+        return {value, count};
+    }
+
 	template <typename T> Array<T> ToArray(vector<T> &value)
 	{
 		return {value.data(), value.size()};
@@ -137,4 +171,9 @@ namespace ECSTest
 	{
 		return {value, size};
 	}
+
+    template <typename T> Array<T> ToArray(Array<T> value)
+    {
+        return value;
+    }
 }

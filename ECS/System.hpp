@@ -8,18 +8,11 @@ namespace ECSTest
     class System
     {
     public:
-        enum ComponentRequirement
-        {
-            Required,
-            Optional,
-			Subtractive
-        };
-
         struct RequestedComponent
         {
-            StableTypeId type;
-            bool isWriteAccess;
-			ComponentRequirement requirement;
+            StableTypeId type{};
+            bool isWriteAccess = false;
+			RequirementForComponent requirement = RequirementForComponent::Required;
         };
 
 		[[nodiscard]] virtual Array<const RequestedComponent> RequestedComponents() const = 0;

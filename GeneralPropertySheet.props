@@ -3,8 +3,8 @@
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <IncludePath>C:\Users\Colgate\Documents\Visual Studio 2017\Projects\StdLib2018\Core\;C:\Users\Colgate\Documents\Visual Studio 2017\Projects\StdLib2018\PlatformAbstraction\;C:\Users\Colgate\Documents\Visual Studio 2017\Projects\StdLib2018\Miscellaneous\;$(VC_IncludePath);$(WindowsSDK_IncludePath);C:\StdLib2018\Core\;C:\StdLib2018\PlatformAbstraction\;C:\StdLib2018\Miscellaneous\</IncludePath>
-    <LibraryPath>C:\Users\Colgate\Documents\Visual Studio 2017\Projects\StdLib2018\$(Configuration)_$(Platform)\;C:\StdLib2018\$(Configuration)_$(Platform)\;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(VisualStudioDir)\Projects\StdLib2018\Core\;$(VisualStudioDir)\Projects\StdLib2018\PlatformAbstraction\;$(VisualStudioDir)\Projects\StdLib2018\Miscellaneous\;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
+    <LibraryPath>$(VisualStudioDir)\Projects\StdLib2018\$(Configuration)_$(Platform)\;$(LibraryPath)</LibraryPath>
     <OutDir>$(SolutionDir)\$(Platform)_$(Configuration)\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup>

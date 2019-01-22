@@ -12,6 +12,13 @@
 
 namespace ECSTest
 {
+    enum RequirementForComponent
+    {
+        Required,
+        Optional,
+        Subtractive
+    };
+
     class Component
     {
     };
