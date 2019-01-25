@@ -13,6 +13,7 @@
 #include <unordered_map>
 #include <map>
 #include <cstdlib>
+#include <stack>
 
 #include <StdMiscellaneousLib.hpp>
 #include <MatrixMathTypes.hpp>

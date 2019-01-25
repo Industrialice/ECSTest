@@ -3,16 +3,16 @@
 
 using namespace ECSTest;
 
-void SystemGameInfo::ProcessMessages(Archetype achetype, MessageStreamEntityRemoved &stream)
+void SystemGameInfo::ProcessMessages(const MessageStreamEntityAdded &stream)
 {
+    for (auto &item : stream)
+    {
+        printf("received %u\n", item.entityID.Hash());
+    }
 }
 
-void SystemGameInfo::ProcessMessages(Archetype achetype, MessageStreamEntityAdded &stream)
+void SystemGameInfo::ProcessMessages(const MessageStreamEntityRemoved &stream)
 {
-	for (auto item = stream.Next(); item; item = stream.Next())
-	{
-		printf("received %u\n", item->entityID.Hash());
-	}
 }
 
 void SystemGameInfo::Update(MessageBuilder &messageBuilder)

@@ -27,8 +27,8 @@ namespace ECSTest
 	{
 		[[nodiscard]] virtual IndirectSystem *AsIndirectSystem() override final;
 		[[nodiscard]] virtual const IndirectSystem *AsIndirectSystem() const override final;
-		virtual void ProcessMessages(Archetype achetype, MessageStreamEntityRemoved &stream) = 0;
-		virtual void ProcessMessages(Archetype achetype, MessageStreamEntityAdded &stream) = 0;
+        virtual void ProcessMessages(const MessageStreamEntityAdded &stream) = 0;
+		virtual void ProcessMessages(const MessageStreamEntityRemoved &stream) = 0;
         virtual void Update(MessageBuilder &messageBuilder) = 0;
 	};
 

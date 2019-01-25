@@ -274,17 +274,19 @@ int main()
 {
     StdLib::Initialization::Initialize({});
 
-	GameOfLifeEntities stream;
+    auto stream = make_shared<GameOfLifeEntities>();
 	SystemsManager manager;
 
-	GenerateScene(manager, stream);
+	GenerateScene(manager, *stream);
 
 	auto gameInfoPipelineGroup = manager.CreatePipelineGroup(1000'0000, true);
 	manager.Register(make_unique<SystemGameInfo>(), gameInfoPipelineGroup);
 
-	vector<std::thread> workers(SystemInfo::LogicalCPUCores());
+	vector<WorkerThread> workers(SystemInfo::LogicalCPUCores());
 
-	manager.Start(move(workers), ToArray(stream));
+    shared_ptr<EntitiesStream> casted = stream;
+	manager.Start(move(workers), ToArray(casted));
+    manager.Stop(true);
 
     system("pause");
 }

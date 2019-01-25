@@ -7,6 +7,7 @@
 #include "EntitiesStream.hpp"
 #include "MessageBuilder.hpp"
 #include "ArchetypeReflector.hpp"
+#include "WokerThread.hpp"
 //#include <ListenerHandle.hpp>
 
 namespace ECSTest
@@ -40,11 +41,13 @@ namespace ECSTest
         //[[nodiscard]] ListenerHandle OnSystemExecuted(StableTypeId systemType, OnSystemExecutedCallbackType callback);
         //void RemoveListener(ListenerHandle &listener);
         //void Register(System &system, optional<ui32> stepMicroSeconds, const vector<StableTypeId> &runBefore, const vector<StableTypeId> &runAfter, std::thread::id affinityThread);
-        PipelineGroup CreatePipelineGroup(optional<ui32> stepMicroSeconds, bool isMergeWithExisting);
+        PipelineGroup CreatePipelineGroup(optional<ui32> stepMicroSeconds, bool isMergeIfSuchPipelineExists);
         void Register(unique_ptr<System> system, PipelineGroup pipelineGroup);
         void Unregister(StableTypeId systemType);
-        void Start(vector<std::thread> &&threads, Array<EntitiesStream> streams);
-        void StreamIn(Array<EntitiesStream> streams);
+        void Start(vector<WorkerThread> &&workers, Array<shared_ptr<EntitiesStream>> streams);
+        void Stop(bool isWaitForStop);
+        bool IsRunning();
+        void StreamIn(Array<shared_ptr<EntitiesStream>> streams);
 
     private:
         struct ArchetypeGroup
@@ -97,26 +100,35 @@ namespace ECSTest
         //	StableTypeId _type;
         //};
 
-        struct WorkerThread
-        {
-            std::thread _thread{};
-            std::atomic<bool> _isWaitingForWork{true};
-            std::atomic<bool> _isExiting{false};
-        };
-
-		struct ManagedSystem
+		struct ManagedDirectSystem
 		{
-			unique_ptr<System> system;
-			ui32 executedAt;
+            unique_ptr<DirectSystem> system{};
+            ui32 executedAt{};
 		};
+
+        struct ManagedIndirectSystem
+        {
+            unique_ptr<IndirectSystem> system{};
+            ui32 executedAt{};
+            // contains messages that the system needs to process before it starts its update
+            struct MessageQueue
+            {
+                vector<MessageStreamEntityAdded> entityAdded{};
+                vector<MessageStreamEntityRemoved> entityRemoved{};
+            } messageQueue{};
+        };
 
         struct Pipeline
         {
-			ui32 executionFrame;
-			vector<ManagedSystem> systems{};
+			ui32 executionFrame = 0;
+			vector<ManagedDirectSystem> directSystems{};
+            vector<ManagedIndirectSystem> indirectSystems{};
             optional<ui32> stepMicroSeconds{};
-            std::thread schedulerThread{};
         };
+
+        // used by all pipelines to perform execution scheduling, all real
+        // work including received message processing is done by workers
+        std::thread _schedulerThread{};
 
         // used for matching EntityID to physical entity and its components
         // this is needed when processing entity/component update messages
@@ -138,8 +150,7 @@ namespace ECSTest
         vector<Pipeline> _pipelines{};
 
         vector<WorkerThread> _workerThreads{};
-        std::condition_variable _workerDoneNotifier{};
-        std::mutex _workerReportMutex{};
+        shared_ptr<pair<std::mutex, std::condition_variable>> _workerFinishedWorkNotifier = make_shared<pair<std::mutex, std::condition_variable>>();
         ui32 _workersVacantCount = 0;
         //vector<PendingOnSystemExecutedData> _pendingOnSystemExecutedDatas{};
         //ui64 _onSystemExecutedCurrentId = 0;
@@ -149,10 +160,16 @@ namespace ECSTest
 
 		ArchetypeReflector _archetypeReflector{};
 
+        std::atomic<bool> _isStoppingExecution{false};
+
     private:
-        void AssignComponentIDs(vector<ui32> &assignedIDs, const Array<EntitiesStream::ComponentDesc> components);
-        ArchetypeGroup &FindArchetypeGroup(ArchetypeFull archetype, const vector<ui32> &assignedIDs, const Array<EntitiesStream::ComponentDesc> components);
+        void AssignComponentIDs(vector<ui32> &assignedIDs, Array<const EntitiesStream::ComponentDesc> components);
+        ArchetypeGroup &FindArchetypeGroup(ArchetypeFull archetype, const vector<ui32> &assignedIDs, Array<const EntitiesStream::ComponentDesc> components);
         void AddEntityToArchetypeGroup(ArchetypeFull archetype, ArchetypeGroup &group, const EntitiesStream::StreamedEntity &entity, const vector<ui32> &assignedIDs, MessageBuilder &messageBuilder);
-		bool IsSystemAcceptArchetype(Archetype archetype, Array<const System::RequestedComponent> systemComponents) const;
+		bool IsSystemAcceptsArchetype(Archetype archetype, Array<const System::RequestedComponent> systemComponents) const;
+        void StartScheduler(Array<shared_ptr<EntitiesStream>> streams);
+        void SchedulerLoop();
+
+        static void TaskProcessMessages(IndirectSystem &system, ManagedIndirectSystem::MessageQueue &messageQueue);
 	};
 }

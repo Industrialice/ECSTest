@@ -280,6 +280,6 @@ namespace ECSTest
         return {arrSorted.data(), arrSorted.size()}; \
     } \
     \
-	virtual void ProcessMessages(Archetype achetype, MessageStreamEntityRemoved &stream) override; \
-	virtual void ProcessMessages(Archetype achetype, MessageStreamEntityAdded &stream) override; \
+	virtual void ProcessMessages(const MessageStreamEntityAdded &stream) override; \
+	virtual void ProcessMessages(const MessageStreamEntityRemoved &stream) override; \
     virtual void Update(MessageBuilder &messageBuilder) override

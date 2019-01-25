@@ -16,67 +16,87 @@ namespace ECSTest
 		ui32 id = 0;
 	};
 
+    class MessageStreamEntityAdded
+    {
+        friend class SystemsManager;
+
+    public:
+        struct EntityWithComponents
+        {
+            friend class MessageBuilder;
+
+            EntityID entityID;
+            vector<SerializedComponent> components;
+
+        private:
+            vector<ui8> componentsData;
+        };
+
+    private:
+        shared_ptr<const vector<EntityWithComponents>> _source{};
+        Archetype _archetype{};
+
+        MessageStreamEntityAdded(Archetype archetype, const shared_ptr<const vector<EntityWithComponents>> &source) : _archetype(archetype), _source(source)
+        {}
+
+    public:
+        const EntityWithComponents *begin() const
+        {
+            return _source->data();
+        }
+
+        const EntityWithComponents *end() const
+        {
+            return _source->data() + _source->size();
+        }
+
+        Archetype Archetype() const
+        {
+            return _archetype;
+        }
+    };
+
 	class MessageStreamEntityRemoved
 	{
-		friend class SystemsManager;
+        friend class SystemsManager;
 
-		const vector<EntityID> &_source;
-		uiw _current = 0;
+        shared_ptr<const vector<EntityID>> _source{};
+        Archetype _archetype{};
 
-		MessageStreamEntityRemoved(const vector<EntityID> &source) : _source(source)
+		MessageStreamEntityRemoved(Archetype archetype, const shared_ptr<const vector<EntityID>> &source) : _archetype(archetype), _source(source)
 		{}
 
-		void Rewind();
-
 	public:
-		optional<EntityID> Next();
+        const EntityID *begin() const
+        {
+            return _source->data();
+        }
+
+        const EntityID *end() const
+        {
+            return _source->data() + _source->size();
+        }
+
+        Archetype Archetype() const
+        {
+            return _archetype;
+        }
 	};
 
-	class MessageStreamEntityAdded
-	{
-		friend class SystemsManager;
-		friend class MessageStreamsBuilderEntityAdded;
-		friend class MessageBuilder;
+    class MessageStreamsBuilderEntityAdded
+    {
+        friend class SystemsManager;
+        friend class MessageBuilder;
 
-		struct EntityWithComponents
-		{
-			EntityID entityID;
-			vector<SerializedComponent> components;
-			vector<ui8> componentsData;
-		};
-
-		const vector<EntityWithComponents> &_source;
-		uiw _current = 0;
-
-		MessageStreamEntityAdded(const vector<EntityWithComponents> &source) : _source(source)
-		{}
-
-		void Rewind();
-
-	public:
-		struct EntityAndComponents
-		{
-			EntityID entityID;
-			Array<const SerializedComponent> components;
-		};
-
-		optional<EntityAndComponents> Next();
-	};
+        std::unordered_map<Archetype, shared_ptr<vector<MessageStreamEntityAdded::EntityWithComponents>>> _data{};
+    };
 
     class MessageStreamsBuilderEntityRemoved
     {
 		friend class SystemsManager;
 		friend class MessageBuilder;
 
-		std::unordered_map<Archetype, vector<EntityID>> _data{};
-    };
-
-    class MessageStreamsBuilderEntityAdded
-    {
-		friend class SystemsManager;
-		friend class MessageBuilder;
-
-		std::unordered_map<Archetype, vector<MessageStreamEntityAdded::EntityWithComponents>> _data{};
+		std::unordered_map<Archetype, shared_ptr<vector<EntityID>>> _data{};
     };
 
     class MessageBuilder
@@ -84,8 +104,8 @@ namespace ECSTest
 		friend class SystemsManager;
 
 		void Flush();
-		MessageStreamsBuilderEntityRemoved &EntityRemovedStream();
-		MessageStreamsBuilderEntityAdded &EntityAddedStream();
+        MessageStreamsBuilderEntityAdded &EntityAddedStreams();
+		MessageStreamsBuilderEntityRemoved &EntityRemovedStreams();
 
     public:
         class ComponentArrayBuilder
@@ -115,8 +135,8 @@ namespace ECSTest
             }
         };
 
-        void EntityRemoved(Archetype archetype, EntityID entityID);
         ComponentArrayBuilder &EntityAdded(EntityID entityID); // archetype will be computed after all the components were added
+        void EntityRemoved(Archetype archetype, EntityID entityID);
     
 	private:
 		ComponentArrayBuilder _cab{};

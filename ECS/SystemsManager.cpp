@@ -83,12 +83,14 @@ auto SystemsManager::CreatePipelineGroup(optional<ui32> stepMicroSeconds, bool i
         }
     }
     group.index = (ui32)_pipelines.size();
-	_pipelines.push_back({{}, {}, stepMicroSeconds});
+    _pipelines.push_back({{}, {}, {}, stepMicroSeconds});
     return group;
 }
 
 void SystemsManager::Register(unique_ptr<System> system, PipelineGroup pipelineGroup)
 {
+    ASSUME(system);
+
     if (_entitiesLocations.size())
     {
         HARDBREAK; // registering of the systems with non-empty scene is currently unsupported
@@ -97,19 +99,51 @@ void SystemsManager::Register(unique_ptr<System> system, PipelineGroup pipelineG
 
     ASSUME(pipelineGroup.index < _pipelines.size());
 
-	for (auto &[executionFrame, systems, step, thread] : _pipelines)
+    bool isDirectSystem = system->AsDirectSystem() != nullptr;
+
+	for (auto &[executionFrame, directSystems, indirectSystems, step] : _pipelines)
 	{
-		for (const auto &existingSystem : systems)
-		{
-			if (existingSystem.system->Type() == system->Type())
-			{
-				SOFTBREAK; // system with such type already exists
-				return;
-			}
-		}
+        if (isDirectSystem)
+        {
+            for (const auto &existingSystem : directSystems)
+            {
+                if (existingSystem.system->Type() == system->Type())
+                {
+                    SOFTBREAK; // system with such type already exists
+                    return;
+                }
+            }
+        }
+        else
+        {
+            for (const auto &existingSystem : indirectSystems)
+            {
+                if (existingSystem.system->Type() == system->Type())
+                {
+                    SOFTBREAK; // system with such type already exists
+                    return;
+                }
+            }
+        }
 	}
 
-	_pipelines[pipelineGroup.index].systems.push_back({move(system), 0});
+    auto requestedComponents = system->RequestedComponents();
+    vector<pair<StableTypeId, RequirementForComponent>> types;
+    types.reserve(requestedComponents.size());
+    for (auto req : requestedComponents)
+    {
+        types.push_back({req.type, req.requirement});
+    }
+    _archetypeReflector.StartTrackingMatchingArchetypes((uiw)system.get(), ToArray(types));
+
+    if (isDirectSystem)
+    {
+        _pipelines[pipelineGroup.index].directSystems.push_back({unique_ptr<DirectSystem>(system.release()->AsDirectSystem()), 0});
+    }
+    else
+    {
+        _pipelines[pipelineGroup.index].indirectSystems.push_back({unique_ptr<IndirectSystem>(system.release()->AsIndirectSystem()), 0});
+    }
 }
 
 void SystemsManager::Unregister(StableTypeId systemType)
@@ -120,14 +154,27 @@ void SystemsManager::Unregister(StableTypeId systemType)
         return;
     }
 
-    for (auto &[executionFrame, systems, step, thread] : _pipelines)
+    for (auto &[executionFrame, directSystems, indirectSystems, step] : _pipelines)
     {
-        for (auto &system : systems)
+        for (auto &system : directSystems)
         {
             if (system.system->Type() == systemType)
             {
-                auto diff = &system - &systems.front();
-                systems.erase(systems.begin() + diff);
+                _archetypeReflector.StopTrackingMatchingArchetypes((uiw)system.system.get());
+
+                auto diff = &system - &directSystems.front();
+                directSystems.erase(directSystems.begin() + diff);
+                return;
+            }
+        }
+        for (auto &system : indirectSystems)
+        {
+            if (system.system->Type() == systemType)
+            {
+                _archetypeReflector.StopTrackingMatchingArchetypes((uiw)system.system.get());
+
+                auto diff = &system - &indirectSystems.front();
+                indirectSystems.erase(indirectSystems.begin() + diff);
                 return;
             }
         }
@@ -136,7 +183,7 @@ void SystemsManager::Unregister(StableTypeId systemType)
     SOFTBREAK; // system not found
 }
 
-static ArchetypeFull ComputeArchetype(const vector<ui32> &assignedIDs, const Array<EntitiesStream::ComponentDesc> components)
+static ArchetypeFull ComputeArchetype(const vector<ui32> &assignedIDs, Array<const EntitiesStream::ComponentDesc> components)
 {
     ArchetypeFull archetype;
     for (uiw index = 0; index < components.size(); ++index)
@@ -146,7 +193,7 @@ static ArchetypeFull ComputeArchetype(const vector<ui32> &assignedIDs, const Arr
     return archetype;
 }
 
-void SystemsManager::AssignComponentIDs(vector<ui32> &assignedIDs, const Array<EntitiesStream::ComponentDesc> components)
+void SystemsManager::AssignComponentIDs(vector<ui32> &assignedIDs, Array<const EntitiesStream::ComponentDesc> components)
 {
     assignedIDs.resize(components.size());
     for (uiw index = 0; index < components.size(); ++index)
@@ -162,54 +209,52 @@ void SystemsManager::AssignComponentIDs(vector<ui32> &assignedIDs, const Array<E
     }
 }
 
-void SystemsManager::Start(vector<std::thread> &&threads, Array<EntitiesStream> streams)
+void SystemsManager::Start(vector<WorkerThread> &&workers, Array<shared_ptr<EntitiesStream>> streams)
 {
     ASSUME(_entitiesLocations.empty());
 
-    _workerThreads = {threads.size()};
-    for (uiw index = 0, size = threads.size(); index < size; ++index)
+    if (workers.empty())
     {
-        _workerThreads[index]._thread = move(threads[index]);
+        SOFTBREAK;
+        workers.push_back({});
     }
 
-    MessageBuilder messageBulder;
-    vector<ui32> assignedIDs;
-
-    for (auto &stream : streams)
+    _workerThreads = {workers.size()};
+    for (uiw index = 0, size = workers.size(); index < size; ++index)
     {
-        while (auto entity = stream.Next())
+        Funcs::Reinitialize(_workerThreads[index], move(workers[index]));
+        _workerThreads[index].SetOnWorkDoneNotifier(_workerFinishedWorkNotifier);
+        if (!_workerThreads[index].IsRunning())
         {
-            AssignComponentIDs(assignedIDs, entity->components);
-            ArchetypeFull entityArchetype = ComputeArchetype(assignedIDs, entity->components);
-            ArchetypeGroup &archetypeGroup = FindArchetypeGroup(entityArchetype, assignedIDs, entity->components);
-            AddEntityToArchetypeGroup(entityArchetype, archetypeGroup, *entity, assignedIDs, messageBulder);
+            _workerThreads[index].Start();
         }
     }
 
-	auto &entityAddedStream = messageBulder.EntityAddedStream();
-	for (auto &[archetype, messages] : entityAddedStream._data)
-	{
-		MessageStreamEntityAdded stream = {messages};
-		for (auto &pipeline : _pipelines)
-		{
-			for (auto &system : pipeline.systems)
-			{
-				IndirectSystem *indirect = system.system->AsIndirectSystem();
-				if (indirect && IsSystemAcceptArchetype(archetype, indirect->RequestedComponents()))
-				{
-					indirect->ProcessMessages(archetype, stream);
-				}
-			}
-		}
-	}
+    _isStoppingExecution = false;
+
+    _schedulerThread = std::thread([this, streams] { StartScheduler(streams); });
 }
 
-void SystemsManager::StreamIn(Array<EntitiesStream> streams)
+void SystemsManager::Stop(bool isWaitForStop)
+{
+    _isStoppingExecution = true;
+    if (isWaitForStop)
+    {
+        _schedulerThread.join();
+    }
+}
+
+bool SystemsManager::IsRunning()
+{
+    return _schedulerThread.joinable();
+}
+
+void SystemsManager::StreamIn(Array<shared_ptr<EntitiesStream>> streams)
 {
     NOIMPL;
 }
 
-auto SystemsManager::FindArchetypeGroup(ArchetypeFull archetype, const vector<ui32> &assignedIDs, const Array<EntitiesStream::ComponentDesc> components) -> ArchetypeGroup &
+auto SystemsManager::FindArchetypeGroup(ArchetypeFull archetype, const vector<ui32> &assignedIDs, Array<const EntitiesStream::ComponentDesc> components) -> ArchetypeGroup &
 {
     auto searchResult = _archetypeGroupsFull.find(archetype);
     if (searchResult != _archetypeGroupsFull.end())
@@ -329,7 +374,7 @@ void SystemsManager::AddEntityToArchetypeGroup(ArchetypeFull archetype, Archetyp
     ++group.entitiesCount;
 }
 
-bool SystemsManager::IsSystemAcceptArchetype(Archetype archetype, Array<const System::RequestedComponent> systemComponents) const
+bool SystemsManager::IsSystemAcceptsArchetype(Archetype archetype, Array<const System::RequestedComponent> systemComponents) const
 {
 	auto reflected = _archetypeReflector.Reflect(archetype);
 	for (auto &requested : systemComponents)
@@ -356,4 +401,91 @@ bool SystemsManager::IsSystemAcceptArchetype(Archetype archetype, Array<const Sy
 		}
 	}
 	return true;
+}
+
+void SystemsManager::StartScheduler(Array<shared_ptr<EntitiesStream>> streams)
+{
+    MessageBuilder messageBulder;
+    vector<ui32> assignedIDs;
+
+    for (auto &stream : streams)
+    {
+        while (auto entity = stream->Next())
+        {
+            AssignComponentIDs(assignedIDs, entity->components);
+            ArchetypeFull entityArchetype = ComputeArchetype(assignedIDs, entity->components);
+            ArchetypeGroup &archetypeGroup = FindArchetypeGroup(entityArchetype, assignedIDs, entity->components);
+            AddEntityToArchetypeGroup(entityArchetype, archetypeGroup, *entity, assignedIDs, messageBulder);
+        }
+    }
+
+    auto &entityAddedStreams = messageBulder.EntityAddedStreams();
+    for (auto &[archetype, messages] : entityAddedStreams._data)
+    {
+        MessageStreamEntityAdded stream = {archetype, messages};
+        for (auto &pipeline : _pipelines)
+        {
+            for (auto &managed : pipeline.indirectSystems)
+            {
+                if (IsSystemAcceptsArchetype(archetype, managed.system->RequestedComponents()))
+                {
+                    managed.messageQueue.entityAdded.push_back(stream);
+                }
+            }
+        }
+    }
+
+    uiw workerIndex = 0;
+    for (auto &pipeline : _pipelines)
+    {
+        for (auto &managed : pipeline.indirectSystems)
+        {
+            if (managed.messageQueue.entityAdded.size())
+            {
+                _workerThreads[workerIndex++].AddWork(std::bind(TaskProcessMessages, std::ref(*managed.system), std::ref(managed.messageQueue)));
+                if (workerIndex == _workerThreads.size())
+                {
+                    workerIndex = 0;
+                }
+            }
+        }
+    }
+
+    // wait for completion of processing initial entities
+    for (auto &worker : _workerThreads)
+    {
+        std::unique_lock lock{_workerFinishedWorkNotifier->first};
+        _workerFinishedWorkNotifier->second.wait(lock, [&worker] { return worker.WorkInProgressCount() == 0; });
+    }
+
+    while (!_isStoppingExecution)
+    {
+        SchedulerLoop();
+    }
+
+    for (auto &worker : _workerThreads)
+    {
+        worker.Stop();
+    }
+
+    for (auto &worker : _workerThreads)
+    {
+        worker.Join();
+    }
+}
+
+void SystemsManager::SchedulerLoop()
+{
+}
+
+void SystemsManager::TaskProcessMessages(IndirectSystem &system, ManagedIndirectSystem::MessageQueue &messageQueue)
+{
+    for (const auto &stream : messageQueue.entityAdded)
+    {
+        system.ProcessMessages(stream);
+    }
+    for (const auto &stream : messageQueue.entityRemoved)
+    {
+        system.ProcessMessages(stream);
+    }
 }

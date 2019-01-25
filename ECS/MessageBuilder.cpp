@@ -3,36 +3,6 @@
 
 using namespace ECSTest;
 
-void MessageStreamEntityRemoved::Rewind()
-{
-	_current = 0;
-}
-
-optional<EntityID> MessageStreamEntityRemoved::Next()
-{
-	if (_current < _source.size())
-	{
-		return _source[_current++];
-	}
-	return {};
-}
-
-void MessageStreamEntityAdded::Rewind()
-{
-	_current = 0;
-}
-
-auto ECSTest::MessageStreamEntityAdded::Next() -> optional<EntityAndComponents>
-{
-	if (_current < _source.size())
-	{
-		uiw index = _current++;
-		EntityAndComponents eac = {_source[index].entityID, ToArray(_source[index].components)};
-		return eac;
-	}
-	return {};
-}
-
 void MessageBuilder::ComponentArrayBuilder::Clear()
 {
 	_archetype = {};
@@ -93,33 +63,43 @@ void MessageBuilder::Flush()
 	entry.entityID = _currentEntityId;
 	entry.components = move(_cab._components);
 	entry.componentsData = move(_cab._data);
-	_entityAddedStream._data[_cab._archetype].push_back(move(entry));
+    auto &target = _entityAddedStream._data[_cab._archetype];
+    if (!target)
+    {
+        target = make_shared<vector<MessageStreamEntityAdded::EntityWithComponents>>();
+    }
+	target->push_back(move(entry));
 
 	_currentEntityId = {};
 }
 
-MessageStreamsBuilderEntityRemoved &MessageBuilder::EntityRemovedStream()
+MessageStreamsBuilderEntityAdded &MessageBuilder::EntityAddedStreams()
+{
+    Flush();
+    return _entityAddedStream;
+}
+
+MessageStreamsBuilderEntityRemoved &MessageBuilder::EntityRemovedStreams()
 {
 	return _entityRemovedStream;
 }
 
-MessageStreamsBuilderEntityAdded &MessageBuilder::EntityAddedStream()
+auto ECSTest::MessageBuilder::EntityAdded(EntityID entityID) -> ComponentArrayBuilder &
 {
-	Flush();
-	return _entityAddedStream;
+    ASSUME(entityID.IsValid());
+    Flush();
+    _currentEntityId = entityID;
+    _cab.Clear();
+    return _cab;
 }
 
 void MessageBuilder::EntityRemoved(Archetype archetype, EntityID entityID)
 {
 	ASSUME(entityID.IsValid());
-	_entityRemovedStream._data[archetype].push_back(entityID);
-}
-
-auto ECSTest::MessageBuilder::EntityAdded(EntityID entityID) -> ComponentArrayBuilder &
-{
-	ASSUME(entityID.IsValid());
-	Flush();
-	_currentEntityId = entityID;
-	_cab.Clear();
-	return _cab;
+    auto &target = _entityRemovedStream._data[archetype];
+    if (!target)
+    {
+        target = make_shared<vector<EntityID>>();
+    }
+    target->push_back(entityID);
 }
