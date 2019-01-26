@@ -100,16 +100,20 @@ namespace ECSTest
         //	StableTypeId _type;
         //};
 
-		struct ManagedDirectSystem
+		struct ManagedSystem
 		{
-            unique_ptr<DirectSystem> system{};
-            ui32 executedAt{};
+			ui32 executedAt{};
+			vector<std::reference_wrapper<ArchetypeGroup>> groupsToExecute{};
 		};
 
-        struct ManagedIndirectSystem
+		struct ManagedDirectSystem : ManagedSystem
+		{
+            unique_ptr<DirectSystem> system{};
+		};
+
+        struct ManagedIndirectSystem : ManagedSystem
         {
             unique_ptr<IndirectSystem> system{};
-            ui32 executedAt{};
             // contains messages that the system needs to process before it starts its update
             struct MessageQueue
             {
@@ -140,7 +144,7 @@ namespace ECSTest
         // similar archetypes, like containing entities with multiple components of the same type,
         // will be considered as same archetype, so if you don't care about the components count,
         // but only about their presence, use this
-        std::unordered_multimap<Archetype, ArchetypeGroup *> _archetypeGroups{};
+        std::unordered_multimap<Archetype, std::reference_wrapper<ArchetypeGroup>> _archetypeGroups{};
         // used to match component types and archetype groups
         std::unordered_multimap<StableTypeId, ComponentLocation> _archetypeGroupsComponents{};
         // this lock is shared between all archetype groups arrays

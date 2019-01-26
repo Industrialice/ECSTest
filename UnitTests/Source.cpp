@@ -157,14 +157,14 @@ static void ReflectorTests()
     reflector.StartTrackingMatchingArchetypes(1, ToArray(ToRequired(req1)));
     reflector.StartTrackingMatchingArchetypes(2, ToArray(ToRequired(req2)));
 
-    auto match = reflector.FindMathcingArchetypes(0);
+    auto match = reflector.FindMatchingArchetypes(0);
     ASSUME(match.size() == 1);
     ASSUME(match[0] == arch0);
 
-    match = reflector.FindMathcingArchetypes(1);
+    match = reflector.FindMatchingArchetypes(1);
     ASSUME(match.size() == 0);
 
-    match = reflector.FindMathcingArchetypes(2);
+    match = reflector.FindMatchingArchetypes(2);
     ASSUME(match.size() == 0);
 
     reflector.AddToLibrary(arch2, ToTypes(ent2));
@@ -172,14 +172,14 @@ static void ReflectorTests()
     reflector.AddToLibrary(arch4, ToTypes(ent4));
     reflector.AddToLibrary(arch5, ToTypes(ent5));
 
-    match = reflector.FindMathcingArchetypes(0);
+    match = reflector.FindMatchingArchetypes(0);
     ASSUME(match.size() == 1);
     ASSUME(match[0] == arch0);
 
-    match = reflector.FindMathcingArchetypes(1);
+    match = reflector.FindMatchingArchetypes(1);
     ASSUME(match.size() == 0);
 
-    match = reflector.FindMathcingArchetypes(2);
+    match = reflector.FindMatchingArchetypes(2);
     ASSUME(match.size() == 2);
     ASSUME(match[0] != match[1]);
     ASSUME(match[0] == arch3 || match[0] == arch4);

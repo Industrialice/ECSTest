@@ -124,7 +124,7 @@ void ArchetypeReflector::StopTrackingMatchingArchetypes(uiw id)
     _lock.Unlock(DIWRSpinLock::LockType::Exclusive);
 }
 
-const vector<Archetype> &ArchetypeReflector::FindMathcingArchetypes(uiw id) const
+const vector<Archetype> &ArchetypeReflector::FindMatchingArchetypes(uiw id) const
 {
     _lock.Lock(DIWRSpinLock::LockType::Read);
 

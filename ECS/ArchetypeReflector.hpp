@@ -41,6 +41,6 @@ namespace ECSTest
 		Array<const StableTypeId> Reflect(Archetype archetype) const;
         void StartTrackingMatchingArchetypes(uiw id, Array<const pair<StableTypeId, RequirementForComponent>> types);
         void StopTrackingMatchingArchetypes(uiw id);
-        const vector<Archetype> &FindMathcingArchetypes(uiw id) const;
+        const vector<Archetype> &FindMatchingArchetypes(uiw id) const; // the reference is valid as long as you continue tracking that id
 	};
 }

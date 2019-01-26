@@ -138,11 +138,15 @@ void SystemsManager::Register(unique_ptr<System> system, PipelineGroup pipelineG
 
     if (isDirectSystem)
     {
-        _pipelines[pipelineGroup.index].directSystems.push_back({unique_ptr<DirectSystem>(system.release()->AsDirectSystem()), 0});
+		ManagedDirectSystem direct;
+		direct.system.reset(system.release()->AsDirectSystem());
+        _pipelines[pipelineGroup.index].directSystems.push_back(move(direct));
     }
     else
     {
-        _pipelines[pipelineGroup.index].indirectSystems.push_back({unique_ptr<IndirectSystem>(system.release()->AsIndirectSystem()), 0});
+		ManagedIndirectSystem indirect;
+		indirect.system.reset(system.release()->AsIndirectSystem());
+        _pipelines[pipelineGroup.index].indirectSystems.push_back(move(indirect));
     }
 }
 
@@ -242,6 +246,13 @@ void SystemsManager::Stop(bool isWaitForStop)
     {
         _schedulerThread.join();
     }
+	Funcs::Reinitialize(_entitiesLocations);
+	Funcs::Reinitialize(_archetypeGroups);
+	Funcs::Reinitialize(_archetypeGroupsComponents);
+	Funcs::Reinitialize(_archetypeGroupsFull);
+	Funcs::Reinitialize(_archetypeReflector);
+	_lastComponentID = 0;
+	Funcs::Reinitialize(_workerThreads);
 }
 
 bool SystemsManager::IsRunning()
@@ -268,7 +279,7 @@ auto SystemsManager::FindArchetypeGroup(ArchetypeFull archetype, const vector<ui
     ASSUME(insertedResult);
     ArchetypeGroup &group = insertedWhere->second;
 
-    _archetypeGroups.emplace(archetype.ToShort(), &group);
+    _archetypeGroups.emplace(archetype.ToShort(), std::ref(group));
 
     vector<StableTypeId> uniqueTypes;
     for (const auto &component : components)
@@ -451,7 +462,7 @@ void SystemsManager::StartScheduler(Array<shared_ptr<EntitiesStream>> streams)
         }
     }
 
-    // wait for completion of processing initial entities
+    // wait for completion of initial entities processing
     for (auto &worker : _workerThreads)
     {
         std::unique_lock lock{_workerFinishedWorkNotifier->first};
