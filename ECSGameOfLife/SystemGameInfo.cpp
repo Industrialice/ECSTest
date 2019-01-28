@@ -15,6 +15,6 @@ void SystemGameInfo::ProcessMessages(const MessageStreamEntityRemoved &stream)
 {
 }
 
-void SystemGameInfo::Update(MessageBuilder &messageBuilder)
+void SystemGameInfo::Update(const Environment &env, MessageBuilder &messageBuilder)
 {
 }

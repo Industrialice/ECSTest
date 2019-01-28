@@ -30,6 +30,7 @@ namespace StdLib
         DIWRSpinLock &operator = (DIWRSpinLock &&) = default;
 
         void Lock(LockType type);
+        bool TryLock(LockType type);
         void Unlock(LockType type);
         void InclusiveToExclusive();
     };

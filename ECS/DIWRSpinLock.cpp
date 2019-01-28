@@ -25,7 +25,7 @@ void DIWRSpinLock::Lock(LockType type)
         for (auto oldLock = _users.load();;)
         {
             oldLock &= PendingExclusiveMask;
-            atomicType newLock = ExclusiveMask | oldLock;
+            auto newLock = ExclusiveMask | oldLock;
             if (_users.compare_exchange_weak(oldLock, newLock))
             {
                 break;
@@ -44,6 +44,45 @@ void DIWRSpinLock::Lock(LockType type)
         }
         break;
     }
+}
+
+bool DIWRSpinLock::TryLock(LockType type)
+{
+    atomicType oldLock, newLock;
+
+    switch (type)
+    {
+    case DIWRSpinLock::LockType::Read: // exclusive and pending exclusive must be 0, inclusive and read don't matter
+        oldLock = _users.load();
+        oldLock &= ReadersMask | InclusiveMask;
+        newLock = oldLock + 1;
+        if (_users.compare_exchange_strong(oldLock, newLock))
+        {
+            return true;
+        }
+        break;
+    case DIWRSpinLock::LockType::Exclusive: // inclusive, exclusive and read must be 0, pending exclusive doesn't matter
+        _users.fetch_add(ReadersMask + 1);
+        oldLock = _users.load();
+        oldLock &= PendingExclusiveMask;
+        newLock = ExclusiveMask | oldLock;
+        if (_users.compare_exchange_strong(oldLock, newLock))
+        {
+            return true;
+        }
+        break;
+    case DIWRSpinLock::LockType::Inclusive: // inclusive, exclusive and pending exclusive must be 0, read doesn't matter
+        oldLock = _users.load();
+        oldLock &= ReadersMask;
+        newLock = oldLock | InclusiveMask;
+        if (_users.compare_exchange_strong(oldLock, newLock))
+        {
+            return true;
+        }
+        break;
+    }
+
+    return false;
 }
 
 void DIWRSpinLock::Unlock(LockType type)

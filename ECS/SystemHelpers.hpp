@@ -66,23 +66,23 @@ namespace ECSTest
 			}
         }
 
-		template <typename T> static FORCEINLINE void Call(T *object, void **array, std::integral_constant<uiw, 1>)
+		template <typename T> static FORCEINLINE void Call(T *object, const System::Environment &env, void **array, std::integral_constant<uiw, 1>)
 		{
 			using t0 = std::tuple_element_t<0, types>;
 			decltype(auto) a0 = Convert<t0>(array[0]);
-			(object->*Method)(a0);
+			(object->*Method)(env, a0);
 		}
 
-		template <typename T> static FORCEINLINE void Call(T *object, void **array, std::integral_constant<uiw, 2>)
+		template <typename T> static FORCEINLINE void Call(T *object, const System::Environment &env, void **array, std::integral_constant<uiw, 2>)
 		{
 			using t0 = std::tuple_element_t<0, types>;
 			using t1 = std::tuple_element_t<1, types>;
 			decltype(auto) a0 = Convert<t0>(array[0]);
 			decltype(auto) a1 = Convert<t1>(array[1]);
-			(object->*Method)(a0, a1);
+			(object->*Method)(env, a0, a1);
 		}
 
-		template <typename T> static FORCEINLINE void Call(T *object, void **array, std::integral_constant<uiw, 3>)
+		template <typename T> static FORCEINLINE void Call(T *object, const System::Environment &env, void **array, std::integral_constant<uiw, 3>)
 		{
 			using t0 = std::tuple_element_t<0, types>;
 			using t1 = std::tuple_element_t<1, types>;
@@ -90,10 +90,10 @@ namespace ECSTest
 			decltype(auto) a0 = Convert<t0>(array[0]);
 			decltype(auto) a1 = Convert<t1>(array[1]);
 			decltype(auto) a2 = Convert<t2>(array[2]);
-			(object->*Method)(a0, a1, a2);
+			(object->*Method)(env, a0, a1, a2);
 		}
 
-		template <typename T> static FORCEINLINE void Call(T *object, void **array, std::integral_constant<uiw, 4>)
+		template <typename T> static FORCEINLINE void Call(T *object, const System::Environment &env, void **array, std::integral_constant<uiw, 4>)
 		{
 			using t0 = std::tuple_element_t<0, types>;
 			using t1 = std::tuple_element_t<1, types>;
@@ -103,10 +103,10 @@ namespace ECSTest
 			decltype(auto) a1 = Convert<t1>(array[1]);
 			decltype(auto) a2 = Convert<t2>(array[2]);
 			decltype(auto) a3 = Convert<t3>(array[3]);
-			(object->*Method)(a0, a1, a2, a3);
+			(object->*Method)(env, a0, a1, a2, a3);
 		}
 
-		template <typename T> static FORCEINLINE void Call(T *object, void **array, std::integral_constant<uiw, 5>)
+		template <typename T> static FORCEINLINE void Call(T *object, const System::Environment &env, void **array, std::integral_constant<uiw, 5>)
 		{
 			using t0 = std::tuple_element_t<0, types>;
 			using t1 = std::tuple_element_t<1, types>;
@@ -118,10 +118,10 @@ namespace ECSTest
 			decltype(auto) a2 = Convert<t2>(array[2]);
 			decltype(auto) a3 = Convert<t3>(array[3]);
 			decltype(auto) a4 = Convert<t4>(array[4]);
-			(object->*Method)(a0, a1, a2, a3, a4);
+			(object->*Method)(env, a0, a1, a2, a3, a4);
 		}
 
-		template <typename T> static FORCEINLINE void Call(T *object, void **array, std::integral_constant<uiw, 6>)
+		template <typename T> static FORCEINLINE void Call(T *object, const System::Environment &env, void **array, std::integral_constant<uiw, 6>)
 		{
 			using t0 = std::tuple_element_t<0, types>;
 			using t1 = std::tuple_element_t<1, types>;
@@ -135,7 +135,7 @@ namespace ECSTest
 			decltype(auto) a3 = Convert<t3>(array[3]);
 			decltype(auto) a4 = Convert<t4>(array[4]);
 			decltype(auto) a5 = Convert<t5>(array[5]);
-			(object->*Method)(a0, a1, a2, a3, a4, a5);
+			(object->*Method)(env, a0, a1, a2, a3, a4, a5);
 		}
     };
 
@@ -260,14 +260,14 @@ namespace ECSTest
         return {arrSorted.data(), arrSorted.size()}; \
     } \
     \
-    virtual void Accept(void **array) override \
+    virtual void Accept(const Environment &env, void **array) override \
     { \
         using thisType = std::remove_reference_t<std::remove_cv_t<decltype(*this)>>; \
 		using types = typename FunctionInfo::Info<decltype(&thisType::Acceptor)>::args; \
 		static constexpr uiw count = std::tuple_size_v<types>; \
         _AcceptCaller<&thisType::Acceptor, types>::Call(this, array, std::integral_constant<uiw, count>()); \
     } \
-    void Acceptor(__VA_ARGS__)
+    void Acceptor(const Environment &env, __VA_ARGS__)
 
 #define INDIRECT_ACCEPT_COMPONENTS(...) \
     virtual Array<const RequestedComponent> RequestedComponents() const override \
@@ -282,4 +282,4 @@ namespace ECSTest
     \
 	virtual void ProcessMessages(const MessageStreamEntityAdded &stream) override; \
 	virtual void ProcessMessages(const MessageStreamEntityRemoved &stream) override; \
-    virtual void Update(MessageBuilder &messageBuilder) override
+    virtual void Update(const Environment &env, MessageBuilder &messageBuilder) override

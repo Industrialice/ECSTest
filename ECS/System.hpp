@@ -8,6 +8,13 @@ namespace ECSTest
     class System
     {
     public:
+        struct Environment
+        {
+            f32 timeSinceLastFrame;
+            ui32 frameNumber;
+            f64 timeSinceStarted;
+        };
+
         struct RequestedComponent
         {
             StableTypeId type{};
@@ -29,14 +36,14 @@ namespace ECSTest
 		[[nodiscard]] virtual const IndirectSystem *AsIndirectSystem() const override final;
         virtual void ProcessMessages(const MessageStreamEntityAdded &stream) = 0;
 		virtual void ProcessMessages(const MessageStreamEntityRemoved &stream) = 0;
-        virtual void Update(MessageBuilder &messageBuilder) = 0;
+        virtual void Update(const Environment &env, MessageBuilder &messageBuilder) = 0;
 	};
 
 	struct DirectSystem : public System
 	{
 		[[nodiscard]] virtual DirectSystem *AsDirectSystem() override final;
 		[[nodiscard]] virtual const DirectSystem *AsDirectSystem() const override final;
-		virtual void Accept(void **array) = 0;
+		virtual void Accept(const Environment &env, void **array) = 0;
 	};
 
     template <typename BaseSystem, typename Type> struct _SystemTypeIdentefiable : public BaseSystem, public Type

@@ -102,8 +102,13 @@ namespace ECSTest
 
 		struct ManagedSystem
 		{
-			ui32 executedAt{};
-			vector<std::reference_wrapper<ArchetypeGroup>> groupsToExecute{};
+            // every time the schedule sends a system to be executed by a worker, it increments this value
+            // after the system is done executing, the workers decrements it, and the schedule must wait for
+            // this value to become 0 before it can start a new frame
+            unique_ptr<std::atomic<ui32>> systemsAtExecution = make_unique<std::atomic<ui32>>(0);
+			ui32 executedAt{}; // last executed frame, gets set to Pipeline::executionFrame at first execution attempt on a new frame
+            ui32 lastGroupLockAttempt{}; // attempts to lock the group for execution, gets incremented in case of failure
+			vector<std::reference_wrapper<ArchetypeGroup>> groupsToExecute{}; // group still left to be executed for the current frame
 		};
 
 		struct ManagedDirectSystem : ManagedSystem
