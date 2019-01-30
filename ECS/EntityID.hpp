@@ -27,7 +27,7 @@ namespace std
 {
 	template <> struct hash<ECSTest::EntityID>
 	{
-		size_t operator()(const ECSTest::EntityID &value) const
+        [[nodiscard]] size_t operator()(const ECSTest::EntityID &value) const
 		{
 			return value.Hash();
 		}

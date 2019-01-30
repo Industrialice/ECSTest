@@ -82,11 +82,11 @@ namespace ECSTest
             ui32 index{};
         };
 
-        struct ComponentLocation
-        {
-            ArchetypeGroup *group{};
-            ui32 index{};
-        };
+        //struct ComponentLocation
+        //{
+        //    ArchetypeGroup *group{};
+        //    ui32 index{};
+        //};
 
         //struct OnSystemExecutedData
         //{
@@ -102,13 +102,9 @@ namespace ECSTest
 
 		struct ManagedSystem
 		{
-            // every time the schedule sends a system to be executed by a worker, it increments this value
-            // after the system is done executing, the workers decrements it, and the schedule must wait for
-            // this value to become 0 before it can start a new frame
-            unique_ptr<std::atomic<ui32>> systemsAtExecution = make_unique<std::atomic<ui32>>(0);
 			ui32 executedAt{}; // last executed frame, gets set to Pipeline::executionFrame at first execution attempt on a new frame
-            ui32 lastGroupLockAttempt{}; // attempts to lock the group for execution, gets incremented in case of failure
 			vector<std::reference_wrapper<ArchetypeGroup>> groupsToExecute{}; // group still left to be executed for the current frame
+            vector<DIWRSpinLock::Unlocker> locks{}; // all currently held locks by the system
 		};
 
 		struct ManagedDirectSystem : ManagedSystem
@@ -129,6 +125,10 @@ namespace ECSTest
 
         struct Pipeline
         {
+            // every time the schedule sends a system to be executed by a worker, it increments this value
+            // after the system is done executing, the worker decrements it, and the scheduler must wait for
+            // this value to become 0 before it can start a new frame
+            unique_ptr<std::atomic<ui32>> systemsAtExecution = make_unique<std::atomic<ui32>>(0);
 			ui32 executionFrame = 0;
 			vector<ManagedDirectSystem> directSystems{};
             vector<ManagedIndirectSystem> indirectSystems{};
@@ -149,9 +149,9 @@ namespace ECSTest
         // similar archetypes, like containing entities with multiple components of the same type,
         // will be considered as same archetype, so if you don't care about the components count,
         // but only about their presence, use this
-        std::unordered_multimap<Archetype, std::reference_wrapper<ArchetypeGroup>> _archetypeGroups{};
+        std::unordered_map<Archetype, vector<std::reference_wrapper<ArchetypeGroup>>> _archetypeGroups{};
         // used to match component types and archetype groups
-        std::unordered_multimap<StableTypeId, ComponentLocation> _archetypeGroupsComponents{};
+        //std::unordered_multimap<StableTypeId, ComponentLocation> _archetypeGroupsComponents{};
         // this lock is shared between all archetype groups arrays
         DIWRSpinLock _archetypeGroupsLock{};
 
@@ -173,12 +173,16 @@ namespace ECSTest
 
     private:
         void AssignComponentIDs(vector<ui32> &assignedIDs, Array<const EntitiesStream::ComponentDesc> components);
-        ArchetypeGroup &FindArchetypeGroup(ArchetypeFull archetype, const vector<ui32> &assignedIDs, Array<const EntitiesStream::ComponentDesc> components);
+        [[nodiscard]] ArchetypeGroup &FindArchetypeGroup(ArchetypeFull archetype, const vector<ui32> &assignedIDs, Array<const EntitiesStream::ComponentDesc> components);
         void AddEntityToArchetypeGroup(ArchetypeFull archetype, ArchetypeGroup &group, const EntitiesStream::StreamedEntity &entity, const vector<ui32> &assignedIDs, MessageBuilder &messageBuilder);
-		bool IsSystemAcceptsArchetype(Archetype archetype, Array<const System::RequestedComponent> systemComponents) const;
+        [[nodiscard]] bool IsSystemAcceptsArchetype(Archetype archetype, Array<const System::RequestedComponent> systemComponents) const;
         void StartScheduler(Array<shared_ptr<EntitiesStream>> streams);
         void SchedulerLoop();
+        void ExecutePipeline(Pipeline &pipeline);
+        void CalculateGroupsToExectute(const System *system, vector<std::reference_wrapper<ArchetypeGroup>> &groups);
+        WorkerThread &FindBestWorker();
 
         static void TaskProcessMessages(IndirectSystem &system, ManagedIndirectSystem::MessageQueue &messageQueue);
+        static void TaskExecuteIndirectSystem(IndirectSystem &system, ManagedIndirectSystem::MessageQueue messageQueue, System::Environment env, std::atomic<ui32> &decrementAtCompletion, Array<DIWRSpinLock::Unlocker> locks);
 	};
 }

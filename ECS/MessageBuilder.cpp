@@ -52,6 +52,18 @@ auto MessageBuilder::ComponentArrayBuilder::AddComponent(const SerializedCompone
 	return *this;
 }
 
+bool MessageBuilder::IsEmpty() const
+{
+    return _cab._components.empty() && _entityAddedStream._data.empty() && _entityRemovedStream._data.empty();
+}
+
+void MessageBuilder::Clear()
+{
+    _cab.Clear();
+    _entityAddedStream._data.clear();
+    _entityRemovedStream._data.clear();
+}
+
 void MessageBuilder::Flush()
 {
 	if (!_currentEntityId.IsValid())

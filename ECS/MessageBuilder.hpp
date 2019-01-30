@@ -37,20 +37,22 @@ namespace ECSTest
         Archetype _archetype{};
 
         MessageStreamEntityAdded(Archetype archetype, const shared_ptr<const vector<EntityWithComponents>> &source) : _archetype(archetype), _source(source)
-        {}
+        {
+            ASSUME(source->size());
+        }
 
     public:
-        const EntityWithComponents *begin() const
+        [[nodiscard]] const EntityWithComponents *begin() const
         {
             return _source->data();
         }
 
-        const EntityWithComponents *end() const
+        [[nodiscard]] const EntityWithComponents *end() const
         {
             return _source->data() + _source->size();
         }
 
-        Archetype Archetype() const
+        [[nodiscard]] Archetype Archetype() const
         {
             return _archetype;
         }
@@ -64,20 +66,22 @@ namespace ECSTest
         Archetype _archetype{};
 
 		MessageStreamEntityRemoved(Archetype archetype, const shared_ptr<const vector<EntityID>> &source) : _archetype(archetype), _source(source)
-		{}
+		{
+            ASSUME(source->size());
+        }
 
 	public:
-        const EntityID *begin() const
+        [[nodiscard]] const EntityID *begin() const
         {
             return _source->data();
         }
 
-        const EntityID *end() const
+        [[nodiscard]] const EntityID *end() const
         {
             return _source->data() + _source->size();
         }
 
-        Archetype Archetype() const
+        [[nodiscard]] Archetype Archetype() const
         {
             return _archetype;
         }
@@ -103,9 +107,11 @@ namespace ECSTest
     {
 		friend class SystemsManager;
 
+        bool IsEmpty() const;
+        void Clear();
 		void Flush();
-        MessageStreamsBuilderEntityAdded &EntityAddedStreams();
-		MessageStreamsBuilderEntityRemoved &EntityRemovedStreams();
+        [[nodiscard]] MessageStreamsBuilderEntityAdded &EntityAddedStreams();
+        [[nodiscard]] MessageStreamsBuilderEntityRemoved &EntityRemovedStreams();
 
     public:
         class ComponentArrayBuilder
@@ -135,7 +141,7 @@ namespace ECSTest
             }
         };
 
-        ComponentArrayBuilder &EntityAdded(EntityID entityID); // archetype will be computed after all the components were added
+        ComponentArrayBuilder &EntityAdded(EntityID entityID); // archetype will be computed after all the components were added, you can ignore the returned value if you don't want to add any components
         void EntityRemoved(Archetype archetype, EntityID entityID);
     
 	private:

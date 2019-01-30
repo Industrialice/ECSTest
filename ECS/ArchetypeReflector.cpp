@@ -7,15 +7,15 @@ static bool Satisfies(Array<const StableTypeId> value, Array<const pair<StableTy
 
 bool ArchetypeReflector::Contains(Archetype archetype) const
 {
-	_lock.Lock(DIWRSpinLock::LockType::Read);
+	auto unlocker = _lock.Lock(DIWRSpinLock::LockType::Read);
 	bool contains = _library.find(archetype) != _library.end();
-	_lock.Unlock(DIWRSpinLock::LockType::Read);
+    unlocker.Unlock();
 	return contains;
 }
 
 void ArchetypeReflector::AddToLibrary(Archetype archetype, vector<StableTypeId> &&types)
 {
-	_lock.Lock(DIWRSpinLock::LockType::Exclusive);
+	auto unlocker = _lock.Lock(DIWRSpinLock::LockType::Exclusive);
 
     // try to add to the archetype library, there's a chance such archetype is already registered
     auto [it, result] = _library.insert({archetype, move(types)});
@@ -32,22 +32,22 @@ void ArchetypeReflector::AddToLibrary(Archetype archetype, vector<StableTypeId> 
         }
     }
 	
-    _lock.Unlock(DIWRSpinLock::LockType::Exclusive);
+    unlocker.Unlock();
 }
 
 Array<const StableTypeId> ArchetypeReflector::Reflect(Archetype archetype) const
 {
-	_lock.Lock(DIWRSpinLock::LockType::Read);
+	auto unlocker = _lock.Lock(DIWRSpinLock::LockType::Read);
 	auto it = _library.find(archetype);
 	ASSUME(it != _library.end());
 	auto types = ToArray(it->second);
-	_lock.Unlock(DIWRSpinLock::LockType::Read);
+    unlocker.Unlock();
 	return types;
 }
 
 void ArchetypeReflector::StartTrackingMatchingArchetypes(uiw id, Array<const pair<StableTypeId, RequirementForComponent>> types)
 {
-    _lock.Lock(DIWRSpinLock::LockType::Exclusive);
+    auto unlocker = _lock.Lock(DIWRSpinLock::LockType::Exclusive);
 
     // removing RequirementForComponent::Optional components, they don't affect the search
     auto filteredStorage = ALLOCA_TYPED(types.size(), decltype(types)::ItemType);
@@ -87,12 +87,12 @@ void ArchetypeReflector::StartTrackingMatchingArchetypes(uiw id, Array<const pai
     auto[insertKey, insertResult] = _matchingIDArchetypes.insert({id, ref});
     ASSUME(insertResult);
 
-    _lock.Unlock(DIWRSpinLock::LockType::Exclusive);
+    unlocker.Unlock();
 }
 
 void ArchetypeReflector::StopTrackingMatchingArchetypes(uiw id)
 {
-    _lock.Lock(DIWRSpinLock::LockType::Exclusive);
+    auto unlocker = _lock.Lock(DIWRSpinLock::LockType::Exclusive);
 
     auto it = _matchingIDArchetypes.find(id);
     ASSUME(it != _matchingIDArchetypes.end());
@@ -121,16 +121,16 @@ void ArchetypeReflector::StopTrackingMatchingArchetypes(uiw id)
         }
     }
 
-    _lock.Unlock(DIWRSpinLock::LockType::Exclusive);
+    unlocker.Unlock();
 }
 
 const vector<Archetype> &ArchetypeReflector::FindMatchingArchetypes(uiw id) const
 {
-    _lock.Lock(DIWRSpinLock::LockType::Read);
+    auto unlocker = _lock.Lock(DIWRSpinLock::LockType::Read);
 
     const auto &ref = *_matchingIDArchetypes.find(id)->second;
 
-    _lock.Unlock(DIWRSpinLock::LockType::Read);
+    unlocker.Unlock();
 
     return ref;
 }

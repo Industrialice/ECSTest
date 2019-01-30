@@ -83,7 +83,8 @@ auto SystemsManager::CreatePipelineGroup(optional<ui32> stepMicroSeconds, bool i
         }
     }
     group.index = (ui32)_pipelines.size();
-    _pipelines.push_back({{}, {}, {}, stepMicroSeconds});
+    _pipelines.emplace_back();
+    _pipelines.back().stepMicroSeconds = stepMicroSeconds;
     return group;
 }
 
@@ -100,8 +101,21 @@ void SystemsManager::Register(unique_ptr<System> system, PipelineGroup pipelineG
     ASSUME(pipelineGroup.index < _pipelines.size());
 
     bool isDirectSystem = system->AsDirectSystem() != nullptr;
+    auto requestedComponents = system->RequestedComponents();
 
-	for (auto &[executionFrame, directSystems, indirectSystems, step] : _pipelines)
+    if (isDirectSystem)
+    {
+        uiw requiredCount = requestedComponents.count_if([](const System::RequestedComponent &req) { return req.requirement == RequirementForComponent::Required; });
+        uiw optionalCount = requestedComponents.count_if([](const System::RequestedComponent &req) { return req.requirement == RequirementForComponent::Optional; });
+
+        if (requiredCount == 0 && optionalCount == 0)
+        {
+            SOFTBREAK; // the system will never be executed with such configuration
+            return;
+        }
+    }
+
+	for (auto &[systemsAtExecution, executionFrame, directSystems, indirectSystems, step] : _pipelines)
 	{
         if (isDirectSystem)
         {
@@ -127,7 +141,6 @@ void SystemsManager::Register(unique_ptr<System> system, PipelineGroup pipelineG
         }
 	}
 
-    auto requestedComponents = system->RequestedComponents();
     vector<pair<StableTypeId, RequirementForComponent>> types;
     types.reserve(requestedComponents.size());
     for (auto req : requestedComponents)
@@ -136,17 +149,21 @@ void SystemsManager::Register(unique_ptr<System> system, PipelineGroup pipelineG
     }
     _archetypeReflector.StartTrackingMatchingArchetypes((uiw)system.get(), ToArray(types));
 
+    auto &pipeline = _pipelines[pipelineGroup.index];
+
     if (isDirectSystem)
     {
 		ManagedDirectSystem direct;
+        direct.executedAt = pipeline.executionFrame - 1;
 		direct.system.reset(system.release()->AsDirectSystem());
-        _pipelines[pipelineGroup.index].directSystems.push_back(move(direct));
+        pipeline.directSystems.push_back(move(direct));
     }
     else
     {
 		ManagedIndirectSystem indirect;
+        indirect.executedAt = pipeline.executionFrame - 1;
 		indirect.system.reset(system.release()->AsIndirectSystem());
-        _pipelines[pipelineGroup.index].indirectSystems.push_back(move(indirect));
+        pipeline.indirectSystems.push_back(move(indirect));
     }
 }
 
@@ -158,7 +175,7 @@ void SystemsManager::Unregister(StableTypeId systemType)
         return;
     }
 
-    for (auto &[executionFrame, directSystems, indirectSystems, step] : _pipelines)
+    for (auto &[systemsAtExecution, executionFrame, directSystems, indirectSystems, step] : _pipelines)
     {
         for (auto &system : directSystems)
         {
@@ -248,7 +265,7 @@ void SystemsManager::Stop(bool isWaitForStop)
     }
 	Funcs::Reinitialize(_entitiesLocations);
 	Funcs::Reinitialize(_archetypeGroups);
-	Funcs::Reinitialize(_archetypeGroupsComponents);
+	//Funcs::Reinitialize(_archetypeGroupsComponents);
 	Funcs::Reinitialize(_archetypeGroupsFull);
 	Funcs::Reinitialize(_archetypeReflector);
 	_lastComponentID = 0;
@@ -279,7 +296,7 @@ auto SystemsManager::FindArchetypeGroup(ArchetypeFull archetype, const vector<ui
     ASSUME(insertedResult);
     ArchetypeGroup &group = insertedWhere->second;
 
-    _archetypeGroups.emplace(archetype.ToShort(), std::ref(group));
+    _archetypeGroups[archetype.ToShort()].emplace_back(std::ref(group));
 
     vector<StableTypeId> uniqueTypes;
     for (const auto &component : components)
@@ -324,8 +341,8 @@ auto SystemsManager::FindArchetypeGroup(ArchetypeFull archetype, const vector<ui
         }
 
         // and also register component type locations
-        ComponentLocation location = {&group, index};
-        _archetypeGroupsComponents.emplace(componentArray.type, location);
+        //ComponentLocation location = {&group, index};
+        //_archetypeGroupsComponents.emplace(componentArray.type, location);
     }
 
 	// also add that archetype to the library
@@ -487,6 +504,122 @@ void SystemsManager::StartScheduler(Array<shared_ptr<EntitiesStream>> streams)
 
 void SystemsManager::SchedulerLoop()
 {
+    for (auto &pipeline : _pipelines)
+    {
+        ExecutePipeline(pipeline);
+    }
+}
+
+void SystemsManager::ExecutePipeline(Pipeline &pipeline)
+{
+    if (*pipeline.systemsAtExecution) // previously submitted work is not completed yet
+    {
+        return;
+    }
+
+    bool isAddedWork = false;
+
+    for (auto &managed : pipeline.directSystems)
+    {
+    }
+
+    for (auto &managed : pipeline.indirectSystems)
+    {
+        if (managed.executedAt != pipeline.executionFrame)
+        {
+            managed.executedAt = pipeline.executionFrame;
+            CalculateGroupsToExectute(managed.system.get(), managed.groupsToExecute);
+        }
+
+        ASSUME(managed.locks.empty());
+
+        auto requested = managed.system->RequestedComponents();
+        bool hasRequestedTypes = requested.find_if([](const System::RequestedComponent &req) { return req.requirement == RequirementForComponent::Required; }) != requested.end();
+
+        for (ArchetypeGroup &group : managed.groupsToExecute)
+        {
+            managed.locks.emplace_back(group.lock.Lock(DIWRSpinLock::LockType::Read));
+
+            if (hasRequestedTypes)
+            {
+                for (System::RequestedComponent request : requested)
+                {
+                    uiw index = 0;
+                    for (; ; ++index)
+                    {
+                        ASSUME(index < group.uniqueTypedComponentsCount);
+                        if (group.components[index].type == request.type)
+                        {
+                            break;
+                        }
+                    }
+
+                    auto lockType = request.isWriteAccess ? DIWRSpinLock::LockType::Inclusive : DIWRSpinLock::LockType::Read;
+                    managed.locks.emplace_back(group.components[index].lock.Lock(lockType));
+                }
+            }
+            else
+            {
+                for (uiw index = 0; index < group.uniqueTypedComponentsCount; ++index)
+                {
+                    const auto &component = group.components[index];
+                    bool isWriteAccess = false;
+
+                    auto req = requested.find_if([&component](const System::RequestedComponent &req) { return req.type == component.type; });
+                    if (req != requested.end())
+                    {
+                        ASSUME(req->requirement == RequirementForComponent::Optional);
+                        isWriteAccess = req->isWriteAccess;
+                    }
+
+                    auto lockType = isWriteAccess ? DIWRSpinLock::LockType::Inclusive : DIWRSpinLock::LockType::Read;
+                    managed.locks.emplace_back(component.lock.Lock(lockType));
+                }
+            }
+        }
+
+        auto work = std::bind(TaskExecuteIndirectSystem, std::ref(*managed.system), move(managed.messageQueue), System::Environment{}, std::ref(*pipeline.systemsAtExecution), ToArray(managed.locks));
+        FindBestWorker().AddWork(work);
+        isAddedWork = true;
+
+        managed.messageQueue = {};
+    }
+
+    if (!isAddedWork)
+    {
+        std::this_thread::yield();
+    }
+}
+
+void SystemsManager::CalculateGroupsToExectute(const System *system, vector<std::reference_wrapper<ArchetypeGroup>> &groups)
+{
+    groups.clear();
+    
+    const auto &archetypes = _archetypeReflector.FindMatchingArchetypes((uiw)system);
+
+    auto lock = _archetypeGroupsLock.Lock(DIWRSpinLock::LockType::Read);
+
+    for (Archetype archetype : archetypes)
+    {
+        auto it = _archetypeGroups.find(archetype);
+        ASSUME(it != _archetypeGroups.end());
+        groups.insert(groups.end(), it->second.begin(), it->second.end());
+    }
+
+    lock.Unlock();
+}
+
+WorkerThread &SystemsManager::FindBestWorker()
+{
+    WorkerThread *bestWorker = _workerThreads.data();
+    for (auto &worker : _workerThreads)
+    {
+        if (worker.WorkInProgressCount() < bestWorker->WorkInProgressCount())
+        {
+            bestWorker = &worker;
+        }
+    }
+    return *bestWorker;
 }
 
 void SystemsManager::TaskProcessMessages(IndirectSystem &system, ManagedIndirectSystem::MessageQueue &messageQueue)
@@ -499,4 +632,22 @@ void SystemsManager::TaskProcessMessages(IndirectSystem &system, ManagedIndirect
     {
         system.ProcessMessages(stream);
     }
+}
+
+void SystemsManager::TaskExecuteIndirectSystem(IndirectSystem &system, ManagedIndirectSystem::MessageQueue messageQueue, System::Environment env, std::atomic<ui32> &decrementAtCompletion, Array<DIWRSpinLock::Unlocker> locks)
+{
+    TaskProcessMessages(system, messageQueue);
+
+    MessageBuilder messageBuilder;
+    system.Update(env, messageBuilder);
+
+    for (auto &lock : locks)
+    {
+        if (lock.LockType() == DIWRSpinLock::LockType::Inclusive)
+        {
+            lock.Transition(DIWRSpinLock::LockType::Exclusive);
+        }
+    }
+
+    --decrementAtCompletion;
 }

@@ -51,7 +51,7 @@ namespace std
 {
     template <> struct hash<ECSTest::Archetype>
     {
-        size_t operator()(const ECSTest::Archetype &value) const
+        [[nodiscard]] size_t operator()(const ECSTest::Archetype &value) const
         {
             if constexpr (sizeof(size_t) == 4)
             {
@@ -68,7 +68,7 @@ namespace std
 
     template <> struct hash<ECSTest::ArchetypeFull>
     {
-        size_t operator()(const ECSTest::ArchetypeFull &value) const
+        [[nodiscard]] size_t operator()(const ECSTest::ArchetypeFull &value) const
         {
             if constexpr (sizeof(size_t) == 4)
             {

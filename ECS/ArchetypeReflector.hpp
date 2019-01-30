@@ -30,17 +30,17 @@ namespace ECSTest
             }
         };
 
-		mutable DIWRSpinLock _lock{};
+		DIWRSpinLock _lock{};
 		std::unordered_map<Archetype, vector<StableTypeId>> _library{};
         std::unordered_map<uiw, vector<Archetype> *> _matchingIDArchetypes{};
         std::map<vector<pair<StableTypeId, RequirementForComponent>>, vector<Archetype>, MatchingRequirementComparator> _matchingRequirementArchetypes{};
 
 	public:
-		bool Contains(Archetype archetype) const;
+        [[nodiscard]] bool Contains(Archetype archetype) const;
 		void AddToLibrary(Archetype archetype, vector<StableTypeId> &&types);
-		Array<const StableTypeId> Reflect(Archetype archetype) const;
+        [[nodiscard]] Array<const StableTypeId> Reflect(Archetype archetype) const;
         void StartTrackingMatchingArchetypes(uiw id, Array<const pair<StableTypeId, RequirementForComponent>> types);
         void StopTrackingMatchingArchetypes(uiw id);
-        const vector<Archetype> &FindMatchingArchetypes(uiw id) const; // the reference is valid as long as you continue tracking that id
+        [[nodiscard]] const vector<Archetype> &FindMatchingArchetypes(uiw id) const; // the reference is valid as long as you continue tracking that id
 	};
 }

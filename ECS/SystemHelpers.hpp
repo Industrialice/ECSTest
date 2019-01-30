@@ -159,12 +159,9 @@ namespace ECSTest
 
 	template <typename T> struct _TupleToComponents<T, 0>
 	{
-		static constexpr std::array<System::RequestedComponent, 1> Convert()
+		static constexpr std::array<System::RequestedComponent, 0> Convert()
 		{
-			return
-			{
-				System::RequestedComponent{{}, false, RequirementForComponent::Optional} // kind of hacky
-			};
+			return {};
 		}
 	};
 

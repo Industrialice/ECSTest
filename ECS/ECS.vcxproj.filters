@@ -29,9 +29,6 @@
     <ClInclude Include="SystemsManager.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="DIWRSpinLock.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="EntitiesStream.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -59,9 +56,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="PreHeader.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="DIWRSpinLock.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="EntityID.cpp">
