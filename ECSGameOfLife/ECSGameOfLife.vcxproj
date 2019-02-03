@@ -135,6 +135,7 @@
     </ClCompile>
     <ClCompile Include="Source.cpp" />
     <ClCompile Include="SystemGameInfo.cpp" />
+    <ClCompile Include="SystemTest.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ComponentCompany.hpp" />
@@ -150,6 +151,7 @@
     <ClInclude Include="PreHeader.hpp" />
     <ClInclude Include="ComponentProgrammer.hpp" />
     <ClInclude Include="SystemGameInfo.hpp" />
+    <ClInclude Include="SystemTest.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

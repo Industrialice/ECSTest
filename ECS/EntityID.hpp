@@ -21,6 +21,19 @@ namespace ECSTest
 		[[nodiscard]] bool operator < (const EntityID &other) const;
 		[[nodiscard]] bool IsValid() const;
 	};
+
+    class EntityIDGenerator
+    {
+    protected:
+        std::atomic<ui32> _current = 0;
+
+    public:
+        EntityID Generate();
+        EntityID LastGenerated() const;
+        EntityIDGenerator() = default;
+        EntityIDGenerator(EntityIDGenerator &&source);
+        EntityIDGenerator &operator = (EntityIDGenerator &&source);
+    };
 }
 
 namespace std

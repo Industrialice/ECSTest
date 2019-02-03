@@ -33,10 +33,10 @@ namespace ECSTest
         };
 
     private:
-        shared_ptr<const vector<EntityWithComponents>> _source{};
+        shared_ptr<vector<EntityWithComponents>> _source{};
         Archetype _archetype{};
 
-        MessageStreamEntityAdded(Archetype archetype, const shared_ptr<const vector<EntityWithComponents>> &source) : _archetype(archetype), _source(source)
+        MessageStreamEntityAdded(Archetype archetype, const shared_ptr<vector<EntityWithComponents>> &source) : _archetype(archetype), _source(source)
         {
             ASSUME(source->size());
         }
@@ -55,6 +55,17 @@ namespace ECSTest
         [[nodiscard]] Archetype Archetype() const
         {
             return _archetype;
+        }
+
+    private:
+        [[nodiscard]] EntityWithComponents *begin()
+        {
+            return _source->data();
+        }
+
+        [[nodiscard]] EntityWithComponents *end()
+        {
+            return _source->data() + _source->size();
         }
     };
 
@@ -135,7 +146,7 @@ namespace ECSTest
                 sc.sizeOf = sizeof(T);
                 sc.isUnique = T::IsUnique();
                 sc.type = T::GetTypeId();
-                sc.data = &component;
+                sc.data = (ui8 *)&component;
                 sc.id = id;
                 return AddComponent(sc);
             }

@@ -29,6 +29,9 @@
     <ClCompile Include="SystemGameInfo.cpp">
       <Filter>System Sources</Filter>
     </ClCompile>
+    <ClCompile Include="SystemTest.cpp">
+      <Filter>System Sources</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PreHeader.hpp">
@@ -68,6 +71,9 @@
       <Filter>Component Headers</Filter>
     </ClInclude>
     <ClInclude Include="SystemGameInfo.hpp">
+      <Filter>System Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="SystemTest.hpp">
       <Filter>System Headers</Filter>
     </ClInclude>
   </ItemGroup>

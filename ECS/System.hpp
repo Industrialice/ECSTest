@@ -13,6 +13,7 @@ namespace ECSTest
             f32 timeSinceLastFrame;
             ui32 frameNumber;
             f64 timeSinceStarted;
+            EntityIDGenerator &idGenerator;
         };
 
         struct RequestedComponent
@@ -22,7 +23,16 @@ namespace ECSTest
 			RequirementForComponent requirement = RequirementForComponent::Required;
         };
 
-		[[nodiscard]] virtual Array<const RequestedComponent> RequestedComponents() const = 0;
+        struct Requests
+        {
+            Array<const RequestedComponent> required; // contains only required components
+            Array<const RequestedComponent> optional; // contains only optional components
+            Array<const RequestedComponent> subtractive; // contains only subtractive components
+            Array<const RequestedComponent> writeAccess; // contains only components with write access (write access is ignored for subtractive components)
+            Array<const RequestedComponent> all; // contains all reqested components
+        };
+
+		[[nodiscard]] virtual Requests RequestedComponents() const = 0;
 		[[nodiscard]] virtual StableTypeId Type() const = 0;
 		[[nodiscard]] virtual struct IndirectSystem *AsIndirectSystem();
 		[[nodiscard]] virtual const struct IndirectSystem *AsIndirectSystem() const;
@@ -36,14 +46,14 @@ namespace ECSTest
 		[[nodiscard]] virtual const IndirectSystem *AsIndirectSystem() const override final;
         virtual void ProcessMessages(const MessageStreamEntityAdded &stream) = 0;
 		virtual void ProcessMessages(const MessageStreamEntityRemoved &stream) = 0;
-        virtual void Update(const Environment &env, MessageBuilder &messageBuilder) = 0;
+        virtual void Update(Environment &env, MessageBuilder &messageBuilder) = 0;
 	};
 
 	struct DirectSystem : public System
 	{
 		[[nodiscard]] virtual DirectSystem *AsDirectSystem() override final;
 		[[nodiscard]] virtual const DirectSystem *AsDirectSystem() const override final;
-		virtual void Accept(const Environment &env, void **array) = 0;
+		virtual void Accept(Environment &env, void **array) = 0;
 	};
 
     template <typename BaseSystem, typename Type> struct _SystemTypeIdentefiable : public BaseSystem, public Type

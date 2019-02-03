@@ -66,14 +66,14 @@ namespace ECSTest
 			}
         }
 
-		template <typename T> static FORCEINLINE void Call(T *object, const System::Environment &env, void **array, std::integral_constant<uiw, 1>)
+		template <typename T> static FORCEINLINE void Call(T *object, System::Environment &env, void **array, std::integral_constant<uiw, 1>)
 		{
 			using t0 = std::tuple_element_t<0, types>;
 			decltype(auto) a0 = Convert<t0>(array[0]);
 			(object->*Method)(env, a0);
 		}
 
-		template <typename T> static FORCEINLINE void Call(T *object, const System::Environment &env, void **array, std::integral_constant<uiw, 2>)
+		template <typename T> static FORCEINLINE void Call(T *object, System::Environment &env, void **array, std::integral_constant<uiw, 2>)
 		{
 			using t0 = std::tuple_element_t<0, types>;
 			using t1 = std::tuple_element_t<1, types>;
@@ -82,7 +82,7 @@ namespace ECSTest
 			(object->*Method)(env, a0, a1);
 		}
 
-		template <typename T> static FORCEINLINE void Call(T *object, const System::Environment &env, void **array, std::integral_constant<uiw, 3>)
+		template <typename T> static FORCEINLINE void Call(T *object, System::Environment &env, void **array, std::integral_constant<uiw, 3>)
 		{
 			using t0 = std::tuple_element_t<0, types>;
 			using t1 = std::tuple_element_t<1, types>;
@@ -93,7 +93,7 @@ namespace ECSTest
 			(object->*Method)(env, a0, a1, a2);
 		}
 
-		template <typename T> static FORCEINLINE void Call(T *object, const System::Environment &env, void **array, std::integral_constant<uiw, 4>)
+		template <typename T> static FORCEINLINE void Call(T *object, System::Environment &env, void **array, std::integral_constant<uiw, 4>)
 		{
 			using t0 = std::tuple_element_t<0, types>;
 			using t1 = std::tuple_element_t<1, types>;
@@ -106,7 +106,7 @@ namespace ECSTest
 			(object->*Method)(env, a0, a1, a2, a3);
 		}
 
-		template <typename T> static FORCEINLINE void Call(T *object, const System::Environment &env, void **array, std::integral_constant<uiw, 5>)
+		template <typename T> static FORCEINLINE void Call(T *object, System::Environment &env, void **array, std::integral_constant<uiw, 5>)
 		{
 			using t0 = std::tuple_element_t<0, types>;
 			using t1 = std::tuple_element_t<1, types>;
@@ -121,7 +121,7 @@ namespace ECSTest
 			(object->*Method)(env, a0, a1, a2, a3, a4);
 		}
 
-		template <typename T> static FORCEINLINE void Call(T *object, const System::Environment &env, void **array, std::integral_constant<uiw, 6>)
+		template <typename T> static FORCEINLINE void Call(T *object, System::Environment &env, void **array, std::integral_constant<uiw, 6>)
 		{
 			using t0 = std::tuple_element_t<0, types>;
 			using t1 = std::tuple_element_t<1, types>;
@@ -143,11 +143,11 @@ namespace ECSTest
     {
         using TPure = std::remove_pointer_t<std::remove_reference_t<T>>;
 		using componentType = typename _GetComponentType<std::remove_cv_t<TPure>>::type;
-		constexpr System::RequirementForComponent availability =
+		constexpr RequirementForComponent availability =
 			std::is_reference_v<T> ?
-			System::RequirementForComponent::Required :
+			RequirementForComponent::Required :
 			(std::is_pointer_v<T> ?
-				System::RequirementForComponent::Optional :
+				RequirementForComponent::Optional :
 				(std::is_base_of_v<_SubtractiveComponentBase, T> ?
 					RequirementForComponent::Subtractive :
 					(RequirementForComponent)i8_max));
@@ -245,38 +245,92 @@ namespace ECSTest
             };
         }
     };
+
+    template <uiw size> [[nodiscard]] constexpr pair<std::array<System::RequestedComponent, size>, uiw> _FindMatchingComponents(const std::array<System::RequestedComponent, size> &arr, RequirementForComponent requirement)
+    {
+        std::array<System::RequestedComponent, size> components{};
+        uiw target = 0;
+        for (uiw source = 0; source < arr.size(); ++source)
+        {
+            if (arr[source].requirement == requirement)
+            {
+                components[target++] = arr[source];
+            }
+        }
+        return {components, target};
+    }
+
+    template <uiw size>[[nodiscard]] constexpr pair<std::array<System::RequestedComponent, size>, uiw> _FindComponentsWithWriteAccess(const std::array<System::RequestedComponent, size> &arr)
+    {
+        std::array<System::RequestedComponent, size> components{};
+        uiw target = 0;
+        for (uiw source = 0; source < arr.size(); ++source)
+        {
+            if (arr[source].isWriteAccess)
+            {
+                components[target++] = arr[source];
+            }
+        }
+        return {components, target};
+    }
 }
 
+// TODO: optimize it so std::arrays use only as much space as they actually need
+
 #define DIRECT_ACCEPT_COMPONENTS(...) \
-    virtual Array<const RequestedComponent> RequestedComponents() const override \
+    virtual Requests RequestedComponents() const override \
     { \
         using thisType = std::remove_reference_t<std::remove_cv_t<decltype(*this)>>; \
 		using types = typename FunctionInfo::Info<decltype(&thisType::Acceptor)>::args; \
         static constexpr auto arr = _TupleToComponents<types>::Convert(); \
         static constexpr auto arrSorted = Funcs::SortCompileTime(arr); \
-        return {arrSorted.data(), arrSorted.size()}; \
+        static constexpr auto required = _FindMatchingComponents(arrSorted, RequirementForComponent::Required); \
+        static constexpr auto opt = _FindMatchingComponents(arrSorted, RequirementForComponent::Optional); \
+        static constexpr auto subtractive = _FindMatchingComponents(arrSorted, RequirementForComponent::Subtractive); \
+        static constexpr auto writeAccess = _FindComponentsWithWriteAccess(arrSorted); \
+        Requests requests = \
+        { \
+            ToArray(required.first.data(), required.second), \
+            ToArray(opt.first.data(), opt.second), \
+            ToArray(subtractive.first.data(), subtractive.second), \
+            ToArray(writeAccess.first.data(), writeAccess.second), \
+            ToArray(arrSorted) \
+        }; \
+        return requests; \
     } \
     \
-    virtual void Accept(const Environment &env, void **array) override \
+    virtual void Accept(Environment &env, void **array) override \
     { \
         using thisType = std::remove_reference_t<std::remove_cv_t<decltype(*this)>>; \
 		using types = typename FunctionInfo::Info<decltype(&thisType::Acceptor)>::args; \
 		static constexpr uiw count = std::tuple_size_v<types>; \
         _AcceptCaller<&thisType::Acceptor, types>::Call(this, array, std::integral_constant<uiw, count>()); \
     } \
-    void Acceptor(const Environment &env, __VA_ARGS__)
+    void Acceptor(Environment &env, __VA_ARGS__)
 
 #define INDIRECT_ACCEPT_COMPONENTS(...) \
-    virtual Array<const RequestedComponent> RequestedComponents() const override \
+    virtual Requests RequestedComponents() const override \
     { \
         using thisType = std::remove_reference_t<std::remove_cv_t<decltype(*this)>>; \
 		struct Local { static void Temp(__VA_ARGS__); }; \
 		using types = typename FunctionInfo::Info<decltype(Local::Temp)>::args; \
         static constexpr auto arr = _TupleToComponents<types>::Convert(); \
         static constexpr auto arrSorted = Funcs::SortCompileTime(arr); \
-        return {arrSorted.data(), arrSorted.size()}; \
+        static constexpr auto required = _FindMatchingComponents(arrSorted, RequirementForComponent::Required); \
+        static constexpr auto opt = _FindMatchingComponents(arrSorted, RequirementForComponent::Optional); \
+        static constexpr auto subtractive = _FindMatchingComponents(arrSorted, RequirementForComponent::Subtractive); \
+        static constexpr auto writeAccess = _FindComponentsWithWriteAccess(arrSorted); \
+        Requests requests = \
+        { \
+            ToArray(required.first.data(), required.second), \
+            ToArray(opt.first.data(), opt.second), \
+            ToArray(subtractive.first.data(), subtractive.second), \
+            ToArray(writeAccess.first.data(), writeAccess.second), \
+            ToArray(arrSorted) \
+        }; \
+        return requests; \
     } \
     \
 	virtual void ProcessMessages(const MessageStreamEntityAdded &stream) override; \
 	virtual void ProcessMessages(const MessageStreamEntityRemoved &stream) override; \
-    virtual void Update(const Environment &env, MessageBuilder &messageBuilder) override
+    virtual void Update(Environment &env, MessageBuilder &messageBuilder) override

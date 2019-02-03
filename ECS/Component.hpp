@@ -1,6 +1,6 @@
 #pragma once
 
-#include "TypeIdentifiable.hpp"
+#include <TypeIdentifiable.hpp>
 
 #ifdef DEBUG
     #define IDINPUT <ui64 stableId, ui64 encoded0, ui64 encoded1, ui64 encoded2>

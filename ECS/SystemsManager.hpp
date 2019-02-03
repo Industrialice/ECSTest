@@ -3,7 +3,7 @@
 #include "System.hpp"
 #include "EntityID.hpp"
 #include "Archetype.hpp"
-#include "DIWRSpinLock.hpp"
+#include <DIWRSpinLock.hpp>
 #include "EntitiesStream.hpp"
 #include "MessageBuilder.hpp"
 #include "ArchetypeReflector.hpp"
@@ -44,7 +44,7 @@ namespace ECSTest
         PipelineGroup CreatePipelineGroup(optional<ui32> stepMicroSeconds, bool isMergeIfSuchPipelineExists);
         void Register(unique_ptr<System> system, PipelineGroup pipelineGroup);
         void Unregister(StableTypeId systemType);
-        void Start(vector<WorkerThread> &&workers, Array<shared_ptr<EntitiesStream>> streams);
+        void Start(EntityIDGenerator &&idGenerator, vector<WorkerThread> &&workers, Array<shared_ptr<EntitiesStream>> streams);
         void Stop(bool isWaitForStop);
         bool IsRunning();
         void StreamIn(Array<shared_ptr<EntitiesStream>> streams);
@@ -66,11 +66,14 @@ namespace ECSTest
                 bool isUnique{}; // indicates whether other components of the same type can be attached to an entity
             };
 
-            unique_ptr<ComponentArray[]> components{};
+            unique_ptr<ComponentArray[]> components{}; // a 2D array where rows count = uniqueTypedComponentsCount, columns count is computed per row as entitiesCount * stride
+            unique_ptr<EntityID[]> entities{};
             ui16 uniqueTypedComponentsCount{};
             ui16 reservedCount{}; // final reserved count is computed as reservedCount * stride
             ui32 entitiesCount{};
-            // must lock it first before accessing any other fields of the group
+            ArchetypeFull archetype{}; // group's archetype
+            // must lock it first before accessing any other fields of the group 
+            // except archetype and uniqueTypedComponentsCount
             // if you request exclusive write lock, locking components is not
             // required because you have exclusive access to all the content of this group
             DIWRSpinLock lock{};
@@ -104,7 +107,8 @@ namespace ECSTest
 		{
 			ui32 executedAt{}; // last executed frame, gets set to Pipeline::executionFrame at first execution attempt on a new frame
 			vector<std::reference_wrapper<ArchetypeGroup>> groupsToExecute{}; // group still left to be executed for the current frame
-            vector<DIWRSpinLock::Unlocker> locks{}; // all currently held locks by the system
+            vector<pair<ArchetypeFull, DIWRSpinLock::Unlocker>> groupLocks{}; // all currently held archetype group locks by the system
+            vector<DIWRSpinLock::Unlocker> componentLocks{}; // all currently held component locks by the system
 		};
 
 		struct ManagedDirectSystem : ManagedSystem
@@ -118,8 +122,11 @@ namespace ECSTest
             // contains messages that the system needs to process before it starts its update
             struct MessageQueue
             {
-                vector<MessageStreamEntityAdded> entityAdded{};
-                vector<MessageStreamEntityRemoved> entityRemoved{};
+                vector<MessageStreamEntityAdded> entityAddedStreams{};
+                vector<MessageStreamEntityRemoved> entityRemovedStreams{};
+
+                void clear();
+                bool empty() const;
             } messageQueue{};
         };
 
@@ -165,16 +172,18 @@ namespace ECSTest
         //ui64 _onSystemExecutedCurrentId = 0;
         //shared_ptr<ListenerLocation> _listenerLocation = make_shared<ListenerLocation>(*this);
 		
-        std::atomic<ui32> _lastComponentID = {0};
+        std::atomic<ui32> _lastComponentId = {0};
 
 		ArchetypeReflector _archetypeReflector{};
 
         std::atomic<bool> _isStoppingExecution{false};
 
+        EntityIDGenerator _idGenerator{};
+
     private:
-        void AssignComponentIDs(vector<ui32> &assignedIDs, Array<const EntitiesStream::ComponentDesc> components);
-        [[nodiscard]] ArchetypeGroup &FindArchetypeGroup(ArchetypeFull archetype, const vector<ui32> &assignedIDs, Array<const EntitiesStream::ComponentDesc> components);
-        void AddEntityToArchetypeGroup(ArchetypeFull archetype, ArchetypeGroup &group, const EntitiesStream::StreamedEntity &entity, const vector<ui32> &assignedIDs, MessageBuilder &messageBuilder);
+        [[nodiscard]] ArchetypeGroup &FindArchetypeGroup(ArchetypeFull archetype, Array<const SerializedComponent> components);
+        ArchetypeGroup &AddNewArchetypeGroup(ArchetypeFull archetype, Array<const SerializedComponent> components);
+        void AddEntityToArchetypeGroup(ArchetypeFull archetype, ArchetypeGroup &group, EntityID entityId, Array<const SerializedComponent> components, MessageBuilder *messageBuilder);
         [[nodiscard]] bool IsSystemAcceptsArchetype(Archetype archetype, Array<const System::RequestedComponent> systemComponents) const;
         void StartScheduler(Array<shared_ptr<EntitiesStream>> streams);
         void SchedulerLoop();
@@ -182,7 +191,7 @@ namespace ECSTest
         void CalculateGroupsToExectute(const System *system, vector<std::reference_wrapper<ArchetypeGroup>> &groups);
         WorkerThread &FindBestWorker();
 
-        static void TaskProcessMessages(IndirectSystem &system, ManagedIndirectSystem::MessageQueue &messageQueue);
-        static void TaskExecuteIndirectSystem(IndirectSystem &system, ManagedIndirectSystem::MessageQueue messageQueue, System::Environment env, std::atomic<ui32> &decrementAtCompletion, Array<DIWRSpinLock::Unlocker> locks);
+        static void TaskProcessMessages(IndirectSystem &system, const ManagedIndirectSystem::MessageQueue &messageQueue);
+        void TaskExecuteIndirectSystem(IndirectSystem &system, ManagedIndirectSystem::MessageQueue messageQueue, System::Environment env, std::atomic<ui32> &decrementAtCompletion, vector<pair<ArchetypeFull, DIWRSpinLock::Unlocker>> &groupLocks, vector<DIWRSpinLock::Unlocker> &componentLocks);
 	};
 }
