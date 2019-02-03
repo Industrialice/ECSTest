@@ -141,13 +141,7 @@ void SystemsManager::Register(unique_ptr<System> system, PipelineGroup pipelineG
         }
 	}
 
-    vector<pair<StableTypeId, RequirementForComponent>> types;
-    types.reserve(requestedComponents.all.size());
-    for (auto req : requestedComponents.all)
-    {
-        types.push_back({req.type, req.requirement});
-    }
-    _archetypeReflector.StartTrackingMatchingArchetypes((uiw)system.get(), ToArray(types));
+    _archetypeReflector.StartTrackingMatchingArchetypes((uiw)system.get(), requestedComponents.archetypeDefining);
 
     auto &pipeline = _pipelines[pipelineGroup.index];
 
@@ -156,14 +150,14 @@ void SystemsManager::Register(unique_ptr<System> system, PipelineGroup pipelineG
 		ManagedDirectSystem direct;
         direct.executedAt = pipeline.executionFrame - 1;
 		direct.system.reset(system.release()->AsDirectSystem());
-        pipeline.directSystems.push_back(move(direct));
+        pipeline.directSystems.emplace_back(move(direct));
     }
     else
     {
 		ManagedIndirectSystem indirect;
         indirect.executedAt = pipeline.executionFrame - 1;
 		indirect.system.reset(system.release()->AsIndirectSystem());
-        pipeline.indirectSystems.push_back(move(indirect));
+        pipeline.indirectSystems.emplace_back(move(indirect));
     }
 }
 
@@ -733,11 +727,14 @@ void SystemsManager::ExecutePipeline(Pipeline &pipeline)
             _idGenerator
         };
 
-        auto work = std::bind(&SystemsManager::TaskExecuteIndirectSystem, this, std::ref(*managed.system), move(managed.messageQueue), env, std::ref(*pipeline.systemsAtExecution), std::ref(managed.groupLocks), std::ref(managed.componentLocks));
+        auto messageQueueLock = managed.messageQueueLock.Lock(DIWRSpinLock::LockType::Exclusive);
+        auto movedOutMessageQueue = move(managed.messageQueue);
+        managed.messageQueue = {};
+        messageQueueLock.Unlock();
+
+        auto work = std::bind(&SystemsManager::TaskExecuteIndirectSystem, this, std::ref(*managed.system), move(movedOutMessageQueue), env, std::ref(*pipeline.systemsAtExecution), std::ref(managed.groupLocks), std::ref(managed.componentLocks));
         FindBestWorker().AddWork(work);
         isAddedWork = true;
-
-        managed.messageQueue = {};
     }
 
     if (!isAddedWork)
@@ -920,7 +917,43 @@ void SystemsManager::TaskExecuteIndirectSystem(IndirectSystem &system, ManagedIn
         lock.Transition(DIWRSpinLock::LockType::Exclusive);
     }
 
-    // send messages to other indirect systems
+    for (auto &[streamArchetype, streamPointer] : messageBuilder.EntityAddedStreams()._data)
+    {
+        auto reflected = _archetypeReflector.Reflect(streamArchetype);
+        auto stream = MessageStreamEntityAdded(streamArchetype, streamPointer);
+
+        for (auto &pipeline : _pipelines)
+        {
+            for (auto &managed : pipeline.indirectSystems)
+            {
+                if (managed.system.get() != &system && ArchetypeReflector::Satisfies(reflected, managed.system->RequestedComponents().archetypeDefining))
+                {
+                    auto messageQueueLock = managed.messageQueueLock.Lock(DIWRSpinLock::LockType::Exclusive);
+                    managed.messageQueue.entityAddedStreams.emplace_back(stream);
+                    messageQueueLock.Unlock();
+                }
+            }
+        }
+    }
+
+    for (const auto &[streamArchetype, streamPointer] : messageBuilder.EntityRemovedStreams()._data)
+    {
+        auto reflected = _archetypeReflector.Reflect(streamArchetype);
+        auto stream = MessageStreamEntityRemoved(streamArchetype, streamPointer);
+
+        for (auto &pipeline : _pipelines)
+        {
+            for (auto &managed : pipeline.indirectSystems)
+            {
+                if (managed.system.get() != &system && ArchetypeReflector::Satisfies(reflected, managed.system->RequestedComponents().archetypeDefining))
+                {
+                    auto messageQueueLock = managed.messageQueueLock.Lock(DIWRSpinLock::LockType::Exclusive);
+                    managed.messageQueue.entityRemovedStreams.emplace_back(stream);
+                    messageQueueLock.Unlock();
+                }
+            }
+        }
+    }
 
     for (auto &lock : componentLocks)
     {

@@ -29,6 +29,7 @@ namespace ECSTest
             Array<const RequestedComponent> optional; // contains only optional components
             Array<const RequestedComponent> subtractive; // contains only subtractive components
             Array<const RequestedComponent> writeAccess; // contains only components with write access (write access is ignored for subtractive components)
+            Array<const pair<StableTypeId, RequirementForComponent>> archetypeDefining; // contains only required and subtractive components
             Array<const RequestedComponent> all; // contains all reqested components
         };
 

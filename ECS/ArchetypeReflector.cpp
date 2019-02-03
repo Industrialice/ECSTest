@@ -3,8 +3,6 @@
 
 using namespace ECSTest;
 
-static bool Satisfies(Array<const StableTypeId> value, Array<const pair<StableTypeId, RequirementForComponent>> request);
-
 bool ArchetypeReflector::Contains(Archetype archetype) const
 {
 	auto unlocker = _lock.Lock(DIWRSpinLock::LockType::Read);
@@ -45,36 +43,24 @@ Array<const StableTypeId> ArchetypeReflector::Reflect(Archetype archetype) const
 	return types;
 }
 
-void ArchetypeReflector::StartTrackingMatchingArchetypes(uiw id, Array<const pair<StableTypeId, RequirementForComponent>> types)
+void ArchetypeReflector::StartTrackingMatchingArchetypes(uiw id, Array<const pair<StableTypeId, RequirementForComponent>> archetypeDefining)
 {
     auto unlocker = _lock.Lock(DIWRSpinLock::LockType::Exclusive);
 
-    // removing RequirementForComponent::Optional components, they don't affect the search
-    auto filteredStorage = ALLOCA_TYPED(types.size(), decltype(types)::ItemType);
-    uiw filteredCount = 0;
-    for (auto &value : types)
-    {
-        if (value.second != RequirementForComponent::Optional)
-        {
-            filteredStorage[filteredCount++] = value;
-        }
-    }
-    auto filtered = ToArray(filteredStorage, filteredCount);
-
     vector<Archetype> *ref = nullptr;
 
-    auto existingSearch = _matchingRequirementArchetypes.find(filtered);
+    auto existingSearch = _matchingRequirementArchetypes.find(archetypeDefining);
     if (existingSearch != _matchingRequirementArchetypes.end())
     {
         ref = &existingSearch->second;
     }
     else
     {
-        vector<pair<StableTypeId, RequirementForComponent>> filteredVector = {filtered.begin(), filtered.end()};
+        vector<pair<StableTypeId, RequirementForComponent>> filteredVector = {archetypeDefining.begin(), archetypeDefining.end()};
         vector<Archetype> matchingArchetypes;
         for (const auto &[key, value] : _library)
         {
-            if (Satisfies(ToArray(value), filtered))
+            if (Satisfies(ToArray(value), archetypeDefining))
             {
                 matchingArchetypes.push_back(key);
             }
@@ -135,7 +121,7 @@ const vector<Archetype> &ArchetypeReflector::FindMatchingArchetypes(uiw id) cons
     return ref;
 }
 
-bool Satisfies(Array<const StableTypeId> value, Array<const pair<StableTypeId, RequirementForComponent>> request)
+bool ArchetypeReflector::Satisfies(Array<const StableTypeId> value, Array<const pair<StableTypeId, RequirementForComponent>> request)
 {
     for (auto[type, requirement] : request)
     {

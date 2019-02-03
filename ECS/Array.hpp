@@ -132,67 +132,67 @@ namespace ECSTest
 		}
 	};
 
-	template <typename T> [[nodiscard]] Array<T> ToArray(T &value)
+	template <typename T> [[nodiscard]] constexpr Array<T> ToArray(T &value)
 	{
 		return {&value, 1};
 	}
 
-    template <typename T> [[nodiscard]] Array<T> ToArray(T *value, uiw count)
+    template <typename T> [[nodiscard]] constexpr Array<T> ToArray(T *value, uiw count)
     {
         return {value, count};
     }
 
-    template <typename T> [[nodiscard]] Array<const T> ToArray(const T *value, uiw count)
+    template <typename T> [[nodiscard]] constexpr Array<const T> ToArray(const T *value, uiw count)
     {
         return {value, count};
     }
 
-	template <typename T> [[nodiscard]] Array<T> ToArray(vector<T> &value)
+	template <typename T> [[nodiscard]] constexpr Array<T> ToArray(vector<T> &value)
 	{
 		return {value.data(), value.size()};
 	}
 
-	template <typename T> [[nodiscard]] Array<const T> ToArray(vector<const T> &value)
+	template <typename T> [[nodiscard]] constexpr Array<const T> ToArray(vector<const T> &value)
 	{
 		return {value.data(), value.size()};
 	}
 
-	template <typename T> [[nodiscard]] Array<const T> ToArray(const vector<T> &value)
+	template <typename T> [[nodiscard]] constexpr Array<const T> ToArray(const vector<T> &value)
 	{
 		return {value.data(), value.size()};
 	}
 
-	template <typename T> [[nodiscard]] Array<const T> ToArray(const vector<const T> &value)
+	template <typename T> [[nodiscard]] constexpr Array<const T> ToArray(const vector<const T> &value)
 	{
 		return {value.data(), value.size()};
 	}
 
-	template <typename T, uiw size> [[nodiscard]] Array<T> ToArray(std::array<T, size> &value)
+	template <typename T, uiw size> [[nodiscard]] constexpr Array<T> ToArray(std::array<T, size> &value)
 	{
 		return {value.data(), size};
 	}
 
-	template <typename T, uiw size> [[nodiscard]] Array<const T> ToArray(const std::array<T, size> &value)
+	template <typename T, uiw size> [[nodiscard]] constexpr Array<const T> ToArray(const std::array<T, size> &value)
 	{
 		return {value.data(), size};
 	}
 
-	template <typename T, uiw size> [[nodiscard]] Array<const T> ToArray(const std::array<const T, size> &value)
+	template <typename T, uiw size> [[nodiscard]] constexpr Array<const T> ToArray(const std::array<const T, size> &value)
 	{
 		return {value.data(), size};
 	}
 
-	template <typename T, uiw size> [[nodiscard]] Array<T> ToArray(T (&value)[size])
+	template <typename T, uiw size> [[nodiscard]] constexpr Array<T> ToArray(T (&value)[size])
 	{
 		return {value, size};
 	}
 
-	template <typename T, uiw size> [[nodiscard]] Array<const T> ToArray(const T (&value)[size])
+	template <typename T, uiw size> [[nodiscard]] constexpr Array<const T> ToArray(const T (&value)[size])
 	{
 		return {value, size};
 	}
 
-    template <typename T> [[nodiscard]] Array<T> ToArray(Array<T> value)
+    template <typename T> [[nodiscard]] constexpr Array<T> ToArray(Array<T> value)
     {
         return value;
     }

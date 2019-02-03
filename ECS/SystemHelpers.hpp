@@ -260,7 +260,7 @@ namespace ECSTest
         return {components, target};
     }
 
-    template <uiw size>[[nodiscard]] constexpr pair<std::array<System::RequestedComponent, size>, uiw> _FindComponentsWithWriteAccess(const std::array<System::RequestedComponent, size> &arr)
+    template <uiw size> [[nodiscard]] constexpr pair<std::array<System::RequestedComponent, size>, uiw> _FindComponentsWithWriteAccess(const std::array<System::RequestedComponent, size> &arr)
     {
         std::array<System::RequestedComponent, size> components{};
         uiw target = 0;
@@ -269,6 +269,22 @@ namespace ECSTest
             if (arr[source].isWriteAccess)
             {
                 components[target++] = arr[source];
+            }
+        }
+        return {components, target};
+    }
+
+    template <uiw size> [[nodiscard]] constexpr pair<std::array<pair<StableTypeId, RequirementForComponent>, size>, uiw> _FindArchetypeDefiningComponents(const std::array<System::RequestedComponent, size> &arr)
+    {
+        std::array<pair<StableTypeId, RequirementForComponent>, size> components{};
+        uiw target = 0;
+        for (uiw source = 0; source < arr.size(); ++source)
+        {
+            if (arr[source].requirement == RequirementForComponent::Required || arr[source].requirement == RequirementForComponent::Subtractive)
+            {
+                components[target].first = arr[source].type;
+                components[target].second = arr[source].requirement;
+                ++target;
             }
         }
         return {components, target};
@@ -288,12 +304,14 @@ namespace ECSTest
         static constexpr auto opt = _FindMatchingComponents(arrSorted, RequirementForComponent::Optional); \
         static constexpr auto subtractive = _FindMatchingComponents(arrSorted, RequirementForComponent::Subtractive); \
         static constexpr auto writeAccess = _FindComponentsWithWriteAccess(arrSorted); \
-        Requests requests = \
+        static constexpr auto archetypeDefining = _FindArchetypeDefiningComponents(arrSorted); \
+        static constexpr Requests requests = \
         { \
             ToArray(required.first.data(), required.second), \
             ToArray(opt.first.data(), opt.second), \
             ToArray(subtractive.first.data(), subtractive.second), \
             ToArray(writeAccess.first.data(), writeAccess.second), \
+            ToArray(archetypeDefining.first.data(), archetypeDefining.second), \
             ToArray(arrSorted) \
         }; \
         return requests; \
@@ -320,12 +338,14 @@ namespace ECSTest
         static constexpr auto opt = _FindMatchingComponents(arrSorted, RequirementForComponent::Optional); \
         static constexpr auto subtractive = _FindMatchingComponents(arrSorted, RequirementForComponent::Subtractive); \
         static constexpr auto writeAccess = _FindComponentsWithWriteAccess(arrSorted); \
-        Requests requests = \
+        static constexpr auto archetypeDefining = _FindArchetypeDefiningComponents(arrSorted); \
+        static constexpr Requests requests = \
         { \
             ToArray(required.first.data(), required.second), \
             ToArray(opt.first.data(), opt.second), \
             ToArray(subtractive.first.data(), subtractive.second), \
             ToArray(writeAccess.first.data(), writeAccess.second), \
+            ToArray(archetypeDefining.first.data(), archetypeDefining.second), \
             ToArray(arrSorted) \
         }; \
         return requests; \

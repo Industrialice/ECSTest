@@ -128,6 +128,7 @@ namespace ECSTest
                 void clear();
                 bool empty() const;
             } messageQueue{};
+            DIWRSpinLock messageQueueLock{}; // you must acquire it before you can access messageQueue
         };
 
         struct Pipeline

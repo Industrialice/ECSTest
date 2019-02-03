@@ -21,7 +21,9 @@ void SystemTest::ProcessMessages(const MessageStreamEntityRemoved &stream)
 
 void SystemTest::Update(Environment &env, MessageBuilder &messageBuilder)
 {
-    printf("updating SystemTest\n");
+    auto threadId = std::this_thread::get_id();
+
+    printf("updating SystemTest on thread %u\n", *(ui32 *)&threadId);
 
     /*auto id = env.idGenerator.Generate();
     auto &builder = messageBuilder.EntityAdded(id);

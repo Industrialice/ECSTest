@@ -33,7 +33,9 @@ void SystemGameInfo::ProcessMessages(const MessageStreamEntityRemoved &stream)
 
 void SystemGameInfo::Update(Environment &env, MessageBuilder &messageBuilder)
 {
-    printf("updating SystemGameInfo\n");
+    auto threadId = std::this_thread::get_id();
+
+    printf("updating SystemGameInfo on thread %u\n", *(ui32 *)&threadId);
 
     auto id = env.idGenerator.Generate();
     auto &builder = messageBuilder.EntityAdded(id);
