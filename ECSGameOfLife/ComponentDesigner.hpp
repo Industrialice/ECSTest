@@ -4,16 +4,15 @@
 
 namespace ECSTest
 {
-	COMPONENT(ComponentDesigner)
+	NONUNIQUE_COMPONENT(ComponentDesigner)
     {
-        struct Areas
+        enum class Areas : ui8
         {
-            static constexpr struct Area : EnumCombinable<Area, ui32, true>
-            {} Undefined = Area::Create(0),
-                Level = Area::Create(1 << 0),
-                UXUI = Area::Create(1 << 1);
+            Undefined,
+            Level,
+            UXUI
         };
 
-        Areas::Area area;
+        Areas area;
     };
 }

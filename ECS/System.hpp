@@ -57,7 +57,7 @@ namespace ECSTest
 		virtual void Accept(Environment &env, void **array) = 0;
 	};
 
-    template <typename BaseSystem, typename Type> struct _SystemTypeIdentefiable : public BaseSystem, public Type
+    template <typename BaseSystem, typename Type> struct _SystemTypeIdentifiable : public BaseSystem, public Type
     {
     public:
         using Type::GetTypeId;
@@ -69,21 +69,21 @@ namespace ECSTest
     };
 
     #ifdef DEBUG
-        #define INDIRECT_SYSTEM(name) struct name final : public _SystemTypeIdentefiable<IndirectSystem, StableTypeIdentifiable<Hash::FNVHashCT<Hash::Precision::P64, char, CountOf(TOSTR(name)), true>(TOSTR(name)), \
+        #define INDIRECT_SYSTEM(name) struct name final : public _SystemTypeIdentifiable<IndirectSystem, StableTypeIdentifiable<Hash::FNVHashCT<Hash::Precision::P64, char, CountOf(TOSTR(name)), true>(TOSTR(name)), \
             CompileTimeStrings::EncodeASCII(TOSTR(name), CountOf(TOSTR(name)), CompileTimeStrings::CharsPerNumber * 0), \
             CompileTimeStrings::EncodeASCII(TOSTR(name), CountOf(TOSTR(name)), CompileTimeStrings::CharsPerNumber * 1), \
             CompileTimeStrings::EncodeASCII(TOSTR(name), CountOf(TOSTR(name)), CompileTimeStrings::CharsPerNumber * 2)>>
     #else
-        #define INDIRECT_SYSTEM(name) struct name final : public _SystemTypeIdentefiable<IndirectSystem, StableTypeIdentifiable<Hash::FNVHashCT<Hash::Precision::P64, char, CountOf(TOSTR(name)), true>(TOSTR(name))>>
+        #define INDIRECT_SYSTEM(name) struct name final : public _SystemTypeIdentifiable<IndirectSystem, StableTypeIdentifiable<Hash::FNVHashCT<Hash::Precision::P64, char, CountOf(TOSTR(name)), true>(TOSTR(name))>>
     #endif
 
     #ifdef DEBUG
-        #define DIRECT_SYSTEM(name) struct name final : public _SystemTypeIdentefiable<DirectSystem, StableTypeIdentifiable<Hash::FNVHashCT<Hash::Precision::P64, char, CountOf(TOSTR(name)), true>(TOSTR(name)), \
+        #define DIRECT_SYSTEM(name) struct name final : public _SystemTypeIdentifiable<DirectSystem, StableTypeIdentifiable<Hash::FNVHashCT<Hash::Precision::P64, char, CountOf(TOSTR(name)), true>(TOSTR(name)), \
             CompileTimeStrings::EncodeASCII(TOSTR(name), CountOf(TOSTR(name)), CompileTimeStrings::CharsPerNumber * 0), \
             CompileTimeStrings::EncodeASCII(TOSTR(name), CountOf(TOSTR(name)), CompileTimeStrings::CharsPerNumber * 1), \
             CompileTimeStrings::EncodeASCII(TOSTR(name), CountOf(TOSTR(name)), CompileTimeStrings::CharsPerNumber * 2)>>
     #else
-        #define DIRECT_SYSTEM(name) struct name final : public _SystemTypeIdentefiable<DirectSystem, StableTypeIdentifiable<Hash::FNVHashCT<Hash::Precision::P64, char, CountOf(TOSTR(name)), true>(TOSTR(name))>>
+        #define DIRECT_SYSTEM(name) struct name final : public _SystemTypeIdentifiable<DirectSystem, StableTypeIdentifiable<Hash::FNVHashCT<Hash::Precision::P64, char, CountOf(TOSTR(name)), true>(TOSTR(name))>>
     #endif
 }
 

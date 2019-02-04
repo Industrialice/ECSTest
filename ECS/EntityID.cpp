@@ -41,7 +41,7 @@ EntityID EntityIDGenerator::Generate()
 
 EntityID EntityIDGenerator::LastGenerated() const
 {
-    return _current.load();
+    return _current.load() - 1;
 }
 
 EntityIDGenerator::EntityIDGenerator(EntityIDGenerator &&source) : _current{source._current.load()}

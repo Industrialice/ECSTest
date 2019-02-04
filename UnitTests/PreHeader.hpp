@@ -12,6 +12,7 @@
 #include <array>
 #include <unordered_map>
 #include <map>
+#include <set>
 #include <cstdlib>
 
 #include <StdMiscellaneousLib.hpp>
@@ -34,3 +35,21 @@ using std::make_shared;
 using std::make_unique;
 using namespace std::literals;
 using std::nullopt;
+
+struct MallocDeleter
+{
+    void operator()(void *ptr)
+    {
+        free(ptr);
+    }
+};
+
+struct AlignedMallocDeleter
+{
+    void operator()(void *ptr)
+    {
+        _aligned_free(ptr);
+    }
+};
+
+class UnitTests;

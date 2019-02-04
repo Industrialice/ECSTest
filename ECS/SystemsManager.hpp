@@ -71,7 +71,7 @@ namespace ECSTest
             ui16 uniqueTypedComponentsCount{};
             ui16 reservedCount{}; // final reserved count is computed as reservedCount * stride
             ui32 entitiesCount{};
-            ArchetypeFull archetype{}; // group's archetype
+            ArchetypeFull archetype; // group's archetype
             // must lock it first before accessing any other fields of the group 
             // except archetype and uniqueTypedComponentsCount
             // if you request exclusive write lock, locking components is not
@@ -185,7 +185,6 @@ namespace ECSTest
         [[nodiscard]] ArchetypeGroup &FindArchetypeGroup(ArchetypeFull archetype, Array<const SerializedComponent> components);
         ArchetypeGroup &AddNewArchetypeGroup(ArchetypeFull archetype, Array<const SerializedComponent> components);
         void AddEntityToArchetypeGroup(ArchetypeFull archetype, ArchetypeGroup &group, EntityID entityId, Array<const SerializedComponent> components, MessageBuilder *messageBuilder);
-        [[nodiscard]] bool IsSystemAcceptsArchetype(Archetype archetype, Array<const System::RequestedComponent> systemComponents) const;
         void StartScheduler(Array<shared_ptr<EntitiesStream>> streams);
         void SchedulerLoop();
         void ExecutePipeline(Pipeline &pipeline);

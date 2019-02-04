@@ -1,6 +1,5 @@
 #include "PreHeader.hpp"
 #include "SystemsManager.hpp"
-#include <set>
 
 using namespace ECSTest;
 
@@ -198,16 +197,6 @@ void SystemsManager::Unregister(StableTypeId systemType)
     SOFTBREAK; // system not found
 }
 
-static ArchetypeFull ComputeArchetype(const vector<ui32> &assignedIDs, Array<const EntitiesStream::ComponentDesc> components)
-{
-    ArchetypeFull archetype;
-    for (uiw index = 0; index < components.size(); ++index)
-    {
-        archetype.Add(components[index].type, assignedIDs[index]);
-    }
-    return archetype;
-}
-
 static void StreamedToSerialized(Array<const EntitiesStream::ComponentDesc> streamed, vector<SerializedComponent> &serialized)
 {
     serialized.resize(streamed.size());
@@ -227,12 +216,7 @@ static void StreamedToSerialized(Array<const EntitiesStream::ComponentDesc> stre
 
 static ArchetypeFull ComputeArchetype(Array<const SerializedComponent> components)
 {
-    ArchetypeFull archetype;
-    for (uiw index = 0; index < components.size(); ++index)
-    {
-        archetype.Add(components[index].type, components[index].id);
-    }
-    return archetype;
+    return ArchetypeFull::Create<SerializedComponent, &SerializedComponent::type, &SerializedComponent::id>(components);
 }
 
 static void AssignComponentIDs(Array<SerializedComponent> components, std::atomic<ui32> &lastComponentId)
@@ -424,11 +408,12 @@ void SystemsManager::AddEntityToArchetypeGroup(ArchetypeFull archetype, Archetyp
         {
             return stored.type == component.type;
         };
-        auto &componentArray = *std::find_if(group.components.get(), group.components.get() + group.uniqueTypedComponentsCount, pred);
+        auto findResult = std::find_if(group.components.get(), group.components.get() + group.uniqueTypedComponentsCount, pred);
+        ASSUME(findResult != group.components.get() + group.uniqueTypedComponentsCount);
+        auto &componentArray = *findResult;
 
         memcpy(componentArray.data.get() + componentArray.sizeOf * componentArray.stride * group.entitiesCount, component.data, componentArray.sizeOf);
 
-        ui32 componentId = 0;
         if (!componentArray.isUnique)
         {
             componentArray.ids[componentArray.stride * group.entitiesCount] = component.id;
@@ -447,35 +432,6 @@ void SystemsManager::AddEntityToArchetypeGroup(ArchetypeFull archetype, Archetyp
     entitiesLocationsLock.Unlock();
 
     ++group.entitiesCount;
-}
-
-bool SystemsManager::IsSystemAcceptsArchetype(Archetype archetype, Array<const System::RequestedComponent> systemComponents) const
-{
-	auto reflected = _archetypeReflector.Reflect(archetype);
-	for (auto &requested : systemComponents)
-	{
-		if (requested.requirement == RequirementForComponent::Optional)
-		{
-			continue;
-		}
-		bool isFound = reflected.find(requested.type) != reflected.end();
-		if (requested.requirement == RequirementForComponent::Subtractive)
-		{
-			if (isFound)
-			{
-				return false;
-			}
-		}
-		else
-		{
-			ASSUME(requested.requirement == RequirementForComponent::Required);
-			if (!isFound)
-			{
-				return false;
-			}
-		}
-	}
-	return true;
 }
 
 void SystemsManager::StartScheduler(Array<shared_ptr<EntitiesStream>> streams)
@@ -498,12 +454,13 @@ void SystemsManager::StartScheduler(Array<shared_ptr<EntitiesStream>> streams)
     auto &entityAddedStreams = messageBulder.EntityAddedStreams();
     for (auto &[archetype, messages] : entityAddedStreams._data)
     {
+        auto reflected = _archetypeReflector.Reflect(archetype);
         MessageStreamEntityAdded stream = {archetype, messages};
         for (auto &pipeline : _pipelines)
         {
             for (auto &managed : pipeline.indirectSystems)
             {
-                if (IsSystemAcceptsArchetype(archetype, managed.system->RequestedComponents().all))
+                if (ArchetypeReflector::Satisfies(reflected, managed.system->RequestedComponents().archetypeDefining))
                 {
                     managed.messageQueue.entityAddedStreams.push_back(stream);
                 }

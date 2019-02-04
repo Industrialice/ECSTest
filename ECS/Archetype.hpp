@@ -10,15 +10,58 @@ namespace ECSTest
     {
         friend ArchetypeFull;
 
-        ui64 _hash{};
-
-        static constexpr ui64 MainPartStartBit = 0;
-        static constexpr ui64 MainPartMask = 0x0000'0000'FFFF'FFFFULL;
+        union
+        {
+            struct
+            {
+                ui64 idPart : 32;
+                ui64 typePart : 32;
+            } _parted;
+            ui64 _whole{};
+        };
 
     public:
+        template <typename T, StableTypeId T::*type = nullptr> [[nodiscard]] static Archetype Create(Array<const T> types)
+        {
+            Archetype result;
+
+            auto unduplicated = ALLOCA_TYPED(types.size(), StableTypeId);
+            uiw count = 0;
+
+            for (const T &t : types)
+            {
+                bool isAdd = true;
+                StableTypeId tType;
+
+                if constexpr (type == nullptr)
+                {
+                    tType = t;
+                }
+                else
+                {
+                    tType = t.*type;
+                }
+
+                for (uiw search = 0; search < count; ++search)
+                {
+                    if (unduplicated[search] == tType)
+                    {
+                        isAdd = false;
+                        break;
+                    }
+                }
+
+                if (isAdd)
+                {
+                    unduplicated[count++] = tType;
+                    result._parted.typePart ^= (ui32)tType.Hash();
+                }
+            }
+
+            return result;
+        }
+
         Archetype() = default;
-        void Add(StableTypeId type);
-        void Subtract(StableTypeId type);
         [[nodiscard]] ui64 Hash() const;
         [[nodiscard]] static Archetype FromFull(const ArchetypeFull &source);
         [[nodiscard]] bool operator == (const Archetype &other) const;
@@ -30,15 +73,50 @@ namespace ECSTest
     {
         friend Archetype;
 
-        ui64 _hash{};
-
-        static constexpr ui64 ExtraPartStartBit = 32;
-        static constexpr ui64 ExtraPartMask = 0xFFFF'FFFF'0000'0000ULL;
+        union
+        {
+            struct
+            {
+                ui64 idPart : 32;
+                ui64 typePart : 32;
+            } _parted;
+            ui64 _whole{};
+        };
 
     public:
+        template <typename T, StableTypeId T::*type, ui32 T::*id> [[nodiscard]] static ArchetypeFull Create(Array<const T> types)
+        {
+            ArchetypeFull result;
+
+            auto unduplicated = ALLOCA_TYPED(types.size(), StableTypeId);
+            uiw count = 0;
+            
+            for (const T &t : types)
+            {
+                result._parted.idPart += t.*id;
+
+                bool isAdd = true;
+
+                for (uiw search = 0; search < count; ++search)
+                {
+                    if (unduplicated[search] == t.*type)
+                    {
+                        isAdd = false;
+                        break;
+                    }
+                }
+
+                if (isAdd)
+                {
+                    unduplicated[count++] = t.*type;
+                    result._parted.typePart ^= (ui32)(t.*type).Hash();
+                }
+            }
+
+            return result;
+        }
+
         ArchetypeFull() = default;
-        void Add(StableTypeId type, ui32 componentID);
-        void Subtract(StableTypeId type, ui32 componentID);
         [[nodiscard]] ui64 Hash() const;
         [[nodiscard]] Archetype ToShort() const;
         [[nodiscard]] bool operator == (const ArchetypeFull &other) const;

@@ -53,3 +53,5 @@ struct AlignedMallocDeleter
         _aligned_free(ptr);
     }
 };
+
+class UnitTests;

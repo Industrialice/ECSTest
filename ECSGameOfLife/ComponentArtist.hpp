@@ -4,17 +4,16 @@
 
 namespace ECSTest
 {
-	COMPONENT(ComponentArtist)
+	NONUNIQUE_COMPONENT(ComponentArtist)
     {
-        struct Areas
+        enum class Areas : ui8
         {
-            static constexpr struct Area : EnumCombinable<Area, ui32, true>
-            {} Undefined = Area::Create(0),
-                TwoD = Area::Create(1 << 0),
-                ThreeD = Area::Create(1 << 1),
-                Concept = Area::Create(1 << 2);
+            Undefined,
+            TwoD,
+            ThreeD,
+            Concept
         };
 
-        Areas::Area area;
+        Areas area;
     };
 }

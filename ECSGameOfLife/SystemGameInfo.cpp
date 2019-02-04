@@ -44,8 +44,8 @@ void SystemGameInfo::Update(Environment &env, MessageBuilder &messageBuilder)
     artist.area = ComponentArtist::Areas::Concept;
     builder.AddComponent(artist);
 
-    Archetype archetype;
-    archetype.Add(ComponentArtist::GetTypeId());
+    StableTypeId types[] = {ComponentArtist::GetTypeId()};
+    Archetype archetype = Archetype::Create<StableTypeId>(ToArray(types));
 
     messageBuilder.EntityRemoved(archetype, id);
 }

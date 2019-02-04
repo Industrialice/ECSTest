@@ -79,7 +79,7 @@ template <typename... Args> GameOfLifeEntities::PreStreamedEntity Stream(EntityI
 	return preStreamed;
 }
 
-template <ui32 N, typename... CompanyComponents> bool IsMatching(const std::variant<ComponentArtist, ComponentDesigner, ComponentProgrammer> &profession, const CompanyComponents &... companyComponents)
+template <ui32 N = 0, typename... CompanyComponents> bool IsMatching(const std::variant<ComponentArtist, ComponentDesigner, ComponentProgrammer> &profession, const CompanyComponents &... companyComponents)
 {
     auto tuple = std::make_tuple(companyComponents...);
     if constexpr (N < std::tuple_size_v<decltype(tuple)>)
@@ -93,7 +93,7 @@ template <ui32 N, typename... CompanyComponents> bool IsMatching(const std::vari
             {
                 if constexpr (std::is_same_v<componentType, ComponentProgrammer>)
                 {
-                    if (companyComponent.language.Intersects(employeeComponent->language))
+                    if (companyComponent.language == employeeComponent->language)
                     {
                         if (companyComponent.skillLevel <= employeeComponent->skillLevel)
                         {
@@ -103,14 +103,14 @@ template <ui32 N, typename... CompanyComponents> bool IsMatching(const std::vari
                 }
                 else if constexpr (std::is_same_v<componentType, ComponentDesigner>)
                 {
-                    if (companyComponent.area.Intersects(employeeComponent->area))
+                    if (companyComponent.area == employeeComponent->area)
                     {
                         return true;
                     }
                 }
                 else if constexpr (std::is_same_v<componentType, ComponentArtist>)
                 {
-                    if (companyComponent.area.Intersects(employeeComponent->area))
+                    if (companyComponent.area == employeeComponent->area)
                     {
                         return true;
                     }
@@ -129,76 +129,133 @@ template <typename... CompanyComponents> void GenerateEmployees(GameOfLifeEntiti
 
     for (ui32 employeeIndex = 0; employeeIndex < 1000; ++employeeIndex)
     {
-        std::variant<ComponentArtist, ComponentDesigner, ComponentProgrammer> profession;
-        int choice = rand() % std::variant_size_v<decltype(profession)>;
-        if (choice == 0)
+        static vector<std::variant<ComponentArtist, ComponentDesigner, ComponentProgrammer>> choices;
+        if (choices.empty())
         {
-            ComponentArtist artist;
-            ui32 areasCount = 1;
-            int areasCountRand = rand() % 10;
-            if (areasCountRand > 4) ++areasCount;
-            if (areasCountRand > 8) ++areasCount;
-            for (ui32 areaIndex = 0; areaIndex < areasCount; ++areaIndex)
-            {
-                int newArea = rand() % 3;
-                if (newArea == 0) artist.area.Add(ComponentArtist::Areas::Concept);
-                if (newArea == 1) artist.area.Add(ComponentArtist::Areas::ThreeD);
-                if (newArea == 2) artist.area.Add(ComponentArtist::Areas::TwoD);
-            }
-            profession = artist;
+            using aa = ComponentArtist::Areas;
+            ComponentArtist a;
+            a.area = aa::Concept;
+            choices.push_back(a);
+            a.area = aa::ThreeD;
+            choices.push_back(a);
+            a.area = aa::TwoD;
+            choices.push_back(a);
+
+            using pl = ComponentProgrammer::Languages;
+            ComponentProgrammer p;
+            p.language = pl::C;
+            choices.push_back(p);
+            p.language = pl::CPP;
+            choices.push_back(p);
+            p.language = pl::CS;
+            choices.push_back(p);
+            p.language = pl::Java;
+            choices.push_back(p);
+            p.language = pl::JS;
+            choices.push_back(p);
+            p.language = pl::PHP;
+            choices.push_back(p);
+            p.language = pl::Python;
+            choices.push_back(p);
+
+            using da = ComponentDesigner::Areas;
+            ComponentDesigner d;
+            d.area = da::Level;
+            choices.push_back(d);
+            d.area = da::UXUI;
+            choices.push_back(d);
         }
-        if (choice == 1)
+
+        vector<std::variant<ComponentArtist, ComponentDesigner, ComponentProgrammer>> professions;
+
+        int choicesCount = rand() % 5 + 1;
+        for (int c = 0; c < choicesCount; ++c)
         {
-            ComponentDesigner design;
-            ui32 areasCount = 1;
-            int areasCountRand = rand() % 5;
-            if (areasCountRand > 3) ++areasCount;
-            for (ui32 areaIndex = 0; areaIndex < areasCount; ++areaIndex)
+            auto choice = choices[rand() % choices.size()];
+            bool isAdd = true;
+
+            if (auto p = std::get_if<ComponentProgrammer>(&choice); p)
             {
-                int newArea = rand() % 2;
-                if (newArea == 0) design.area.Add(ComponentDesigner::Areas::UXUI);
-                if (newArea == 1) design.area.Add(ComponentDesigner::Areas::Level);
+                p->skillLevel = ComponentProgrammer::SkillLevel::Junior;
+                int skillLevelRand = rand() % 50;
+                if (skillLevelRand > 35) p->skillLevel = ComponentProgrammer::SkillLevel::Middle;
+                if (skillLevelRand > 45) p->skillLevel = ComponentProgrammer::SkillLevel::Senior;
+
+                for (const auto &profession : professions)
+                {
+                    if (auto existing = std::get_if<ComponentProgrammer>(&profession); existing)
+                    {
+                        if (p->language == existing->language)
+                        {
+                            isAdd = false;
+                            break;
+                        }
+                    }
+                }
             }
-            profession = design;
+            else if (auto a = std::get_if<ComponentArtist>(&choice); a)
+            {
+                for (const auto &profession : professions)
+                {
+                    if (auto existing = std::get_if<ComponentArtist>(&profession); existing)
+                    {
+                        if (a->area == existing->area)
+                        {
+                            isAdd = false;
+                            break;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                auto d = std::get_if<ComponentDesigner>(&choice);
+                ASSUME(d);
+                for (const auto &profession : professions)
+                {
+                    if (auto existing = std::get_if<ComponentDesigner>(&profession); existing)
+                    {
+                        if (d->area == existing->area)
+                        {
+                            isAdd = false;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (isAdd)
+            {
+                professions.push_back(choice);
+            }
         }
-        if (choice == 2)
+
+        bool isMatchingAny = false;
+        for (const auto &profession : professions)
         {
-            ComponentProgrammer programmer;
-            programmer.skillLevel = ComponentProgrammer::SkillLevel::Junior;
-            ui32 areasCount = 1;
-            int areasCountRand = rand() % 10;
-            if (areasCountRand > 2) ++areasCount;
-            if (areasCountRand > 6) ++areasCount;
-            if (areasCountRand > 8) ++areasCount;
-            for (ui32 areaIndex = 0; areaIndex < areasCount; ++areaIndex)
+            if (IsMatching(profession, companyComponents...))
             {
-                int newArea = rand() % 7;
-                if (newArea == 0) programmer.language.Add(ComponentProgrammer::Languages::C);
-                if (newArea == 1) programmer.language.Add(ComponentProgrammer::Languages::CPP);
-                if (newArea == 2) programmer.language.Add(ComponentProgrammer::Languages::CS);
-                if (newArea == 3) programmer.language.Add(ComponentProgrammer::Languages::Java);
-                if (newArea == 4) programmer.language.Add(ComponentProgrammer::Languages::JS);
-                if (newArea == 5) programmer.language.Add(ComponentProgrammer::Languages::PHP);
-                if (newArea == 6) programmer.language.Add(ComponentProgrammer::Languages::Python);
+                isMatchingAny = true;
+                break;
             }
-            int skillLevelRand = rand() % 50;
-            if (skillLevelRand > 35) programmer.skillLevel = ComponentProgrammer::SkillLevel::Middle;
-            if (skillLevelRand > 45) programmer.skillLevel = ComponentProgrammer::SkillLevel::Senior;
-            profession = programmer;
         }
-        if (IsMatching<0>(profession, companyComponents...))
+
+        if (isMatchingAny)
         {
             static constexpr const char *firstNamesMale[] = {"Dave", "Bill", "Donald", "Vladimir", "Bashar", "Hussein", "Ossama", "Doctor", "Man", "Barack", "Guy", "Martin", "Max"};
             static constexpr const char *firstNamesFemale[] = {"Mria", "Colgate", "Alyx", "Hillary", "Michelle"};
             static constexpr const char *lastNames[] = {"Clinton", "Merkel", "Trump", "Putin", "Assad", "Laden", "Obama", "Payne"};
 
             GameOfLifeEntities::PreStreamedEntity preStreamed;
-            std::visit([&preStreamed](const auto &arg) { StreamComponent(arg, preStreamed); }, profession);
+            for (const auto &profession : professions)
+            {
+                std::visit([&preStreamed](const auto &arg) { StreamComponent(arg, preStreamed); }, profession);
+            }
             ComponentGender gender;
             gender.isMale = rand() % 2 == 0;
             StreamComponent(gender, preStreamed);
             ComponentDateOfBirth dateOfBirth;
-            dateOfBirth.dateOfBirth = (rand() % (30 * 365)) + (20 * 365);
+            dateOfBirth.dateOfBirth = (rand() % (30 * 365)) + (20 * 365); // 20..50 years
             StreamComponent(dateOfBirth, preStreamed);
             ComponentEmployee employee;
             employee.employer = companyId;
@@ -240,33 +297,41 @@ static void GenerateScene(EntityIDGenerator &idGenerator, SystemsManager &manage
 	{
 		EntityID entityId;
 		ComponentCompany company;
-		ComponentProgrammer programmer;
-		ComponentArtist artist;
+		ComponentProgrammer programmerC, programmerCPP, programmerCS;
+		ComponentArtist artistTwoD, artistConcept;
 	} microsoft;
 	microsoft.entityId = idGenerator.Generate();
 	microsoft.company.name = {"Microsoft"};
-	microsoft.programmer.language = ComponentProgrammer::Languages::C.Combined(ComponentProgrammer::Languages::CPP).Combined(ComponentProgrammer::Languages::CS);
-	microsoft.programmer.skillLevel = ComponentProgrammer::SkillLevel::Junior;
-	microsoft.artist.area = ComponentArtist::Areas::TwoD.Combined(ComponentArtist::Areas::Concept);
-	stream.AddEntity(Stream(microsoft.entityId, microsoft.company, microsoft.programmer, microsoft.artist));
-    GenerateEmployees(stream, idGenerator, microsoft.entityId, microsoft.company, microsoft.programmer, microsoft.artist);
+    microsoft.programmerC.language = ComponentProgrammer::Languages::C;
+    microsoft.programmerC.skillLevel = ComponentProgrammer::SkillLevel::Middle;
+    microsoft.programmerCPP.language = ComponentProgrammer::Languages::CPP;
+    microsoft.programmerCPP.skillLevel = ComponentProgrammer::SkillLevel::Junior;
+    microsoft.programmerCS.language = ComponentProgrammer::Languages::CS;
+	microsoft.programmerCS.skillLevel = ComponentProgrammer::SkillLevel::Junior;
+	microsoft.artistTwoD.area = ComponentArtist::Areas::TwoD;
+    microsoft.artistConcept.area = ComponentArtist::Areas::Concept;
+	stream.AddEntity(Stream(microsoft.entityId, microsoft.company, microsoft.programmerC, microsoft.programmerCPP, microsoft.programmerCS, microsoft.artistTwoD, microsoft.artistConcept));
+    GenerateEmployees(stream, idGenerator, microsoft.entityId, microsoft.company, microsoft.programmerC, microsoft.programmerCPP, microsoft.programmerCS, microsoft.artistTwoD, microsoft.artistConcept);
 
     struct EA
     {
         EntityID entityId;
         ComponentCompany company;
         ComponentProgrammer programmer;
-        ComponentArtist artist;
-        ComponentDesigner designer;
+        ComponentArtist artistConcept, artistTwoD, artistThreeD;
+        ComponentDesigner designerLevel, designerUXUI;
     } ea;
     ea.entityId = idGenerator.Generate();
     ea.company.name = {"EA"};
     ea.programmer.language = ComponentProgrammer::Languages::CPP;
     ea.programmer.skillLevel = ComponentProgrammer::SkillLevel::Junior;
-    ea.artist.area = ComponentArtist::Areas::Concept.Combined(ComponentArtist::Areas::ThreeD).Combined(ComponentArtist::Areas::TwoD);
-    ea.designer.area = ComponentDesigner::Areas::Level.Combined(ComponentDesigner::Areas::UXUI);
-    stream.AddEntity(Stream(ea.entityId, ea.company, ea.programmer, ea.artist, ea.designer));
-    GenerateEmployees(stream, idGenerator, ea.entityId, ea.company, ea.programmer, ea.artist, ea.designer);
+    ea.artistConcept.area = ComponentArtist::Areas::Concept;
+    ea.artistTwoD.area = ComponentArtist::Areas::ThreeD;
+    ea.artistThreeD.area = ComponentArtist::Areas::TwoD;
+    ea.designerLevel.area = ComponentDesigner::Areas::Level;
+    ea.designerUXUI.area = ComponentDesigner::Areas::UXUI;
+    stream.AddEntity(Stream(ea.entityId, ea.company, ea.programmer, ea.artistConcept, ea.artistTwoD, ea.artistThreeD, ea.designerLevel, ea.designerUXUI));
+    GenerateEmployees(stream, idGenerator, ea.entityId, ea.company, ea.programmer, ea.artistConcept, ea.artistTwoD, ea.artistThreeD, ea.designerLevel, ea.designerUXUI);
 }
 
 int main()

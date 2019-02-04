@@ -5,19 +5,9 @@ using namespace ECSTest;
 
 // ArchetypeShort
 
-void Archetype::Add(StableTypeId type)
-{
-    _hash ^= type.Hash() & MainPartMask;
-}
-
-void Archetype::Subtract(StableTypeId type)
-{
-    Add(type);
-}
-
 ui64 Archetype::Hash() const
 {
-    return _hash;
+    return _parted.typePart;
 }
 
 Archetype ECSTest::Archetype::FromFull(const ArchetypeFull &source)
@@ -27,55 +17,44 @@ Archetype ECSTest::Archetype::FromFull(const ArchetypeFull &source)
 
 bool ECSTest::Archetype::operator == (const Archetype &other) const
 {
-    return _hash == other._hash;
+    return _whole == other._whole;
 }
 
 bool ECSTest::Archetype::operator != (const Archetype &other) const
 {
-    return _hash != other._hash;
+    return _whole != other._whole;
 }
 
 bool ECSTest::Archetype::operator < (const Archetype &other) const
 {
-    return _hash < other._hash;
+    return _whole < other._whole;
 }
-
 
 // Archetype
 
-void ArchetypeFull::Add(StableTypeId type, ui32 componentID)
-{
-    _hash ^= (type.Hash() & Archetype::MainPartMask) + ((ui64)componentID << ExtraPartStartBit);
-}
-
-void ArchetypeFull::Subtract(StableTypeId type, ui32 componentID)
-{
-    Add(type, componentID);
-}
-
 ui64 ArchetypeFull::Hash() const
 {
-    return _hash;
+    return _whole;
 }
 
 Archetype ArchetypeFull::ToShort() const
 {
     Archetype result;
-    result._hash = _hash & Archetype::MainPartMask;
+    result._parted.typePart = _parted.typePart;
     return result;
 }
 
 bool ArchetypeFull::operator == (const ArchetypeFull &other) const
 {
-    return _hash == other._hash;
+    return _whole == other._whole;
 }
 
 bool ArchetypeFull::operator != (const ArchetypeFull &other) const
 {
-    return _hash != other._hash;
+    return _whole != other._whole;
 }
 
 bool ArchetypeFull::operator < (const ArchetypeFull &other) const
 {
-    return _hash < other._hash;
+    return _whole < other._whole;
 }

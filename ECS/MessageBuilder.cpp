@@ -5,7 +5,6 @@ using namespace ECSTest;
 
 void MessageBuilder::ComponentArrayBuilder::Clear()
 {
-	_archetype = {};
 	_components = {};
 	_data = {};
 }
@@ -25,7 +24,7 @@ auto MessageBuilder::ComponentArrayBuilder::AddComponent(const EntitiesStream::C
 auto MessageBuilder::ComponentArrayBuilder::AddComponent(const SerializedComponent &sc) -> ComponentArrayBuilder &
 {
 	ui8 *oldPtr = _data.data();
-	_data.resize(_data.size() % sc.alignmentOf);
+	_data.resize(_data.size() + _data.size() % sc.alignmentOf);
 	uiw copyIndex = _data.size();
 	_data.resize(_data.size() + sc.sizeOf);
 	ui8 *newPtr = _data.data();
@@ -47,21 +46,22 @@ auto MessageBuilder::ComponentArrayBuilder::AddComponent(const SerializedCompone
 	SerializedComponent &added = _components.back();
 	std::copy(sc.data, sc.data + sc.sizeOf, _data.begin() + copyIndex);
 
-	_archetype.Add(sc.type);
+    added.data = _data.data() + copyIndex;
 
 	return *this;
 }
 
 bool MessageBuilder::IsEmpty() const
 {
-    return _cab._components.empty() && _entityAddedStream._data.empty() && _entityRemovedStream._data.empty();
+    return _cab._components.empty() && _entityAddedStreams._data.empty() && _entityRemovedStreams._data.empty() && _componentChangedStreams._data.empty();
 }
 
 void MessageBuilder::Clear()
 {
     _cab.Clear();
-    _entityAddedStream._data.clear();
-    _entityRemovedStream._data.clear();
+    _entityAddedStreams._data.clear();
+    _entityRemovedStreams._data.clear();
+    _componentChangedStreams._data.clear();
 }
 
 void MessageBuilder::Flush()
@@ -72,10 +72,11 @@ void MessageBuilder::Flush()
 	}
 
 	MessageStreamEntityAdded::EntityWithComponents entry;
+    Archetype archetype = Archetype::Create<SerializedComponent, &SerializedComponent::type>(ToArray(_cab._components));
 	entry.entityID = _currentEntityId;
 	entry.components = move(_cab._components);
 	entry.componentsData = move(_cab._data);
-    auto &target = _entityAddedStream._data[_cab._archetype];
+    auto &target = _entityAddedStreams._data[archetype];
     if (!target)
     {
         target = make_shared<vector<MessageStreamEntityAdded::EntityWithComponents>>();
@@ -88,12 +89,17 @@ void MessageBuilder::Flush()
 MessageStreamsBuilderEntityAdded &MessageBuilder::EntityAddedStreams()
 {
     Flush();
-    return _entityAddedStream;
+    return _entityAddedStreams;
+}
+
+MessageStreamsBuilderComponentChanged &MessageBuilder::ComponentChangedStreams()
+{
+    return _componentChangedStreams;
 }
 
 MessageStreamsBuilderEntityRemoved &MessageBuilder::EntityRemovedStreams()
 {
-	return _entityRemovedStream;
+	return _entityRemovedStreams;
 }
 
 auto ECSTest::MessageBuilder::EntityAdded(EntityID entityID) -> ComponentArrayBuilder &
@@ -105,10 +111,46 @@ auto ECSTest::MessageBuilder::EntityAdded(EntityID entityID) -> ComponentArrayBu
     return _cab;
 }
 
+void MessageBuilder::ComponentChanged(EntityID entityID, const SerializedComponent &sc)
+{
+    auto &entry = _componentChangedStreams._data[sc.type];
+    if (!entry)
+    {
+        entry = make_shared<MessageStreamComponentChanged::InfoWithData>();
+    }
+
+    uiw copyIndex = sc.sizeOf * entry->info.size();
+
+    ui8 *oldPtr = entry->data.release();
+    ui8 *newPtr = (ui8 *)_aligned_realloc(oldPtr, copyIndex + sc.sizeOf, sc.alignmentOf);
+    entry->data.reset(newPtr);
+
+    if (oldPtr != newPtr)
+    {
+        for (auto &stored : entry->info)
+        {
+            if (newPtr > oldPtr)
+            {
+                stored.component.data += newPtr - oldPtr;
+            }
+            else
+            {
+                stored.component.data -= oldPtr - newPtr;
+            }
+        }
+    }
+
+    entry->info.push_back({entityID, sc});
+    SerializedComponent &added = entry->info.back().component;
+    std::copy(sc.data, sc.data + sc.sizeOf, entry->data.get() + copyIndex);
+
+    added.data = entry->data.get() + copyIndex;
+}
+
 void MessageBuilder::EntityRemoved(Archetype archetype, EntityID entityID)
 {
 	ASSUME(entityID.IsValid());
-    auto &target = _entityRemovedStream._data[archetype];
+    auto &target = _entityRemovedStreams._data[archetype];
     if (!target)
     {
         target = make_shared<vector<EntityID>>();
