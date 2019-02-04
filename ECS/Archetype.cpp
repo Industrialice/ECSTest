@@ -17,12 +17,19 @@ Archetype ECSTest::Archetype::FromFull(const ArchetypeFull &source)
 
 bool ECSTest::Archetype::operator == (const Archetype &other) const
 {
-    return _whole == other._whole;
+    bool equalTest = _whole == other._whole;
+#ifdef DEBUG
+    if (equalTest)
+    {
+        ASSUME(std::equal(_storedTypes.begin(), _storedTypes.end(), other._storedTypes.begin(), other._storedTypes.end()));
+    }
+#endif
+    return equalTest;
 }
 
 bool ECSTest::Archetype::operator != (const Archetype &other) const
 {
-    return _whole != other._whole;
+    return !this->operator == (other);
 }
 
 bool ECSTest::Archetype::operator < (const Archetype &other) const
@@ -41,17 +48,27 @@ Archetype ArchetypeFull::ToShort() const
 {
     Archetype result;
     result._parted.typePart = _parted.typePart;
+#ifdef DEBUG
+    result._storedTypes = _storedTypes;
+#endif
     return result;
 }
 
 bool ArchetypeFull::operator == (const ArchetypeFull &other) const
 {
-    return _whole == other._whole;
+    bool equalTest = _whole == other._whole;
+#ifdef DEBUG
+    if (equalTest)
+    {
+        ASSUME(std::equal(_storedTypes.begin(), _storedTypes.end(), other._storedTypes.begin(), other._storedTypes.end()));
+    }
+#endif
+    return equalTest;
 }
 
 bool ArchetypeFull::operator != (const ArchetypeFull &other) const
 {
-    return _whole != other._whole;
+    return !this->operator == (other);
 }
 
 bool ArchetypeFull::operator < (const ArchetypeFull &other) const

@@ -20,6 +20,11 @@ namespace ECSTest
             ui64 _whole{};
         };
 
+    #ifdef DEBUG
+        friend class ArchetypeReflector;
+        vector<StableTypeId> _storedTypes{};
+    #endif
+
     public:
         template <typename T, StableTypeId T::*type = nullptr> [[nodiscard]] static Archetype Create(Array<const T> types)
         {
@@ -55,8 +60,16 @@ namespace ECSTest
                 {
                     unduplicated[count++] = tType;
                     result._parted.typePart ^= (ui32)tType.Hash();
+
+                #ifdef DEBUG
+                    result._storedTypes.push_back(tType);
+                #endif
                 }
             }
+
+        #ifdef DEBUG
+            std::sort(result._storedTypes.begin(), result._storedTypes.end());
+        #endif
 
             return result;
         }
@@ -83,34 +96,25 @@ namespace ECSTest
             ui64 _whole{};
         };
 
+    #ifdef DEBUG
+        friend class ArchetypeReflector;
+        vector<StableTypeId> _storedTypes{};
+    #endif
+
     public:
         template <typename T, StableTypeId T::*type, ui32 T::*id> [[nodiscard]] static ArchetypeFull Create(Array<const T> types)
         {
             ArchetypeFull result;
-
-            auto unduplicated = ALLOCA_TYPED(types.size(), StableTypeId);
-            uiw count = 0;
+            
+            auto shor = Archetype::Create<T, type>(types);
+            result._parted.typePart = shor._parted.typePart;
+        #ifdef DEBUG
+            result._storedTypes = move(shor._storedTypes);
+        #endif
             
             for (const T &t : types)
             {
                 result._parted.idPart += t.*id;
-
-                bool isAdd = true;
-
-                for (uiw search = 0; search < count; ++search)
-                {
-                    if (unduplicated[search] == t.*type)
-                    {
-                        isAdd = false;
-                        break;
-                    }
-                }
-
-                if (isAdd)
-                {
-                    unduplicated[count++] = t.*type;
-                    result._parted.typePart ^= (ui32)(t.*type).Hash();
-                }
             }
 
             return result;

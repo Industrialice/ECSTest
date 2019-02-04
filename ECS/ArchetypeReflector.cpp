@@ -13,6 +13,10 @@ bool ArchetypeReflector::Contains(Archetype archetype) const
 
 void ArchetypeReflector::AddToLibrary(Archetype archetype, vector<StableTypeId> &&types)
 {
+#ifdef DEBUG
+    ASSUME(std::equal(archetype._storedTypes.begin(), archetype._storedTypes.end(), types.begin(), types.end()));
+#endif
+
 	auto unlocker = _lock.Lock(DIWRSpinLock::LockType::Exclusive);
 
     // try to add to the archetype library, there's a chance such archetype is already registered
@@ -40,6 +44,9 @@ Array<const StableTypeId> ArchetypeReflector::Reflect(Archetype archetype) const
 	ASSUME(it != _library.end());
 	auto types = ToArray(it->second);
     unlocker.Unlock();
+#ifdef DEBUG
+    ASSUME(std::equal(types.begin(), types.end(), archetype._storedTypes.begin(), archetype._storedTypes.end()));
+#endif
 	return types;
 }
 

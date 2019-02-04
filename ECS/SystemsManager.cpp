@@ -316,6 +316,7 @@ auto SystemsManager::AddNewArchetypeGroup(ArchetypeFull archetype, Array<const S
             uniqueTypes.push_back(component.type);
         }
     }
+    std::sort(uniqueTypes.begin(), uniqueTypes.end());
 
     group.archetype = archetype;
 
