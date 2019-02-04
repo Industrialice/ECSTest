@@ -216,20 +216,24 @@ static void StreamedToSerialized(Array<const EntitiesStream::ComponentDesc> stre
 
 static ArchetypeFull ComputeArchetype(Array<const SerializedComponent> components)
 {
+    for (const auto &component : components)
+    {
+        ASSUME(component.isUnique || component.id != 0);
+    }
     return ArchetypeFull::Create<SerializedComponent, &SerializedComponent::type, &SerializedComponent::id>(components);
 }
 
 static void AssignComponentIDs(Array<SerializedComponent> components, std::atomic<ui32> &lastComponentId)
 {
-    for (uiw index = 0; index < components.size(); ++index)
+    for (auto &component : components)
     {
-        if (!components[index].isUnique)
+        if (!component.isUnique)
         {
-            components[index].id = ++lastComponentId;
+            component.id = ++lastComponentId;
         }
         else
         {
-            ASSUME(components[index].id == 0);
+            ASSUME(component.id == 0);
         }
     }
 }
@@ -288,7 +292,7 @@ void SystemsManager::StreamIn(Array<shared_ptr<EntitiesStream>> streams)
     NOIMPL;
 }
 
-auto SystemsManager::FindArchetypeGroup(ArchetypeFull archetype, Array<const SerializedComponent> components) -> ArchetypeGroup &
+auto SystemsManager::FindArchetypeGroup(const ArchetypeFull &archetype, Array<const SerializedComponent> components) -> ArchetypeGroup &
 {
     auto searchResult = _archetypeGroupsFull.find(archetype);
     if (searchResult != _archetypeGroupsFull.end())
@@ -300,7 +304,7 @@ auto SystemsManager::FindArchetypeGroup(ArchetypeFull archetype, Array<const Ser
     return AddNewArchetypeGroup(archetype, components);
 }
 
-auto SystemsManager::AddNewArchetypeGroup(ArchetypeFull archetype, Array<const SerializedComponent> components) -> ArchetypeGroup &
+auto SystemsManager::AddNewArchetypeGroup(const ArchetypeFull &archetype, Array<const SerializedComponent> components) -> ArchetypeGroup &
 {
     auto[insertedWhere, insertedResult] = _archetypeGroupsFull.try_emplace(archetype);
     ASSUME(insertedResult);
@@ -329,13 +333,18 @@ auto SystemsManager::AddNewArchetypeGroup(ArchetypeFull archetype, Array<const S
         {
             return stored.sizeOf == 0 || stored.type == component.type;
         };
-        auto &componentArray = *std::find_if(group.components.get(), group.components.get() + group.uniqueTypedComponentsCount, pred);
+        
+        auto searchResult = std::find_if(group.components.get(), group.components.get() + group.uniqueTypedComponentsCount, pred);
+        ASSUME(searchResult != group.components.get() + group.uniqueTypedComponentsCount);
+        auto &componentArray = *searchResult;
 
         componentArray.alignmentOf = component.alignmentOf;
         componentArray.sizeOf = component.sizeOf;
         componentArray.type = component.type;
-        componentArray.isUnique = component.isUnique; // TODO: ensure uniquiness
+        componentArray.isUnique = component.isUnique; // TODO: ensure uniqueness
         ++componentArray.stride;
+
+        ASSUME(componentArray.stride == 1 || !componentArray.isUnique);
     }
 
     group.reservedCount = 8; // by default initialize enough space for 8 entities
@@ -350,12 +359,10 @@ auto SystemsManager::AddNewArchetypeGroup(ArchetypeFull archetype, Array<const S
 
         if (!componentArray.isUnique)
         {
-            componentArray.ids.reset((ui32 *)malloc(sizeof(ui32) * componentArray.stride * group.reservedCount));
+            uiw allocSize = sizeof(ui32) * componentArray.stride * group.reservedCount;
+            componentArray.ids.reset((ui32 *)malloc(allocSize));
+            memset(componentArray.ids.get(), 0xFF, allocSize);
         }
-
-        // and also register component type locations
-        //ComponentLocation location = {&group, index};
-        //_archetypeGroupsComponents.emplace(componentArray.type, location);
     }
 
     group.entities.reset((EntityID *)malloc(sizeof(EntityID) * group.reservedCount));
@@ -366,7 +373,7 @@ auto SystemsManager::AddNewArchetypeGroup(ArchetypeFull archetype, Array<const S
     return group;
 }
 
-void SystemsManager::AddEntityToArchetypeGroup(ArchetypeFull archetype, ArchetypeGroup &group, EntityID entityId, Array<const SerializedComponent> components, MessageBuilder *messageBuilder)
+void SystemsManager::AddEntityToArchetypeGroup(const ArchetypeFull &archetype, ArchetypeGroup &group, EntityID entityId, Array<const SerializedComponent> components, MessageBuilder *messageBuilder)
 {
     if (group.entitiesCount == group.reservedCount)
     {
@@ -387,6 +394,7 @@ void SystemsManager::AddEntityToArchetypeGroup(ArchetypeFull archetype, Archetyp
                 ui32 *oldUPtr = componentArray.ids.release();
                 ui32 *newUPtr = (ui32 *)realloc(oldUPtr, sizeof(ui32) * componentArray.stride * group.reservedCount);
                 componentArray.ids.reset(newUPtr);
+                memset(newUPtr + componentArray.stride * group.entitiesCount, 0xFF, (group.reservedCount - group.entitiesCount) * sizeof(ui32) * componentArray.stride);
             }
         }
 
@@ -413,12 +421,21 @@ void SystemsManager::AddEntityToArchetypeGroup(ArchetypeFull archetype, Archetyp
         ASSUME(findResult != group.components.get() + group.uniqueTypedComponentsCount);
         auto &componentArray = *findResult;
 
-        memcpy(componentArray.data.get() + componentArray.sizeOf * componentArray.stride * group.entitiesCount, component.data, componentArray.sizeOf);
-
+        uiw offset = 0;
         if (!componentArray.isUnique)
         {
-            componentArray.ids[componentArray.stride * group.entitiesCount] = component.id;
+            for (; ; ++offset)
+            {
+                ASSUME(offset < componentArray.stride);
+                if (componentArray.ids[componentArray.stride * group.entitiesCount + offset] == ui32_max)
+                {
+                    break;
+                }
+            }
+            componentArray.ids[componentArray.stride * group.entitiesCount + offset] = component.id;
         }
+
+        memcpy(componentArray.data.get() + componentArray.sizeOf * componentArray.stride * group.entitiesCount + offset * componentArray.sizeOf, component.data, componentArray.sizeOf);
 
         if (componentBuilder)
         {
@@ -738,6 +755,10 @@ void SystemsManager::TaskProcessMessages(IndirectSystem &system, const ManagedIn
     {
         system.ProcessMessages(stream);
     }
+    for (const auto &stream : messageQueue.componentChangedStreams)
+    {
+        system.ProcessMessages(stream);
+    }
     for (const auto &stream : messageQueue.entityRemovedStreams)
     {
         system.ProcessMessages(stream);
@@ -808,12 +829,67 @@ void SystemsManager::TaskExecuteIndirectSystem(IndirectSystem &system, ManagedIn
         }
     }
 
+    for (const auto &[componentType, stream] : messageBuilder.ComponentChangedStreams()._data)
+    {
+        auto locationsLock = _entitiesLocationsLock.Lock(DIWRSpinLock::LockType::Read);
+
+        for (const auto &info : stream->infos)
+        {
+            auto entityLocation = _entitiesLocations.find(info.entityID);
+            ASSUME(entityLocation != _entitiesLocations.end());
+
+            auto &[group, entityIndex] = entityLocation->second;
+
+            auto groupLock = group->lock.Lock(DIWRSpinLock::LockType::Read);
+
+            uiw componentIndex = 0;
+            for (; ; ++componentIndex)
+            {
+                ASSUME(componentIndex < group->uniqueTypedComponentsCount);
+                if (group->components[componentIndex].type == componentType)
+                {
+                    break;
+                }
+            }
+
+            auto &componentArray = group->components[componentIndex];
+
+            ASSUME(info.component.alignmentOf == componentArray.alignmentOf);
+            ASSUME(info.component.isUnique == componentArray.isUnique);
+            ASSUME(info.component.sizeOf == componentArray.sizeOf);
+            ASSUME(info.component.type == componentArray.type);
+
+            uiw offset = 0;
+            if (!info.component.isUnique)
+            {
+                for (; ; ++offset)
+                {
+                    ASSUME(offset < componentArray.stride);
+                    if (info.component.id == componentArray.ids[entityIndex * componentArray.stride + offset])
+                    {
+                        break;
+                    }
+                }
+            }
+
+            auto componentArrayLock = componentArray.lock.Lock(DIWRSpinLock::LockType::Exclusive);
+
+            memcpy(componentArray.data.get() + componentArray.sizeOf * componentArray.stride * entityIndex + componentArray.sizeOf * offset, info.component.data, info.component.sizeOf);
+
+            componentArrayLock.Unlock();
+
+            groupLock.Unlock();
+        }
+
+        locationsLock.Unlock();
+    }
+
     for (const auto &[streamArchetype, stream] : messageBuilder.EntityRemovedStreams()._data)
     {
+        auto locationsLock = _entitiesLocationsLock.Lock(DIWRSpinLock::LockType::Read);
+
         for (auto &entity : *stream)
         {
-            auto locationsLock = _entitiesLocationsLock.Lock(DIWRSpinLock::LockType::Read);
-
             auto entityLocation = _entitiesLocations.find(entity);
             ASSUME(entityLocation != _entitiesLocations.end());
 
@@ -865,8 +941,10 @@ void SystemsManager::TaskExecuteIndirectSystem(IndirectSystem &system, ManagedIn
                 entityLocation->second.index = index;
             }
 
-            locationsLock.Unlock();
+            locationsLock.Transition(DIWRSpinLock::LockType::Read);
         }
+
+        locationsLock.Unlock();
     }
 
     for (auto &lock : componentLocks)
@@ -889,6 +967,37 @@ void SystemsManager::TaskExecuteIndirectSystem(IndirectSystem &system, ManagedIn
                     auto messageQueueLock = managed.messageQueueLock.Lock(DIWRSpinLock::LockType::Exclusive);
                     managed.messageQueue.entityAddedStreams.emplace_back(stream);
                     messageQueueLock.Unlock();
+                }
+            }
+        }
+    }
+
+    for (const auto &[componentType, streamPointer] : messageBuilder.ComponentChangedStreams()._data)
+    {
+        auto stream = MessageStreamComponentChanged(componentType, streamPointer);
+
+        for (auto &pipeline : _pipelines)
+        {
+            for (auto &managed : pipeline.indirectSystems)
+            {
+                if (managed.system.get() != &system)
+                {
+                    auto requested = managed.system->RequestedComponents();
+                    auto searchPredicate = [componentType](const System::RequestedComponent &stored) { return componentType == stored.type; };
+
+                    if (requested.subtractive.find(searchPredicate) != requested.subtractive.end())
+                    {
+                        continue;
+                    }
+
+                    if (requested.required.empty() ||
+                        requested.required.find(searchPredicate) != requested.required.end() ||
+                        requested.optional.find(searchPredicate) != requested.optional.end())
+                    {
+                        auto messageQueueLock = managed.messageQueueLock.Lock(DIWRSpinLock::LockType::Exclusive);
+                        managed.messageQueue.componentChangedStreams.emplace_back(stream);
+                        messageQueueLock.Unlock();
+                    }
                 }
             }
         }
@@ -931,6 +1040,7 @@ void SystemsManager::TaskExecuteIndirectSystem(IndirectSystem &system, ManagedIn
 void SystemsManager::ManagedIndirectSystem::MessageQueue::clear()
 {
     entityAddedStreams.clear();
+    componentChangedStreams.clear();
     entityRemovedStreams.clear();
 }
 
@@ -938,5 +1048,6 @@ bool ECSTest::SystemsManager::ManagedIndirectSystem::MessageQueue::empty() const
 {
     return 
         entityAddedStreams.empty() && 
+        componentChangedStreams.empty() &&
         entityRemovedStreams.empty();
 }

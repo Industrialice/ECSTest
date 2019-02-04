@@ -6,7 +6,7 @@ namespace ECSTest
 {
 	NONUNIQUE_COMPONENT(ComponentProgrammer)
     {
-        enum class Languages
+        enum class Languages : ui8
         {
             Undefined,
             CPP,
@@ -16,9 +16,11 @@ namespace ECSTest
             JS,
             Java,
             Python
-        };
+        } language;
 
-        Languages language;
-        enum class SkillLevel { Junior, Middle, Senior } skillLevel;
+        enum class SkillLevel : ui8 
+        { 
+            Junior, Middle, Senior 
+        } skillLevel;
     };
 }

@@ -20,6 +20,27 @@ void SystemGameInfo::ProcessMessages(const MessageStreamEntityAdded &stream)
     for (auto &item : stream)
     {
         printf("SystemGameInfo received %u in MessageStreamEntityAdded\n", item.entityID.Hash());
+
+        for (auto &component : item.components)
+        {
+            if (component.type == ComponentProgrammer::GetTypeId())
+            {
+                ProgrammerEntry entry;
+                entry.parent = item.entityID;
+                entry.componentId = component.id;
+                entry.skillLevel = ((ComponentProgrammer *)component.data)->skillLevel;
+                auto [it, result] = programmerEntities.insert(entry);
+                ASSUME(result);
+            }
+        }
+    }
+}
+
+void SystemGameInfo::ProcessMessages(const MessageStreamComponentChanged &stream)
+{
+    for (auto &item : stream)
+    {
+        printf("SystemGameInfo received %u:%u:%u in MessageStreamComponentChanged\n", item.entityID.Hash(), (ui32)item.component.type.Hash(), item.component.id);
     }
 }
 
@@ -35,7 +56,7 @@ void SystemGameInfo::Update(Environment &env, MessageBuilder &messageBuilder)
 {
     auto threadId = std::this_thread::get_id();
 
-    printf("updating SystemGameInfo on thread %u\n", *(ui32 *)&threadId);
+    //printf("updating SystemGameInfo on thread %u\n", *(ui32 *)&threadId);
 
     auto id = env.idGenerator.Generate();
     auto &builder = messageBuilder.EntityAdded(id);
@@ -48,4 +69,21 @@ void SystemGameInfo::Update(Environment &env, MessageBuilder &messageBuilder)
     Archetype archetype = Archetype::Create<StableTypeId>(ToArray(types));
 
     messageBuilder.EntityRemoved(archetype, id);
+
+    for (uiw index = 0; index < 10; ++index)
+    {
+        if (programmerEntities.empty())
+        {
+            break;
+        }
+
+        ProgrammerEntry entry = *programmerEntities.begin();
+        programmerEntities.erase(programmerEntities.begin());
+        
+        ComponentProgrammer changed;
+        changed.language = ComponentProgrammer::Languages::CPP;
+        changed.skillLevel = entry.skillLevel;
+
+        messageBuilder.ComponentChanged(entry.parent, changed, entry.componentId);
+    }
 }

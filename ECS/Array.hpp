@@ -30,6 +30,11 @@ namespace ECSTest
 			return _count;
 		}
 
+        [[nodiscard]] bool empty() const
+        {
+            return _count == 0;
+        }
+
         [[nodiscard]] T &front()
         {
             ASSUME(_count > 0);

@@ -11,6 +11,14 @@ void SystemTest::ProcessMessages(const MessageStreamEntityAdded &stream)
     }
 }
 
+void SystemTest::ProcessMessages(const MessageStreamComponentChanged &stream)
+{
+    for (auto &item : stream)
+    {
+        printf("SystemTest received %u:%u:%u in MessageStreamComponentChanged\n", item.entityID.Hash(), (ui32)item.component.type.Hash(), item.component.id);
+    }
+}
+
 void SystemTest::ProcessMessages(const MessageStreamEntityRemoved &stream)
 {
     for (auto &item : stream)
@@ -23,7 +31,7 @@ void SystemTest::Update(Environment &env, MessageBuilder &messageBuilder)
 {
     auto threadId = std::this_thread::get_id();
 
-    printf("updating SystemTest on thread %u\n", *(ui32 *)&threadId);
+    //printf("updating SystemTest on thread %u\n", *(ui32 *)&threadId);
 
     /*auto id = env.idGenerator.Generate();
     auto &builder = messageBuilder.EntityAdded(id);

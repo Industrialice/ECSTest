@@ -16,8 +16,7 @@ namespace ECSTest
             {
                 ui64 idPart : 32;
                 ui64 typePart : 32;
-            } _parted;
-            ui64 _whole{};
+            } _u{};
         };
 
     #ifdef DEBUG
@@ -59,7 +58,7 @@ namespace ECSTest
                 if (isAdd)
                 {
                     unduplicated[count++] = tType;
-                    result._parted.typePart ^= (ui32)tType.Hash();
+                    result._u.typePart ^= (ui32)tType.Hash();
 
                 #ifdef DEBUG
                     result._storedTypes.push_back(tType);
@@ -92,13 +91,13 @@ namespace ECSTest
             {
                 ui64 idPart : 32;
                 ui64 typePart : 32;
-            } _parted;
-            ui64 _whole{};
+            } _u{};
         };
 
     #ifdef DEBUG
         friend class ArchetypeReflector;
         vector<StableTypeId> _storedTypes{};
+        vector<StableTypeId> _storedTypesFull{};
     #endif
 
     public:
@@ -107,14 +106,20 @@ namespace ECSTest
             ArchetypeFull result;
             
             auto shor = Archetype::Create<T, type>(types);
-            result._parted.typePart = shor._parted.typePart;
+            result._u.typePart = shor._u.typePart;
+
         #ifdef DEBUG
             result._storedTypes = move(shor._storedTypes);
+            for (const auto &t : types)
+            {
+                result._storedTypesFull.push_back(t.type);
+            }
+            std::sort(result._storedTypesFull.begin(), result._storedTypesFull.end());
         #endif
             
             for (const T &t : types)
             {
-                result._parted.idPart += t.*id;
+                result._u.idPart ^= Hash::FNVHash<Hash::Precision::P32>(t.*id);
             }
 
             return result;

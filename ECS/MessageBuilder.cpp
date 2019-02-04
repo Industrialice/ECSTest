@@ -119,7 +119,7 @@ void MessageBuilder::ComponentChanged(EntityID entityID, const SerializedCompone
         entry = make_shared<MessageStreamComponentChanged::InfoWithData>();
     }
 
-    uiw copyIndex = sc.sizeOf * entry->info.size();
+    uiw copyIndex = sc.sizeOf * entry->infos.size();
 
     ui8 *oldPtr = entry->data.release();
     ui8 *newPtr = (ui8 *)_aligned_realloc(oldPtr, copyIndex + sc.sizeOf, sc.alignmentOf);
@@ -127,7 +127,7 @@ void MessageBuilder::ComponentChanged(EntityID entityID, const SerializedCompone
 
     if (oldPtr != newPtr)
     {
-        for (auto &stored : entry->info)
+        for (auto &stored : entry->infos)
         {
             if (newPtr > oldPtr)
             {
@@ -140,8 +140,8 @@ void MessageBuilder::ComponentChanged(EntityID entityID, const SerializedCompone
         }
     }
 
-    entry->info.push_back({entityID, sc});
-    SerializedComponent &added = entry->info.back().component;
+    entry->infos.push_back({entityID, sc});
+    SerializedComponent &added = entry->infos.back().component;
     std::copy(sc.data, sc.data + sc.sizeOf, entry->data.get() + copyIndex);
 
     added.data = entry->data.get() + copyIndex;

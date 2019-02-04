@@ -89,7 +89,7 @@ namespace ECSTest
     private:
         struct InfoWithData
         {
-            vector<ComponentInfo> info;
+            vector<ComponentInfo> infos;
             unique_ptr<ui8[], AlignedMallocDeleter> data;
         };
 
@@ -98,18 +98,18 @@ namespace ECSTest
 
         MessageStreamComponentChanged(StableTypeId type, const shared_ptr<InfoWithData> &source) : _type(type), _source(source)
         {
-            ASSUME(source->info.size());
+            ASSUME(source->infos.size());
         }
 
     public:
         [[nodiscard]] const ComponentInfo *begin() const
         {
-            return _source->info.data();
+            return _source->infos.data();
         }
 
         [[nodiscard]] const ComponentInfo *end() const
         {
-            return _source->info.data() + _source->info.size();
+            return _source->infos.data() + _source->infos.size();
         }
 
         [[nodiscard]] StableTypeId Type() const
@@ -120,12 +120,12 @@ namespace ECSTest
     /*private:
         [[nodiscard]] ComponentInfo *begin()
         {
-            return _source->info.data();
+            return _source->infos.data();
         }
 
         [[nodiscard]] ComponentInfo *end()
         {
-            return _source->info.data() + _source->info.size();
+            return _source->infos.data() + _source->infos.size();
         }*/
     };
 

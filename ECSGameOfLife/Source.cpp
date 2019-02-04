@@ -352,7 +352,7 @@ int main()
 
     shared_ptr<EntitiesStream> casted = stream;
 	manager.Start(move(idGenerator), move(workers), ToArray(casted));
-    std::this_thread::sleep_for(1000ms);
+    std::this_thread::sleep_for(2500ms);
     manager.Stop(true);
 
     system("pause");

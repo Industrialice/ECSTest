@@ -66,7 +66,7 @@ namespace ECSTest
                 bool isUnique{}; // indicates whether other components of the same type can be attached to an entity
             };
 
-            unique_ptr<ComponentArray[]> components{}; // a 2D array where rows count = uniqueTypedComponentsCount, columns count is computed per row as entitiesCount * stride
+            unique_ptr<ComponentArray[]> components{}; // essentially a 2D array where rows count = uniqueTypedComponentsCount, columns count is computed per row as entitiesCount * stride
             unique_ptr<EntityID[]> entities{};
             ui16 uniqueTypedComponentsCount{};
             ui16 reservedCount{}; // final reserved count is computed as reservedCount * stride
@@ -84,12 +84,6 @@ namespace ECSTest
             ArchetypeGroup *group{};
             ui32 index{};
         };
-
-        //struct ComponentLocation
-        //{
-        //    ArchetypeGroup *group{};
-        //    ui32 index{};
-        //};
 
         //struct OnSystemExecutedData
         //{
@@ -123,6 +117,7 @@ namespace ECSTest
             struct MessageQueue
             {
                 vector<MessageStreamEntityAdded> entityAddedStreams{};
+                vector<MessageStreamComponentChanged> componentChangedStreams{};
                 vector<MessageStreamEntityRemoved> entityRemovedStreams{};
 
                 void clear();
@@ -158,8 +153,6 @@ namespace ECSTest
         // will be considered as same archetype, so if you don't care about the components count,
         // but only about their presence, use this
         std::unordered_map<Archetype, vector<std::reference_wrapper<ArchetypeGroup>>> _archetypeGroups{};
-        // used to match component types and archetype groups
-        //std::unordered_multimap<StableTypeId, ComponentLocation> _archetypeGroupsComponents{};
         // this lock is shared between all archetype groups arrays
         DIWRSpinLock _archetypeGroupsLock{};
 
@@ -182,9 +175,9 @@ namespace ECSTest
         EntityIDGenerator _idGenerator{};
 
     private:
-        [[nodiscard]] ArchetypeGroup &FindArchetypeGroup(ArchetypeFull archetype, Array<const SerializedComponent> components);
-        ArchetypeGroup &AddNewArchetypeGroup(ArchetypeFull archetype, Array<const SerializedComponent> components);
-        void AddEntityToArchetypeGroup(ArchetypeFull archetype, ArchetypeGroup &group, EntityID entityId, Array<const SerializedComponent> components, MessageBuilder *messageBuilder);
+        [[nodiscard]] ArchetypeGroup &FindArchetypeGroup(const ArchetypeFull &archetype, Array<const SerializedComponent> components);
+        ArchetypeGroup &AddNewArchetypeGroup(const ArchetypeFull &archetype, Array<const SerializedComponent> components);
+        void AddEntityToArchetypeGroup(const ArchetypeFull &archetype, ArchetypeGroup &group, EntityID entityId, Array<const SerializedComponent> components, MessageBuilder *messageBuilder);
         void StartScheduler(Array<shared_ptr<EntitiesStream>> streams);
         void SchedulerLoop();
         void ExecutePipeline(Pipeline &pipeline);
