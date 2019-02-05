@@ -12,8 +12,10 @@
 
 namespace ECSTest
 {
-    class SystemsManager
+    class SystemsManager : public std::enable_shared_from_this<SystemsManager>
     {
+        friend class ECSEntities;
+
         //struct ListenerLocation;
         //static void RemoveListener(ListenerLocation *instance, void *handle);
 
@@ -27,7 +29,13 @@ namespace ECSTest
         SystemsManager(SystemsManager &&) = delete;
         SystemsManager &operator = (SystemsManager &&) = delete;
 
+    protected:
+        ~SystemsManager() = default;
+        SystemsManager() = default;
+
     public:
+        static shared_ptr<SystemsManager> New();
+
         class PipelineGroup
         {
             ui32 index{};
@@ -37,17 +45,20 @@ namespace ECSTest
         //using ListenerHandle = ListenerLocation::ListenerHandle;
         //using OnSystemExecutedCallbackType = function<void(const System &)>;
 
-        SystemsManager() = default;
         //[[nodiscard]] ListenerHandle OnSystemExecuted(StableTypeId systemType, OnSystemExecutedCallbackType callback);
         //void RemoveListener(ListenerHandle &listener);
         //void Register(System &system, optional<ui32> stepMicroSeconds, const vector<StableTypeId> &runBefore, const vector<StableTypeId> &runAfter, std::thread::id affinityThread);
         PipelineGroup CreatePipelineGroup(optional<ui32> stepMicroSeconds, bool isMergeIfSuchPipelineExists);
         void Register(unique_ptr<System> system, PipelineGroup pipelineGroup);
         void Unregister(StableTypeId systemType);
-        void Start(EntityIDGenerator &&idGenerator, vector<WorkerThread> &&workers, Array<shared_ptr<EntitiesStream>> streams);
+        void Start(EntityIDGenerator &&idGenerator, vector<WorkerThread> &&workers, vector<unique_ptr<EntitiesStream>> &&streams);
+        void Pause(bool isWaitForStop); // you can call it multiple times, for example first time as Pause(false), and then as Pause(true) to wait for paused
+        void Resume();
         void Stop(bool isWaitForStop);
-        bool IsRunning();
-        void StreamIn(Array<shared_ptr<EntitiesStream>> streams);
+        bool IsRunning() const;
+        bool IsPaused() const;
+        //void StreamIn(vector<unique_ptr<EntitiesStream>> &&streams);
+        shared_ptr<EntitiesStream> StreamOut() const; // the system must be paused
 
     private:
         struct ArchetypeGroup
@@ -102,7 +113,7 @@ namespace ECSTest
 			ui32 executedAt{}; // last executed frame, gets set to Pipeline::executionFrame at first execution attempt on a new frame
 			vector<std::reference_wrapper<ArchetypeGroup>> groupsToExecute{}; // group still left to be executed for the current frame
             vector<pair<ArchetypeFull, DIWRSpinLock::Unlocker>> groupLocks{}; // all currently held archetype group locks by the system
-            vector<DIWRSpinLock::Unlocker> componentLocks{}; // all currently held component locks by the system
+            vector<pair<StableTypeId, DIWRSpinLock::Unlocker>> componentLocks{}; // all currently held component locks by the system
 		};
 
 		struct ManagedDirectSystem : ManagedSystem
@@ -171,6 +182,14 @@ namespace ECSTest
 		ArchetypeReflector _archetypeReflector{};
 
         std::atomic<bool> _isStoppingExecution{false};
+        
+        std::atomic<bool> _isPausedExecution{false};
+        std::mutex _executionPauseMutex{};
+        std::condition_variable _executionPauseNotifier{};
+
+        std::atomic<bool> _isSchedulerPaused{false};
+        std::mutex _schedulerPausedMutex{};
+        std::condition_variable _schedulerPausedNotifier{};
 
         EntityIDGenerator _idGenerator{};
 
@@ -178,13 +197,13 @@ namespace ECSTest
         [[nodiscard]] ArchetypeGroup &FindArchetypeGroup(const ArchetypeFull &archetype, Array<const SerializedComponent> components);
         ArchetypeGroup &AddNewArchetypeGroup(const ArchetypeFull &archetype, Array<const SerializedComponent> components);
         void AddEntityToArchetypeGroup(const ArchetypeFull &archetype, ArchetypeGroup &group, EntityID entityId, Array<const SerializedComponent> components, MessageBuilder *messageBuilder);
-        void StartScheduler(Array<shared_ptr<EntitiesStream>> streams);
+        void StartScheduler(vector<unique_ptr<EntitiesStream>> &&streams);
         void SchedulerLoop();
         void ExecutePipeline(Pipeline &pipeline);
         void CalculateGroupsToExectute(const System *system, vector<std::reference_wrapper<ArchetypeGroup>> &groups);
         WorkerThread &FindBestWorker();
 
         static void TaskProcessMessages(IndirectSystem &system, const ManagedIndirectSystem::MessageQueue &messageQueue);
-        void TaskExecuteIndirectSystem(IndirectSystem &system, ManagedIndirectSystem::MessageQueue messageQueue, System::Environment env, std::atomic<ui32> &decrementAtCompletion, vector<pair<ArchetypeFull, DIWRSpinLock::Unlocker>> &groupLocks, vector<DIWRSpinLock::Unlocker> &componentLocks);
+        void TaskExecuteIndirectSystem(IndirectSystem &system, ManagedIndirectSystem::MessageQueue messageQueue, System::Environment env, std::atomic<ui32> &decrementAtCompletion, vector<pair<ArchetypeFull, DIWRSpinLock::Unlocker>> &groupLocks, vector<pair<StableTypeId, DIWRSpinLock::Unlocker>> &componentLocks);
 	};
 }

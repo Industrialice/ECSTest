@@ -112,14 +112,14 @@ namespace ECSTest
             result._storedTypes = move(shor._storedTypes);
             for (const auto &t : types)
             {
-                result._storedTypesFull.push_back(t.type);
+                result._storedTypesFull.push_back(t.*type);
             }
             std::sort(result._storedTypesFull.begin(), result._storedTypesFull.end());
         #endif
             
             for (const T &t : types)
             {
-                result._u.idPart ^= Hash::FNVHash<Hash::Precision::P32>(t.*id);
+                result._u.idPart ^= Hash::Integer(t.*id);
             }
 
             return result;

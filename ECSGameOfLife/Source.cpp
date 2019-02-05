@@ -50,9 +50,11 @@ public:
         return {};
     }
 
-    void AddEntity(PreStreamedEntity &&entity)
+    void AddEntity(EntityID id, PreStreamedEntity &&entity)
     {
         _entities.emplace_back(move(entity));
+        _entities.back().streamed.components = ToArray(_entities.back().descs);
+        _entities.back().streamed.entityId = id;
     }
 };
 
@@ -70,12 +72,10 @@ template <typename T> void StreamComponent(const T &component, GameOfLifeEntitie
 	preStreamed.descs.emplace_back(desc);
 }
 
-template <typename... Args> GameOfLifeEntities::PreStreamedEntity Stream(EntityID entityId, const Args &... args)
+template <typename... Args> GameOfLifeEntities::PreStreamedEntity Stream(const Args &... args)
 {
 	GameOfLifeEntities::PreStreamedEntity preStreamed;
 	(StreamComponent(args, preStreamed), ...);
-	preStreamed.streamed.entityId = entityId;
-	preStreamed.streamed.components = ToArray(preStreamed.descs);
 	return preStreamed;
 }
 
@@ -277,10 +277,7 @@ template <typename... CompanyComponents> void GenerateEmployees(GameOfLifeEntiti
             StreamComponent(lastName, preStreamed);
             EntityID employeeId = idGenerator.Generate();
             
-            preStreamed.streamed.entityId = employeeId;
-            preStreamed.streamed.components = ToArray(preStreamed.descs);
-
-            stream.AddEntity(move(preStreamed));
+            stream.AddEntity(employeeId, move(preStreamed));
 
             ++generatedEmployees;
         }
@@ -291,8 +288,6 @@ template <typename... CompanyComponents> void GenerateEmployees(GameOfLifeEntiti
 
 static void GenerateScene(EntityIDGenerator &idGenerator, SystemsManager &manager, GameOfLifeEntities &stream)
 {
-	Funcs::Reinitialize(manager);
-    
 	struct Microsoft
 	{
 		EntityID entityId;
@@ -310,7 +305,7 @@ static void GenerateScene(EntityIDGenerator &idGenerator, SystemsManager &manage
 	microsoft.programmerCS.skillLevel = ComponentProgrammer::SkillLevel::Junior;
 	microsoft.artistTwoD.area = ComponentArtist::Areas::TwoD;
     microsoft.artistConcept.area = ComponentArtist::Areas::Concept;
-	stream.AddEntity(Stream(microsoft.entityId, microsoft.company, microsoft.programmerC, microsoft.programmerCPP, microsoft.programmerCS, microsoft.artistTwoD, microsoft.artistConcept));
+	stream.AddEntity(microsoft.entityId, Stream(microsoft.company, microsoft.programmerC, microsoft.programmerCPP, microsoft.programmerCS, microsoft.artistTwoD, microsoft.artistConcept));
     GenerateEmployees(stream, idGenerator, microsoft.entityId, microsoft.company, microsoft.programmerC, microsoft.programmerCPP, microsoft.programmerCS, microsoft.artistTwoD, microsoft.artistConcept);
 
     struct EA
@@ -330,7 +325,7 @@ static void GenerateScene(EntityIDGenerator &idGenerator, SystemsManager &manage
     ea.artistThreeD.area = ComponentArtist::Areas::TwoD;
     ea.designerLevel.area = ComponentDesigner::Areas::Level;
     ea.designerUXUI.area = ComponentDesigner::Areas::UXUI;
-    stream.AddEntity(Stream(ea.entityId, ea.company, ea.programmer, ea.artistConcept, ea.artistTwoD, ea.artistThreeD, ea.designerLevel, ea.designerUXUI));
+    stream.AddEntity(ea.entityId, Stream(ea.company, ea.programmer, ea.artistConcept, ea.artistTwoD, ea.artistThreeD, ea.designerLevel, ea.designerUXUI));
     GenerateEmployees(stream, idGenerator, ea.entityId, ea.company, ea.programmer, ea.artistConcept, ea.artistTwoD, ea.artistThreeD, ea.designerLevel, ea.designerUXUI);
 }
 
@@ -338,22 +333,23 @@ int main()
 {
     StdLib::Initialization::Initialize({});
 
-    auto stream = make_shared<GameOfLifeEntities>();
-	SystemsManager manager;
+    auto stream = make_unique<GameOfLifeEntities>();
+    auto manager = SystemsManager::New();;
     EntityIDGenerator idGenerator;
 
-	GenerateScene(idGenerator, manager, *stream);
+	GenerateScene(idGenerator, *manager, *stream);
 
-	auto gameInfoPipelineGroup = manager.CreatePipelineGroup(1000'0000, true);
-	manager.Register(make_unique<SystemGameInfo>(), gameInfoPipelineGroup);
-    manager.Register(make_unique<SystemTest>(), gameInfoPipelineGroup);
+	auto gameInfoPipelineGroup = manager->CreatePipelineGroup(1000'0000, true);
+	manager->Register(make_unique<SystemGameInfo>(), gameInfoPipelineGroup);
+    manager->Register(make_unique<SystemTest>(), gameInfoPipelineGroup);
 
 	vector<WorkerThread> workers(SystemInfo::LogicalCPUCores());
 
-    shared_ptr<EntitiesStream> casted = stream;
-	manager.Start(move(idGenerator), move(workers), ToArray(casted));
+    vector<unique_ptr<EntitiesStream>> streams;
+    streams.push_back(move(stream));
+    manager->Start(move(idGenerator), move(workers), move(streams));
     std::this_thread::sleep_for(2500ms);
-    manager.Stop(true);
+    manager->Stop(true);
 
     system("pause");
 }

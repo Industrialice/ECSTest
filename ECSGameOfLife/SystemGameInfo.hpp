@@ -23,6 +23,6 @@ namespace ECSTest
             }
         };
 
-        std::set<ProgrammerEntry> programmerEntities{};
+        std::set<ProgrammerEntry> _programmerEntities{};
     };
 }

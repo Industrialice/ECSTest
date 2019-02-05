@@ -1,6 +1,63 @@
 #include "PreHeader.hpp"
 #include "SystemsManager.hpp"
 
+namespace ECSTest
+{
+    class ECSEntities : public EntitiesStream
+    {
+        shared_ptr<const SystemsManager> _parent{};
+        vector<ComponentDesc> _tempComponents{};
+        decltype(SystemsManager::_entitiesLocations)::const_iterator _it{};
+    
+    public:
+        ECSEntities(const shared_ptr<const SystemsManager> &parent) : _parent(parent)
+        {
+            ASSUME(_parent->_isPausedExecution);
+            _it = _parent->_entitiesLocations.begin();
+        }
+
+        [[nodiscard]] virtual optional<StreamedEntity> Next() override
+        {
+            ASSUME(_parent->_isPausedExecution);
+
+            if (_it == _parent->_entitiesLocations.end())
+            {
+                return {};
+            }
+
+            _tempComponents.clear();
+
+            auto[group, entityIndex] = _it->second;
+
+            for (uiw componentIndex = 0; componentIndex < group->uniqueTypedComponentsCount; ++componentIndex)
+            {
+                const auto &source = group->components[componentIndex];
+
+                for (uiw offset = 0; offset < source.stride; ++offset)
+                {
+                    uiw index = _tempComponents.size();
+                    _tempComponents.emplace_back();
+                    auto &target = _tempComponents[index];
+
+                    target.alignmentOf = source.alignmentOf;
+                    target.isUnique = source.isUnique;
+                    target.sizeOf = source.sizeOf;
+                    target.type = source.type;
+                    target.data = source.data.get() + entityIndex * source.sizeOf * source.stride + offset * source.sizeOf;
+                }
+            }
+
+            StreamedEntity streamed;
+            streamed.components = ToArray(_tempComponents);
+            streamed.entityId = _it->first;
+
+            ++_it;
+
+            return streamed;
+        }
+    };
+}
+
 using namespace ECSTest;
 
 //void SystemsManager::RemoveListener(ListenerLocation *instance, void *handle)
@@ -66,6 +123,16 @@ using namespace ECSTest;
 //void SystemsManager::Register(System &system, optional<ui32> stepMicroSeconds, const vector<StableTypeId> &runBefore, const vector<StableTypeId> &runAfter, std::thread::id affinityThread)
 //{
 //}
+
+shared_ptr<SystemsManager> SystemsManager::New()
+{
+    struct Inherited : public SystemsManager
+    {
+        Inherited() : SystemsManager()
+        {}
+    };
+    return make_shared<Inherited>();
+}
 
 auto SystemsManager::CreatePipelineGroup(optional<ui32> stepMicroSeconds, bool isMergeIfSuchPipelineExists) -> PipelineGroup
 {
@@ -238,7 +305,7 @@ static void AssignComponentIDs(Array<SerializedComponent> components, std::atomi
     }
 }
 
-void SystemsManager::Start(EntityIDGenerator &&idGenerator, vector<WorkerThread> &&workers, Array<shared_ptr<EntitiesStream>> streams)
+void SystemsManager::Start(EntityIDGenerator &&idGenerator, vector<WorkerThread> &&workers, vector<unique_ptr<EntitiesStream>> &&streams)
 {
     ASSUME(_entitiesLocations.empty());
 
@@ -262,17 +329,58 @@ void SystemsManager::Start(EntityIDGenerator &&idGenerator, vector<WorkerThread>
     _idGenerator = move(idGenerator);
 
     _isStoppingExecution = false;
+    _isPausedExecution = false;
+    _isSchedulerPaused = false;
 
-    _schedulerThread = std::thread([this, streams] { StartScheduler(streams); });
+    _schedulerThread = std::thread([this, &streams] { StartScheduler(move(streams)); });
+}
+
+void SystemsManager::Pause(bool isWaitForStop)
+{
+    _isPausedExecution = true;
+
+    if (isWaitForStop)
+    {
+        std::unique_lock waitLock{_schedulerPausedMutex};
+        _schedulerPausedNotifier.wait(waitLock, [this] { return _isSchedulerPaused == true; });
+    }
+}
+
+void SystemsManager::Resume()
+{
+    if (!_isPausedExecution)
+    {
+        SOFTBREAK;
+        return;
+    }
+
+    if (_isStoppingExecution || _schedulerThread.joinable() == false)
+    {
+        SOFTBREAK;
+        return;
+    }
+
+    _isPausedExecution = false;
+    std::scoped_lock lock{_executionPauseMutex};
+    _executionPauseNotifier.notify_all();
 }
 
 void SystemsManager::Stop(bool isWaitForStop)
 {
     _isStoppingExecution = true;
+    
+    // making sure the scheduler thread is not paused
+    _isPausedExecution = false;
+    {
+        std::scoped_lock lock{_executionPauseMutex};
+        _executionPauseNotifier.notify_all();
+    }
+
     if (isWaitForStop)
     {
         _schedulerThread.join();
     }
+
 	Funcs::Reinitialize(_entitiesLocations);
 	Funcs::Reinitialize(_archetypeGroups);
 	//Funcs::Reinitialize(_archetypeGroupsComponents);
@@ -282,14 +390,24 @@ void SystemsManager::Stop(bool isWaitForStop)
 	Funcs::Reinitialize(_workerThreads);
 }
 
-bool SystemsManager::IsRunning()
+bool SystemsManager::IsRunning() const
 {
     return _schedulerThread.joinable();
 }
 
-void SystemsManager::StreamIn(Array<shared_ptr<EntitiesStream>> streams)
+bool SystemsManager::IsPaused() const
 {
-    NOIMPL;
+    return _isPausedExecution;
+}
+
+//void SystemsManager::StreamIn(vector<unique_ptr<EntitiesStream>> &&streams)
+//{
+//    NOIMPL;
+//}
+
+shared_ptr<EntitiesStream> SystemsManager::StreamOut() const
+{
+    return make_shared<ECSEntities>(shared_from_this());
 }
 
 auto SystemsManager::FindArchetypeGroup(const ArchetypeFull &archetype, Array<const SerializedComponent> components) -> ArchetypeGroup &
@@ -452,7 +570,7 @@ void SystemsManager::AddEntityToArchetypeGroup(const ArchetypeFull &archetype, A
     ++group.entitiesCount;
 }
 
-void SystemsManager::StartScheduler(Array<shared_ptr<EntitiesStream>> streams)
+void SystemsManager::StartScheduler(vector<unique_ptr<EntitiesStream>> &&streams)
 {
     MessageBuilder messageBulder;
     vector<SerializedComponent> serialized;
@@ -519,7 +637,29 @@ void SystemsManager::StartScheduler(Array<shared_ptr<EntitiesStream>> streams)
 
     while (!_isStoppingExecution)
     {
-        SchedulerLoop();
+        if (_isPausedExecution)
+        {
+            for (const auto &worker : _workerThreads)
+            {
+                std::unique_lock waitLock{_workerFinishedWorkNotifier->first};
+                _workerFinishedWorkNotifier->second.wait(waitLock, [&worker] { return worker.WorkInProgressCount() == 0; });
+            }
+
+            _isSchedulerPaused = true;
+            {
+                std::scoped_lock lock{_schedulerPausedMutex};
+                _schedulerPausedNotifier.notify_all();
+            }
+
+            std::unique_lock waitLock{_executionPauseMutex};
+            _executionPauseNotifier.wait(waitLock, [this] { return _isPausedExecution == false; });
+
+            _isSchedulerPaused = false;
+        }
+        else
+        {
+            SchedulerLoop();
+        }
     }
 
     for (auto &worker : _workerThreads)
@@ -600,7 +740,7 @@ void SystemsManager::ExecutePipeline(Pipeline &pipeline)
                                         {
                                             return false;
                                         }
-                                        managed.componentLocks.emplace_back(move(*componentLock));
+                                        managed.componentLocks.push_back({group.components[index].type, move(*componentLock)});
                                         hasInclusiveLocks |= true;
                                     }
 
@@ -624,7 +764,7 @@ void SystemsManager::ExecutePipeline(Pipeline &pipeline)
                                         {
                                             return false;
                                         }
-                                        managed.componentLocks.emplace_back(move(*componentLock));
+                                        managed.componentLocks.push_back({group.components[index].type, move(*componentLock)});
                                         hasInclusiveLocks |= true;
                                     }
 
@@ -655,7 +795,7 @@ void SystemsManager::ExecutePipeline(Pipeline &pipeline)
                                 {
                                     return false;
                                 }
-                                managed.componentLocks.emplace_back(move(*componentLock));
+                                managed.componentLocks.push_back({component.type, move(*componentLock)});
                                 hasInclusiveLocks |= true;
                             }
                         }
@@ -678,7 +818,7 @@ void SystemsManager::ExecutePipeline(Pipeline &pipeline)
             {
                 for (auto &lock : managed.componentLocks)
                 {
-                    lock.Unlock();
+                    lock.second.Unlock();
                 }
                 managed.componentLocks.clear();
 
@@ -765,7 +905,7 @@ void SystemsManager::TaskProcessMessages(IndirectSystem &system, const ManagedIn
     }
 }
 
-void SystemsManager::TaskExecuteIndirectSystem(IndirectSystem &system, ManagedIndirectSystem::MessageQueue messageQueue, System::Environment env, std::atomic<ui32> &decrementAtCompletion, vector<pair<ArchetypeFull, DIWRSpinLock::Unlocker>> &groupLocks, vector<DIWRSpinLock::Unlocker> &componentLocks)
+void SystemsManager::TaskExecuteIndirectSystem(IndirectSystem &system, ManagedIndirectSystem::MessageQueue messageQueue, System::Environment env, std::atomic<ui32> &decrementAtCompletion, vector<pair<ArchetypeFull, DIWRSpinLock::Unlocker>> &groupLocks, vector<pair<StableTypeId, DIWRSpinLock::Unlocker>> &componentLocks)
 {
     TaskProcessMessages(system, messageQueue);
 
@@ -829,6 +969,12 @@ void SystemsManager::TaskExecuteIndirectSystem(IndirectSystem &system, ManagedIn
         }
     }
 
+    for (auto &lock : componentLocks)
+    {
+        ASSUME(lock.second.LockType() == DIWRSpinLock::LockType::Inclusive);
+        lock.second.Transition(DIWRSpinLock::LockType::Exclusive);
+    }
+
     for (const auto &[componentType, stream] : messageBuilder.ComponentChangedStreams()._data)
     {
         auto locationsLock = _entitiesLocationsLock.Lock(DIWRSpinLock::LockType::Read);
@@ -872,11 +1018,14 @@ void SystemsManager::TaskExecuteIndirectSystem(IndirectSystem &system, ManagedIn
                 }
             }
 
-            auto componentArrayLock = componentArray.lock.Lock(DIWRSpinLock::LockType::Exclusive);
+            // don't lock here because every component that you change is already supposed to be locked
+            auto predicate = [type = componentArray.type](const auto &contained)
+            {
+                return contained.first == type;
+            };
+            ASSUME(std::find_if(componentLocks.begin(), componentLocks.end(), predicate) != componentLocks.end());
 
             memcpy(componentArray.data.get() + componentArray.sizeOf * componentArray.stride * entityIndex + componentArray.sizeOf * offset, info.component.data, info.component.sizeOf);
-
-            componentArrayLock.Unlock();
 
             groupLock.Unlock();
         }
@@ -945,12 +1094,6 @@ void SystemsManager::TaskExecuteIndirectSystem(IndirectSystem &system, ManagedIn
         }
 
         locationsLock.Unlock();
-    }
-
-    for (auto &lock : componentLocks)
-    {
-        ASSUME(lock.LockType() == DIWRSpinLock::LockType::Inclusive);
-        lock.Transition(DIWRSpinLock::LockType::Exclusive);
     }
 
     for (auto &[streamArchetype, streamPointer] : messageBuilder.EntityAddedStreams()._data)
@@ -1024,7 +1167,7 @@ void SystemsManager::TaskExecuteIndirectSystem(IndirectSystem &system, ManagedIn
 
     for (auto &lock : componentLocks)
     {
-        lock.Unlock();
+        lock.second.Unlock();
     }
     componentLocks.clear();
 

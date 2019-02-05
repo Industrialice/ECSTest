@@ -29,7 +29,7 @@ void SystemGameInfo::ProcessMessages(const MessageStreamEntityAdded &stream)
                 entry.parent = item.entityID;
                 entry.componentId = component.id;
                 entry.skillLevel = ((ComponentProgrammer *)component.data)->skillLevel;
-                auto [it, result] = programmerEntities.insert(entry);
+                auto [it, result] = _programmerEntities.insert(entry);
                 ASSUME(result);
             }
         }
@@ -72,16 +72,16 @@ void SystemGameInfo::Update(Environment &env, MessageBuilder &messageBuilder)
 
     for (uiw index = 0; index < 10; ++index)
     {
-        if (programmerEntities.empty())
+        if (_programmerEntities.empty())
         {
             break;
         }
 
-        ProgrammerEntry entry = *programmerEntities.begin();
-        programmerEntities.erase(programmerEntities.begin());
+        ProgrammerEntry entry = *_programmerEntities.begin();
+        _programmerEntities.erase(_programmerEntities.begin());
         
         ComponentProgrammer changed;
-        changed.language = ComponentProgrammer::Languages::CPP;
+        changed.language = ComponentProgrammer::Languages::Java;
         changed.skillLevel = entry.skillLevel;
 
         messageBuilder.ComponentChanged(entry.parent, changed, entry.componentId);

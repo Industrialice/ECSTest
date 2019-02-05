@@ -24,6 +24,6 @@ namespace ECSTest
         };
 
         virtual ~EntitiesStream() = default;
-        [[nodiscard]] virtual optional<StreamedEntity> Next() = 0;
+        [[nodiscard]] virtual optional<StreamedEntity> Next() = 0; // the previous value may get invalidated when you request the next one
     };
 }
