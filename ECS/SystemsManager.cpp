@@ -226,6 +226,14 @@ void SystemsManager::Register(unique_ptr<System> system, PipelineGroup pipelineG
         }
     }
 
+    for (auto req : requestedComponents.writeAccess)
+    {
+        if (std::find(pipeline.writeComponents.begin(), pipeline.writeComponents.end(), req.type) == pipeline.writeComponents.end())
+        {
+            pipeline.writeComponents.push_back(req.type);
+        }
+    }
+
     _archetypeReflector.StartTrackingMatchingArchetypes((uiw)system.get(), requestedComponents.archetypeDefining);
 
     if (isDirectSystem)
