@@ -18,7 +18,16 @@ namespace MonitoringStats
 
     ui32 testIndirectSystem0UpdatedTimes = 0;
     ui32 testIndirectSystem1UpdatedTimes = 0;
+    ui32 testIndirectSystem2UpdatedTimes = 0;
     ui32 monitoringUpdatedTimes = 0;
+}
+
+namespace SyncStats
+{
+    std::atomic<bool> TestIndirectSystem0Updating;
+    std::atomic<bool> TestIndirectSystem1Updating;
+    std::atomic<bool> TestIndirectSystem2Updating;
+    std::atomic<bool> MonitoringSystemUpdating;
 }
 
 COMPONENT(TestComponent0)
@@ -36,6 +45,7 @@ NONUNIQUE_COMPONENT(TestComponent2)
     ui32 value;
 };
 
+// cannot run in parallel with TestIndirectSystem2
 INDIRECT_SYSTEM(TestIndirectSystem0)
 {
     INDIRECT_ACCEPT_COMPONENTS(Array<TestComponent0> &);
@@ -66,6 +76,10 @@ void TestIndirectSystem0::ProcessMessages(const MessageStreamEntityRemoved &stre
 
 void TestIndirectSystem0::Update(Environment &env, MessageBuilder &messageBuilder)
 {
+    SyncStats::TestIndirectSystem0Updating = true;
+
+    ASSUME(SyncStats::TestIndirectSystem2Updating == false);
+
     for (auto &entry : _entities)
     {
         TestComponent0 c;
@@ -76,15 +90,30 @@ void TestIndirectSystem0::Update(Environment &env, MessageBuilder &messageBuilde
     _entities.clear();
 
     ++MonitoringStats::testIndirectSystem0UpdatedTimes;
+
+    std::this_thread::yield();
+
+    ASSUME(SyncStats::TestIndirectSystem2Updating == false);
+
+    SyncStats::TestIndirectSystem0Updating = false;
 }
 
 INDIRECT_SYSTEM(TestIndirectSystem1)
 {
-    INDIRECT_ACCEPT_COMPONENTS(const Array<TestComponent1> &);
+    INDIRECT_ACCEPT_COMPONENTS(const Array<TestComponent0> &, const Array<TestComponent1> &, const Array<TestComponent2> *);
+
+private:
+    vector<pair<Archetype, EntityID>> _entities{};
+    bool _isFirstUpdate = true;
 };
 
 void TestIndirectSystem1::ProcessMessages(const MessageStreamEntityAdded &stream)
-{}
+{
+    for (auto &entry : stream)
+    {
+        _entities.push_back({stream.Archetype(), entry.entityID});
+    }
+}
 
 void TestIndirectSystem1::ProcessMessages(const MessageStreamComponentChanged &stream)
 {}
@@ -94,7 +123,69 @@ void TestIndirectSystem1::ProcessMessages(const MessageStreamEntityRemoved &stre
 
 void TestIndirectSystem1::Update(Environment &env, MessageBuilder &messageBuilder)
 {
+    SyncStats::TestIndirectSystem1Updating = true;
+
+    if (_isFirstUpdate)
+    {
+        ASSUME(_entities.size() == 50);
+        _isFirstUpdate = false;
+    }
+
+    if (_entities.size() > 100)
+    {
+        messageBuilder.EntityRemoved(_entities.back().first, _entities.back().second);
+        _entities.pop_back();
+    }
+
     ++MonitoringStats::testIndirectSystem1UpdatedTimes;
+
+    std::this_thread::yield();
+
+    SyncStats::TestIndirectSystem1Updating = false;
+}
+
+// cannot run in parallel with TestIndirectSystem0
+INDIRECT_SYSTEM(TestIndirectSystem2)
+{
+    INDIRECT_ACCEPT_COMPONENTS(Array<TestComponent0> &);
+
+private:
+    ui32 _entitiesToAdd = 100;
+};
+
+void TestIndirectSystem2::ProcessMessages(const MessageStreamEntityAdded &stream)
+{}
+
+void TestIndirectSystem2::ProcessMessages(const MessageStreamComponentChanged &stream)
+{}
+
+void TestIndirectSystem2::ProcessMessages(const MessageStreamEntityRemoved &stream)
+{}
+
+void TestIndirectSystem2::Update(Environment &env, MessageBuilder &messageBuilder)
+{
+    SyncStats::TestIndirectSystem2Updating = true;
+
+    ASSUME(SyncStats::TestIndirectSystem0Updating == false);
+
+    if (_entitiesToAdd)
+    {
+        auto &componentBuilder = messageBuilder.EntityAdded(env.idGenerator.Generate());
+        TestComponent0 c0;
+        c0.value = 10;
+        TestComponent1 c1;
+        c1.value = 20;
+        componentBuilder.AddComponent(c0).AddComponent(c1);
+        --_entitiesToAdd;
+    }
+
+    ++MonitoringStats::testIndirectSystem2UpdatedTimes;
+
+    std::this_thread::yield();
+
+    ASSUME(SyncStats::TestIndirectSystem0Updating == false);
+
+    SyncStats::TestIndirectSystem2Updating = false;
 }
 
 INDIRECT_SYSTEM(MonitoringSystem)
@@ -115,7 +206,7 @@ void MonitoringSystem::ProcessMessages(const MessageStreamEntityAdded &stream)
             if (component.type == TestComponent0::GetTypeId())
             {
                 auto casted = (TestComponent0 *)component.data;
-                ASSUME(casted->value == 0);
+                ASSUME(casted->value == 0 || casted->value == 10);
             }
         }
     }
@@ -155,7 +246,13 @@ void MonitoringSystem::ProcessMessages(const MessageStreamEntityRemoved &stream)
 
 void MonitoringSystem::Update(Environment &env, MessageBuilder &messageBuilder)
 {
+    SyncStats::MonitoringSystemUpdating = true;
+
     ++MonitoringStats::monitoringUpdatedTimes;
+
+    std::this_thread::yield();
+
+    SyncStats::MonitoringSystemUpdating = false;
 }
 
 using namespace ECSTest;
@@ -255,7 +352,8 @@ static void PrintStreamInfo(EntitiesStream &stream, bool isFirstPass)
     ui32 test0Count = 0;
     ui32 test1Count = 0;
     ui32 test2Count = 0;
-    for (auto streamed = stream.Next(); streamed; streamed = stream.Next())
+
+    while (auto streamed = stream.Next())
     {
         ++entitiesCount;
 
@@ -276,12 +374,12 @@ static void PrintStreamInfo(EntitiesStream &stream, bool isFirstPass)
         }
     }
 
-    ASSUME(entitiesCount == 100);
-    ASSUME(test0Count == 75);
-    ASSUME(test1Count == 50);
+    ASSUME(entitiesCount == 150);
+    ASSUME(test0Count == 125);
+    ASSUME(test1Count == 100);
     ASSUME(test2Count == 25 + 10);
 
-    ASSUME(MonitoringStats::receivedEntityAddedCount == 100);
+    ASSUME(MonitoringStats::receivedEntityAddedCount == 200);
     ASSUME(MonitoringStats::receivedEntityRemovedCount == 0);
     ASSUME(MonitoringStats::receivedComponentChangedCount == 75);
     ASSUME(MonitoringStats::receivedTest0ChangedCount == 75);
@@ -296,7 +394,8 @@ static void PrintStreamInfo(EntitiesStream &stream, bool isFirstPass)
     printf("  test1 components: %u\n", test1Count);
     printf("  test2 components: %u\n", test2Count);
     printf("  test 0 system updated times: %u\n", MonitoringStats::testIndirectSystem0UpdatedTimes);
-    printf("  test 1 system updated times: %u\n", MonitoringStats::testIndirectSystem0UpdatedTimes);
+    printf("  test 1 system updated times: %u\n", MonitoringStats::testIndirectSystem1UpdatedTimes);
+    printf("  test 2 system updated times: %u\n", MonitoringStats::testIndirectSystem2UpdatedTimes);
     printf("  monitoring system updated times: %u\n", MonitoringStats::monitoringUpdatedTimes);
     printf("\n");
 }
@@ -318,6 +417,8 @@ int main()
 
     manager->Register(make_unique<TestIndirectSystem1>(), testPipelineGroup0);
 
+    manager->Register(make_unique<TestIndirectSystem2>(), testPipelineGroup0);
+
     manager->Register(make_unique<MonitoringSystem>(), testPipelineGroup1);
 
     vector<WorkerThread> workers(SystemInfo::LogicalCPUCores());
@@ -326,7 +427,7 @@ int main()
     streams.push_back(move(stream));
     manager->Start(move(idGenerator), move(workers), move(streams));
     
-    std::this_thread::sleep_for(500ms);
+    std::this_thread::sleep_for(2000ms);
 
     manager->Pause(true);
 

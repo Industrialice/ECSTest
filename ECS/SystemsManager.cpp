@@ -181,11 +181,11 @@ void SystemsManager::Register(unique_ptr<System> system, PipelineGroup pipelineG
         }
     }
 
-	for (auto &[systemsAtExecution, executionFrame, directSystems, indirectSystems, step] : _pipelines)
+	for (auto &pipeline : _pipelines)
 	{
         if (isDirectSystem)
         {
-            for (const auto &existingSystem : directSystems)
+            for (const auto &existingSystem : pipeline.directSystems)
             {
                 if (existingSystem.system->Type() == system->Type())
                 {
@@ -196,7 +196,7 @@ void SystemsManager::Register(unique_ptr<System> system, PipelineGroup pipelineG
         }
         else
         {
-            for (const auto &existingSystem : indirectSystems)
+            for (const auto &existingSystem : pipeline.indirectSystems)
             {
                 if (existingSystem.system->Type() == system->Type())
                 {
@@ -207,9 +207,26 @@ void SystemsManager::Register(unique_ptr<System> system, PipelineGroup pipelineG
         }
 	}
 
-    _archetypeReflector.StartTrackingMatchingArchetypes((uiw)system.get(), requestedComponents.archetypeDefining);
-
     auto &pipeline = _pipelines[pipelineGroup.index];
+
+    for (auto &otherPipeline : _pipelines)
+    {
+        if (&otherPipeline == &pipeline)
+        {
+            continue;
+        }
+
+        for (auto req : requestedComponents.writeAccess)
+        {
+            if (std::find(otherPipeline.writeComponents.begin(), otherPipeline.writeComponents.end(), req.type) != otherPipeline.writeComponents.end())
+            {
+                SOFTBREAK; // other pipeline already requested that component for write, that is not allowed
+                return;
+            }
+        }
+    }
+
+    _archetypeReflector.StartTrackingMatchingArchetypes((uiw)system.get(), requestedComponents.archetypeDefining);
 
     if (isDirectSystem)
     {
@@ -235,27 +252,57 @@ void SystemsManager::Unregister(StableTypeId systemType)
         return;
     }
 
-    for (auto &[systemsAtExecution, executionFrame, directSystems, indirectSystems, step] : _pipelines)
+    auto recomputeWriteComponents = [](Pipeline &pipeline)
     {
-        for (auto &system : directSystems)
-        {
-            if (system.system->Type() == systemType)
-            {
-                _archetypeReflector.StopTrackingMatchingArchetypes((uiw)system.system.get());
+        pipeline.writeComponents.clear();
 
-                auto diff = &system - &directSystems.front();
+        auto addForSystem = [&pipeline](System &system)
+        {
+            for (auto req : system.RequestedComponents().writeAccess)
+            {
+                if (std::find(pipeline.writeComponents.begin(), pipeline.writeComponents.end(), req.type) == pipeline.writeComponents.end())
+                {
+                    pipeline.writeComponents.push_back(req.type);
+                }
+            }
+        };
+
+        for (const auto &managed : pipeline.directSystems)
+        {
+            addForSystem(*managed.system);
+        }
+        for (const auto &managed : pipeline.indirectSystems)
+        {
+            addForSystem(*managed.system);
+        }
+    };
+
+    for (auto &pipeline : _pipelines)
+    {
+        auto &directSystems = pipeline.directSystems;
+        auto &indirectSystems = pipeline.indirectSystems;
+
+        for (auto &managed : directSystems)
+        {
+            if (managed.system->Type() == systemType)
+            {
+                _archetypeReflector.StopTrackingMatchingArchetypes((uiw)managed.system.get());
+
+                auto diff = &managed - &directSystems.front();
                 directSystems.erase(directSystems.begin() + diff);
+                recomputeWriteComponents(pipeline);
                 return;
             }
         }
-        for (auto &system : indirectSystems)
+        for (auto &managed : pipeline.indirectSystems)
         {
-            if (system.system->Type() == systemType)
+            if (managed.system->Type() == systemType)
             {
-                _archetypeReflector.StopTrackingMatchingArchetypes((uiw)system.system.get());
+                _archetypeReflector.StopTrackingMatchingArchetypes((uiw)managed.system.get());
 
-                auto diff = &system - &indirectSystems.front();
+                auto diff = &managed - &indirectSystems.front();
                 indirectSystems.erase(indirectSystems.begin() + diff);
+                recomputeWriteComponents(pipeline);
                 return;
             }
         }
@@ -738,6 +785,7 @@ void SystemsManager::ExecutePipeline(Pipeline &pipeline)
                                         auto componentLock = group.components[index].lock.TryLock(DIWRSpinLock::LockType::Inclusive);
                                         if (!componentLock)
                                         {
+                                            groupLock->Unlock();
                                             return false;
                                         }
                                         managed.componentLocks.push_back({group.components[index].type, move(*componentLock)});
@@ -762,6 +810,7 @@ void SystemsManager::ExecutePipeline(Pipeline &pipeline)
                                         auto componentLock = group.components[index].lock.TryLock(DIWRSpinLock::LockType::Inclusive);
                                         if (!componentLock)
                                         {
+                                            groupLock->Unlock();
                                             return false;
                                         }
                                         managed.componentLocks.push_back({group.components[index].type, move(*componentLock)});
@@ -793,6 +842,7 @@ void SystemsManager::ExecutePipeline(Pipeline &pipeline)
                                 auto componentLock = component.lock.TryLock(DIWRSpinLock::LockType::Inclusive);
                                 if (!componentLock)
                                 {
+                                    groupLock->Unlock();
                                     return false;
                                 }
                                 managed.componentLocks.push_back({component.type, move(*componentLock)});
@@ -912,6 +962,62 @@ void SystemsManager::TaskExecuteIndirectSystem(IndirectSystem &system, ManagedIn
     MessageBuilder messageBuilder;
     system.Update(env, messageBuilder);
 
+    auto lockOrTransition = [&groupLocks](const ArchetypeFull &archetype) -> auto
+    {
+        class ConditionalLock
+        {
+            bool _isTransitioned{};
+            optional<DIWRSpinLock::Unlocker> _lock{};
+            DIWRSpinLock::Unlocker *_lockRef{};
+
+        public:
+            ~ConditionalLock()
+            {
+                ASSUME(!_lockRef && !_lock);
+            }
+
+            ConditionalLock(vector<pair<ArchetypeFull, DIWRSpinLock::Unlocker>> &groupLocks, const ArchetypeFull &archetype)
+            {
+                for (auto &lock : groupLocks)
+                {
+                    if (lock.first == archetype)
+                    {
+                        _isTransitioned = true;
+                        _lockRef = &lock.second;
+                        break;
+                    }
+                }
+            }
+
+            void Lock(DIWRSpinLock &spinLock)
+            {
+                if (_isTransitioned)
+                {
+                    _lockRef->Transition(DIWRSpinLock::LockType::Exclusive); // already locked, just transit it to Exclusive
+                }
+                else
+                {
+                    _lock.emplace(spinLock.Lock(DIWRSpinLock::LockType::Exclusive));
+                }
+            }
+
+            void Unlock()
+            {
+                if (_isTransitioned)
+                {
+                    _lockRef->Transition(DIWRSpinLock::LockType::Read); // just transit it back to Read
+                    _lockRef = nullptr;
+                }
+                else
+                {
+                    _lock->Unlock();
+                    _lock.reset();
+                }
+            }
+        };
+        return ConditionalLock(groupLocks, archetype);
+    };
+
     for (auto &[streamArchetype, stream] : messageBuilder.EntityAddedStreams()._data)
     {
         for (auto &entity : *stream)
@@ -922,9 +1028,9 @@ void SystemsManager::TaskExecuteIndirectSystem(IndirectSystem &system, ManagedIn
 
             auto groupsLock = _archetypeGroupsLock.Lock(DIWRSpinLock::LockType::Read);
 
-            optional<DIWRSpinLock::Unlocker> groupLock;
-            DIWRSpinLock::Unlocker *groupLockRef = nullptr;
-            bool isGroupWasLockedForRead = false;
+            // locking the group for Exclusive will ensure that every other group reading or
+            // writing to that group has already finished running
+            auto groupConditionalLock = lockOrTransition(archetype);
 
             ArchetypeGroup *group;
             auto groupSearch = _archetypeGroupsFull.find(archetype);
@@ -936,36 +1042,14 @@ void SystemsManager::TaskExecuteIndirectSystem(IndirectSystem &system, ManagedIn
             else
             {
                 group = &groupSearch->second;
-                for (auto &lock : groupLocks)
-                {
-                    if (lock.first == archetype)
-                    {
-                        isGroupWasLockedForRead = true;
-                        groupLockRef = &lock.second;
-                        groupLockRef->Transition(DIWRSpinLock::LockType::Exclusive); // already locked, just transit it to Exclusive
-                        break;
-                    }
-                }
-                if (isGroupWasLockedForRead == false)
-                {
-                    // not locked, acquire a new lock
-                    groupLock.emplace(group->lock.Lock(DIWRSpinLock::LockType::Exclusive));
-                    groupLockRef = &*groupLock;
-                }
+                groupConditionalLock.Lock(group->lock);
             }
 
             groupsLock.Unlock();
 
             AddEntityToArchetypeGroup(archetype, *group, entity.entityID, ToArray(entity.components), nullptr);
 
-            if (isGroupWasLockedForRead)
-            {
-                groupLockRef->Transition(DIWRSpinLock::LockType::Read); // just transit it back to Read
-            }
-            else if (groupLockRef)
-            {
-                groupLockRef->Unlock();
-            }
+            groupConditionalLock.Unlock();
         }
     }
 
@@ -986,7 +1070,8 @@ void SystemsManager::TaskExecuteIndirectSystem(IndirectSystem &system, ManagedIn
 
             auto &[group, entityIndex] = entityLocation->second;
 
-            auto groupLock = group->lock.Lock(DIWRSpinLock::LockType::Read);
+            auto groupConditionalLock = lockOrTransition(group->archetype);
+            groupConditionalLock.Lock(group->lock);
 
             uiw componentIndex = 0;
             for (; ; ++componentIndex)
@@ -1027,7 +1112,7 @@ void SystemsManager::TaskExecuteIndirectSystem(IndirectSystem &system, ManagedIn
 
             memcpy(componentArray.data.get() + componentArray.sizeOf * componentArray.stride * entityIndex + componentArray.sizeOf * offset, info.component.data, info.component.sizeOf);
 
-            groupLock.Unlock();
+            groupConditionalLock.Unlock();
         }
 
         locationsLock.Unlock();
@@ -1044,7 +1129,10 @@ void SystemsManager::TaskExecuteIndirectSystem(IndirectSystem &system, ManagedIn
 
             auto &[group, index] = entityLocation->second;
 
-            auto groupLock = group->lock.Lock(DIWRSpinLock::LockType::Exclusive);
+            // locking the group for Exclusive will ensure that every other group reading or
+            // writing to that group has already finished running
+            auto groupConditionalLock = lockOrTransition(group->archetype);
+            groupConditionalLock.Lock(group->lock);
 
             --group->entitiesCount;
             uiw replaceIndex = group->entitiesCount;
@@ -1077,7 +1165,7 @@ void SystemsManager::TaskExecuteIndirectSystem(IndirectSystem &system, ManagedIn
 
             locationsLock.Transition(DIWRSpinLock::LockType::Exclusive);
 
-            groupLock.Unlock();
+            groupConditionalLock.Unlock();
 
             // remove deleted entity location
             _entitiesLocations.erase(entityLocation);

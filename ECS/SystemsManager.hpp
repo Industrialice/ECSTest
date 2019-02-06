@@ -147,6 +147,7 @@ namespace ECSTest
 			vector<ManagedDirectSystem> directSystems{};
             vector<ManagedIndirectSystem> indirectSystems{};
             optional<ui32> stepMicroSeconds{};
+            vector<StableTypeId> writeComponents{};
         };
 
         // used by all pipelines to perform execution scheduling, all real
