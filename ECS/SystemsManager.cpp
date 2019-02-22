@@ -5,22 +5,25 @@ namespace ECSTest
 {
     class ECSEntities : public EntitiesStream
     {
-        shared_ptr<const SystemsManager> _parent{};
+        std::weak_ptr<const SystemsManager> _parent{};
         vector<ComponentDesc> _tempComponents{};
         decltype(SystemsManager::_entitiesLocations)::const_iterator _it{};
     
     public:
         ECSEntities(const shared_ptr<const SystemsManager> &parent) : _parent(parent)
         {
-            ASSUME(_parent->_isPausedExecution);
-            _it = _parent->_entitiesLocations.begin();
+            ASSUME(parent->_isPausedExecution);
+            _it = parent->_entitiesLocations.begin();
         }
 
         [[nodiscard]] virtual optional<StreamedEntity> Next() override
         {
-            ASSUME(_parent->_isPausedExecution);
+            auto locked = _parent.lock();
+            ASSUME(locked);
 
-            if (_it == _parent->_entitiesLocations.end())
+            ASSUME(locked->_isPausedExecution);
+
+            if (_it == locked->_entitiesLocations.end())
             {
                 return {};
             }
@@ -373,7 +376,7 @@ void SystemsManager::Start(EntityIDGenerator &&idGenerator, vector<WorkerThread>
     _workerThreads = {workers.size()};
     for (uiw index = 0, size = workers.size(); index < size; ++index)
     {
-        Funcs::Reinitialize(_workerThreads[index], move(workers[index]));
+        std::exchange(_workerThreads[index], move(workers[index]));
         _workerThreads[index].SetOnWorkDoneNotifier(_workerFinishedWorkNotifier);
         if (!_workerThreads[index].IsRunning())
         {
@@ -436,13 +439,13 @@ void SystemsManager::Stop(bool isWaitForStop)
         _schedulerThread.join();
     }
 
-	Funcs::Reinitialize(_entitiesLocations);
-	Funcs::Reinitialize(_archetypeGroups);
-	//Funcs::Reinitialize(_archetypeGroupsComponents);
-	Funcs::Reinitialize(_archetypeGroupsFull);
-	Funcs::Reinitialize(_archetypeReflector);
+    _entitiesLocations = {};
+    _archetypeGroups = {};
+	//_archetypeGroupsComponents = {};
+    std::exchange(_archetypeGroupsFull, {});
+    _archetypeReflector = {};
 	_lastComponentId = 0;
-	Funcs::Reinitialize(_workerThreads);
+    std::exchange(_workerThreads, {});
 }
 
 bool SystemsManager::IsRunning() const

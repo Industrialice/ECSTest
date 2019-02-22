@@ -25,6 +25,28 @@ WorkerThread::~WorkerThread()
 WorkerThread::WorkerThread(WorkerThread &&source) : _threadData(source._threadData.release())
 {}
 
+WorkerThread &WorkerThread::operator = (WorkerThread &&source)
+{
+    ASSUME(this != &source);
+    if (_threadData)
+    {
+        if (!_threadData->isExiting)
+        {
+            // destroying a running worker is not allowed
+            HARDBREAK;
+        }
+        if (_threadData->thread.joinable())
+        {
+            // destroying a thread that hasn't been joined is a performance hazard
+            // may not be what you wanted
+            SOFTBREAK;
+            _threadData->thread.join();
+        }
+    }
+    _threadData.reset(source._threadData.release());
+    return *this;
+}
+
 void WorkerThread::AddWork(std::function<void()> &&work)
 {
     std::scoped_lock lock{_threadData->workAccessMutex};

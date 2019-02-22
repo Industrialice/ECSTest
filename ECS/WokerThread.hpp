@@ -14,13 +14,13 @@ namespace ECSTest
             std::atomic<ui32> workCount{};
             shared_ptr<pair<std::mutex, std::condition_variable>> onWorkDoneNotifier{};
         };
-        unique_ptr<ThreadData> _threadData = make_unique<ThreadData>();
+        unique_ptr<ThreadData> _threadData = make_unique<ThreadData>(); // the pointer will be referenced by the thread
 
     public:
         ~WorkerThread();
         WorkerThread() = default;
         WorkerThread(WorkerThread &&source);
-        WorkerThread &operator = (WorkerThread &&) = delete;
+        WorkerThread &operator = (WorkerThread &&source);
         void AddWork(std::function<void()> &&work);
         void Start();
         bool IsRunning() const;
