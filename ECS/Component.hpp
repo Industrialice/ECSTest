@@ -19,6 +19,42 @@ namespace ECSTest
         Subtractive
     };
 
+	class ComponentID
+	{
+		ui32 _id = 0;
+
+	public:
+		ComponentID() = default;
+
+		ComponentID(ui32 id) : _id(id)
+		{}
+		
+		ui32 ID() const
+		{
+			return _id;
+		}
+
+		bool IsValid() const
+		{
+			return _id != 0;
+		}
+
+		bool operator == (const ComponentID &other) const
+		{
+			return _id == other._id;
+		}
+
+		bool operator != (const ComponentID &other) const
+		{
+			return _id != other._id;
+		}
+
+		bool operator < (const ComponentID &other) const
+		{
+			return _id < other._id;
+		}
+	};
+
     class Component
     {
     };

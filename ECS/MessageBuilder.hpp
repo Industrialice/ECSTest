@@ -13,7 +13,7 @@ namespace ECSTest
 		ui16 alignmentOf{};
 		const ui8 *data{}; // aigned by alignmentOf
 		bool isUnique{};
-		ui32 id = 0;
+		ComponentID id{};
 	};
 
     class MessageStreamEntityAdded
@@ -209,10 +209,10 @@ namespace ECSTest
 			void Clear();
 
         public:
-            ComponentArrayBuilder &AddComponent(const EntitiesStream::ComponentDesc &desc, ui32 id); // the data will be copied over
+            ComponentArrayBuilder &AddComponent(const EntitiesStream::ComponentDesc &desc, ComponentID id); // the data will be copied over
             ComponentArrayBuilder &AddComponent(const SerializedComponent &sc); // the data will be copied over
 
-            template <typename T> ComponentArrayBuilder &AddComponent(const T &component, ui32 id = 0)
+			template <typename T> ComponentArrayBuilder &AddComponent(const T &component, ComponentID id = {})
             {
                 SerializedComponent sc;
                 sc.alignmentOf = alignof(T);
@@ -225,7 +225,7 @@ namespace ECSTest
             }
         };
 
-        template <typename T> void ComponentChanged(EntityID entityID, const T &component, ui32 id)
+        template <typename T> void ComponentChanged(EntityID entityID, const T &component, ComponentID id)
         {
             SerializedComponent sc;
             sc.alignmentOf = alignof(T);

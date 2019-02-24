@@ -40,7 +40,7 @@ void SystemGameInfo::ProcessMessages(const MessageStreamComponentChanged &stream
 {
     for (auto &item : stream)
     {
-        printf("SystemGameInfo received %u:%u:%u in MessageStreamComponentChanged\n", item.entityID.Hash(), (ui32)item.component.type.Hash(), item.component.id);
+        printf("SystemGameInfo received %u:%u:%u in MessageStreamComponentChanged\n", item.entityID.Hash(), (ui32)item.component.type.Hash(), item.component.id.ID());
     }
 }
 

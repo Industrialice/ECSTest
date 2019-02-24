@@ -343,7 +343,7 @@ static ArchetypeFull ComputeArchetype(Array<const SerializedComponent> component
 {
     for (const auto &component : components)
     {
-        ASSUME(component.isUnique || component.id != 0);
+        ASSUME(component.isUnique || component.id.ID() != 0);
     }
     return ArchetypeFull::Create<SerializedComponent, &SerializedComponent::type, &SerializedComponent::id>(components);
 }
@@ -358,7 +358,7 @@ static void AssignComponentIDs(Array<SerializedComponent> components, std::atomi
         }
         else
         {
-            ASSUME(component.id == 0);
+            ASSUME(component.id.ID() == 0);
         }
     }
 }
@@ -535,9 +535,9 @@ auto SystemsManager::AddNewArchetypeGroup(const ArchetypeFull &archetype, Array<
 
         if (!componentArray.isUnique)
         {
-            uiw allocSize = sizeof(ui32) * componentArray.stride * group.reservedCount;
-            componentArray.ids.reset((ui32 *)malloc(allocSize));
-            memset(componentArray.ids.get(), 0xFF, allocSize);
+            uiw allocSize = sizeof(ComponentID) * componentArray.stride * group.reservedCount;
+            componentArray.ids.reset((ComponentID *)malloc(allocSize));
+            memset(componentArray.ids.get(), 0x0, allocSize);
         }
     }
 
@@ -567,10 +567,10 @@ void SystemsManager::AddEntityToArchetypeGroup(const ArchetypeFull &archetype, A
 
             if (!componentArray.isUnique)
             {
-                ui32 *oldUPtr = componentArray.ids.release();
-                ui32 *newUPtr = (ui32 *)realloc(oldUPtr, sizeof(ui32) * componentArray.stride * group.reservedCount);
+				ComponentID *oldUPtr = componentArray.ids.release();
+				ComponentID *newUPtr = (ComponentID *)realloc(oldUPtr, sizeof(ComponentID) * componentArray.stride * group.reservedCount);
                 componentArray.ids.reset(newUPtr);
-                memset(newUPtr + componentArray.stride * group.entitiesCount, 0xFF, (group.reservedCount - group.entitiesCount) * sizeof(ui32) * componentArray.stride);
+                memset(newUPtr + componentArray.stride * group.entitiesCount, 0x0, (group.reservedCount - group.entitiesCount) * sizeof(ComponentID) * componentArray.stride);
             }
         }
 
@@ -603,7 +603,7 @@ void SystemsManager::AddEntityToArchetypeGroup(const ArchetypeFull &archetype, A
             for (; ; ++offset)
             {
                 ASSUME(offset < componentArray.stride);
-                if (componentArray.ids[componentArray.stride * group.entitiesCount + offset] == ui32_max)
+                if (componentArray.ids[componentArray.stride * group.entitiesCount + offset].IsValid() == false)
                 {
                     break;
                 }
@@ -1166,9 +1166,9 @@ void SystemsManager::TaskExecuteIndirectSystem(IndirectSystem &system, ManagedIn
 
                     if (!arr.isUnique)
                     {
-                        ui32 *idTarget = arr.ids.get() + index * arr.stride;
-                        ui32 *idSource = arr.ids.get() + replaceIndex * arr.stride;
-                        ui32 idCopySize = sizeof(ui32) * arr.stride;
+						ComponentID *idTarget = arr.ids.get() + index * arr.stride;
+						ComponentID *idSource = arr.ids.get() + replaceIndex * arr.stride;
+						uiw idCopySize = sizeof(ComponentID) * arr.stride;
                         memcpy(idTarget, idSource, idCopySize);
                     }
                 }

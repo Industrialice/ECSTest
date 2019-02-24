@@ -27,7 +27,7 @@ static void ArchetypeTests()
 
     ASSUME(shor == shor2);
 
-    using typeId = pair<StableTypeId, ui32>;
+    using typeId = pair<StableTypeId, ComponentID>;
     typeId types2[] = {{ComponentArtist::GetTypeId(), 0}, {ComponentArtist::GetTypeId(), 1}};
     auto arc = ArchetypeFull::Create<typeId, &typeId::first, &typeId::second>(ToArray(types2));
 
@@ -311,7 +311,7 @@ public:
 
                 auto checkFirstName = [refName](const SerializedComponent &c)
                 {
-                    uiw alignment = 1 << Funcs::IndexOfLeastSignificantNonZeroBit((uiw)c.data);
+                    uiw alignment = (uiw)1 << Funcs::IndexOfLeastSignificantNonZeroBit((uiw)c.data);
                     ASSUME(alignment >= alignof(ComponentFirstName));
 
                     ComponentFirstName *casted = (ComponentFirstName *)c.data;
@@ -322,7 +322,7 @@ public:
 
                 auto checkArtist = [](const SerializedComponent &c)
                 {
-                    uiw alignment = 1 << Funcs::IndexOfLeastSignificantNonZeroBit((uiw)c.data);
+                    uiw alignment = (uiw)1 << Funcs::IndexOfLeastSignificantNonZeroBit((uiw)c.data);
                     ASSUME(alignment >= alignof(ComponentArtist));
 
                     ComponentArtist *casted = (ComponentArtist *)c.data;

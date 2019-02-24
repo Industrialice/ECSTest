@@ -38,7 +38,7 @@ void SystemTest::ProcessMessages(const MessageStreamComponentChanged &stream)
             auto rei = *(ComponentProgrammer *)item.component.data;
             auto search = _programmers.find(item.component.id);
             ASSUME(search != _programmers.end());
-            printf("SystemTest receieved change from %u to %u for component %u\n", (ui32)search->second.component.language, (ui32)rei.language, item.component.id);
+            printf("SystemTest receieved change from %u to %u for component %u\n", (ui32)search->second.component.language, (ui32)rei.language, item.component.id.ID());
             search->second.component = rei;
         }
     }

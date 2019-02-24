@@ -70,7 +70,7 @@ namespace ECSTest
                 ui16 sizeOf{}; // of each component
                 ui16 alignmentOf{}; // of each component
                 unique_ptr<ui8[], AlignedMallocDeleter> data{}; // each component can be safely casted into class Component
-                unique_ptr<ui32[], MallocDeleter> ids{}; // ComponentID, used only for components that allow multiple components of that type to be attached to an entity
+                unique_ptr<ComponentID[], MallocDeleter> ids{}; // ComponentID, used only for components that allow multiple components of that type to be attached to an entity
                 // must lock it first before accessing `data` if you don't have exclusive
                 // access to this group, other fields can be accessed without this lock
                 DIWRSpinLock lock{};

@@ -14,7 +14,7 @@ namespace ECSTest
         struct ProgrammerEntry
         {
             EntityID parent{};
-            ui32 componentId{};
+            ComponentID componentId{};
             ComponentProgrammer::SkillLevel skillLevel{};
 
             bool operator < (const ProgrammerEntry &other) const

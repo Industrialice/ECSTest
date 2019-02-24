@@ -17,6 +17,6 @@ namespace ECSTest
             ComponentProgrammer component;
         };
 
-        std::map<ui32, ProgrammerEntry> _programmers;
+        std::map<ComponentID, ProgrammerEntry> _programmers;
     };
 }

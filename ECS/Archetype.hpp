@@ -1,6 +1,7 @@
 #pragma once
 
 #include "TypeIdentifiable.hpp"
+#include "Component.hpp"
 
 namespace ECSTest
 {
@@ -101,7 +102,7 @@ namespace ECSTest
     #endif
 
     public:
-        template <typename T, StableTypeId T::*type, ui32 T::*id> [[nodiscard]] static ArchetypeFull Create(Array<const T> types)
+        template <typename T, StableTypeId T::*type, ComponentID T::*id> [[nodiscard]] static ArchetypeFull Create(Array<const T> types)
         {
             ArchetypeFull result;
             
@@ -119,7 +120,7 @@ namespace ECSTest
             
             for (const T &t : types)
             {
-                result._u.idPart ^= Hash::Integer(t.*id);
+                result._u.idPart ^= Hash::Integer((t.*id).ID());
             }
 
             return result;
