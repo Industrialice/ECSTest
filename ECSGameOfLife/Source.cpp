@@ -334,7 +334,7 @@ int main()
     StdLib::Initialization::Initialize({});
 
     auto stream = make_unique<GameOfLifeEntities>();
-    auto manager = SystemsManager::New();;
+    auto manager = SystemsManager::New(false);
     EntityIDGenerator idGenerator;
 
 	GenerateScene(idGenerator, *manager, *stream);

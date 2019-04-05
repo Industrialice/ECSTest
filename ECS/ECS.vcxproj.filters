@@ -47,6 +47,12 @@
     <ClInclude Include="WokerThread.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="SystemsManagerMT.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SystemsManagerST.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="System.cpp">
@@ -71,6 +77,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="WokerThread.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SystemsManagerMT.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SystemsManagerST.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

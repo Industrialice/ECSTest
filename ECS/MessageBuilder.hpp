@@ -18,7 +18,8 @@ namespace ECSTest
 
     class MessageStreamEntityAdded
     {
-        friend class SystemsManager;
+        friend class SystemsManagerMT;
+        friend class SystemsManagerST;
         friend UnitTests;
 
     public:
@@ -72,7 +73,8 @@ namespace ECSTest
 
     class MessageStreamComponentChanged
     {
-        friend class SystemsManager;
+        friend class SystemsManagerMT;
+        friend class SystemsManagerST;
         friend UnitTests;
         friend class MessageBuilder;
         friend class MessageStreamsBuilderComponentChanged;
@@ -131,7 +133,8 @@ namespace ECSTest
 
 	class MessageStreamEntityRemoved
 	{
-        friend class SystemsManager;
+        friend class SystemsManagerMT;
+        friend class SystemsManagerST;
         friend UnitTests;
 
         shared_ptr<const vector<EntityID>> _source{};
@@ -161,7 +164,8 @@ namespace ECSTest
 
     class MessageStreamsBuilderEntityAdded
     {
-        friend class SystemsManager;
+        friend class SystemsManagerMT;
+        friend class SystemsManagerST;
         friend class MessageBuilder;
         friend UnitTests;
 
@@ -170,7 +174,8 @@ namespace ECSTest
 
     class MessageStreamsBuilderComponentChanged
     {
-        friend class SystemsManager;
+        friend class SystemsManagerMT;
+        friend class SystemsManagerST;
         friend class MessageBuilder;
         friend UnitTests;
 
@@ -179,7 +184,8 @@ namespace ECSTest
 
     class MessageStreamsBuilderEntityRemoved
     {
-		friend class SystemsManager;
+        friend class SystemsManagerMT;
+        friend class SystemsManagerST;
 		friend class MessageBuilder;
         friend UnitTests;
 
@@ -188,7 +194,8 @@ namespace ECSTest
 
     class MessageBuilder
     {
-		friend class SystemsManager;
+		friend class SystemsManagerMT;
+        friend class SystemsManagerST;
         friend UnitTests;
 
         bool IsEmpty() const;
