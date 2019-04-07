@@ -41,6 +41,6 @@ namespace ECSTest
         [[nodiscard]] virtual bool IsRunning() const = 0;
         [[nodiscard]] virtual bool IsPaused() const = 0;
         //virtual void StreamIn(vector<unique_ptr<EntitiesStream>> &&streams) = 0;
-        [[nodiscard]] virtual shared_ptr<EntitiesStream> StreamOut() const = 0; // the system must be paused
+        [[nodiscard]] virtual shared_ptr<EntitiesStream> StreamOut() const = 0; // the manager must be paused
 	};
 }
