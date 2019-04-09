@@ -31,7 +31,7 @@ namespace ECSTest
             friend class SystemsManagerST;
         };
 
-        [[nodiscard]] virtual PipelineGroup CreatePipelineGroup(optional<ui32> stepMicroSeconds, bool isMergeIfSuchPipelineExists) = 0;
+        [[nodiscard]] virtual PipelineGroup CreatePipelineGroup(optional<TimeDifference> executionStep, bool isMergeIfSuchPipelineExists) = 0;
         virtual void Register(unique_ptr<System> system, PipelineGroup pipelineGroup) = 0;
         virtual void Unregister(StableTypeId systemType) = 0;
         virtual void Start(EntityIDGenerator &&idGenerator, vector<WorkerThread> &&workers, vector<unique_ptr<EntitiesStream>> &&streams) = 0;

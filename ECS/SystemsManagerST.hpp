@@ -6,7 +6,7 @@ namespace ECSTest
 {
 	class SystemsManagerST : public SystemsManager, public std::enable_shared_from_this<SystemsManagerST>
 	{
-		friend class ECSEntities;
+		friend class ECSEntitiesST;
 
 	protected:
 		~SystemsManagerST() = default;
@@ -15,7 +15,7 @@ namespace ECSTest
 	public:
 		static shared_ptr<SystemsManagerST> New();
 
-		[[nodiscard]] virtual PipelineGroup CreatePipelineGroup(optional<ui32> stepMicroSeconds, bool isMergeIfSuchPipelineExists) override;
+		[[nodiscard]] virtual PipelineGroup CreatePipelineGroup(optional<TimeDifference> executionStep, bool isMergeIfSuchPipelineExists) override;
 		virtual void Register(unique_ptr<System> system, PipelineGroup pipelineGroup) override;
 		virtual void Unregister(StableTypeId systemType) override;
 		virtual void Start(EntityIDGenerator &&idGenerator, vector<WorkerThread> &&workers, vector<unique_ptr<EntitiesStream>> &&streams) override;
@@ -58,6 +58,7 @@ namespace ECSTest
 		struct ManagedSystem
 		{
 			ui32 executedAt{}; // last executed frame, gets set to Pipeline::executionFrame at first execution attempt on a new frame
+            ui32 executedTimes{};
 			vector<std::reference_wrapper<ArchetypeGroup>> groupsToExecute{}; // group still left to be executed for the current frame
 		};
 
@@ -90,8 +91,9 @@ namespace ECSTest
 			ui32 executionFrame = 0;
 			vector<ManagedDirectSystem> directSystems{};
 			vector<ManagedIndirectSystem> indirectSystems{};
-			optional<ui32> stepMicroSeconds{};
+			optional<TimeDifference> executionStep{};
 			vector<StableTypeId> writeComponents{};
+            TimeMoment lastExecutedTime{};
 		};
 
 		// used by all pipelines to perform execution
@@ -127,6 +129,9 @@ namespace ECSTest
 
 		EntityIDGenerator _idGenerator{};
 
+        TimeDifference _timeSinceStart{0_ms};
+        TimeMoment _currentTime{};
+
 	private:
 		[[nodiscard]] ArchetypeGroup &FindArchetypeGroup(const ArchetypeFull &archetype, Array<const SerializedComponent> components);
 		ArchetypeGroup &AddNewArchetypeGroup(const ArchetypeFull &archetype, Array<const SerializedComponent> components);
@@ -136,5 +141,6 @@ namespace ECSTest
 		void ExecutePipeline(Pipeline &pipeline);
 		void CalculateGroupsToExectute(const System *system, vector<std::reference_wrapper<ArchetypeGroup>> &groups);
 		static void ProcessMessages(IndirectSystem &system, const ManagedIndirectSystem::MessageQueue &messageQueue);
+        void ExecuteIndirectSystem(IndirectSystem &system, ManagedIndirectSystem::MessageQueue &messageQueue, System::Environment env);
 	};
 }

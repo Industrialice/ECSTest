@@ -6,7 +6,7 @@ namespace ECSTest
 {
     class SystemsManagerMT : public SystemsManager, public std::enable_shared_from_this<SystemsManagerMT>
     {
-        friend class ECSEntities;
+        friend class ECSEntitiesMT;
 
     protected:
         ~SystemsManagerMT() = default;
@@ -15,7 +15,7 @@ namespace ECSTest
     public:
         static shared_ptr<SystemsManagerMT> New();
 
-        [[nodiscard]] virtual PipelineGroup CreatePipelineGroup(optional<ui32> stepMicroSeconds, bool isMergeIfSuchPipelineExists) override;
+        [[nodiscard]] virtual PipelineGroup CreatePipelineGroup(optional<TimeDifference> executionStep, bool isMergeIfSuchPipelineExists) override;
         virtual void Register(unique_ptr<System> system, PipelineGroup pipelineGroup) override;
         virtual void Unregister(StableTypeId systemType) override;
         virtual void Start(EntityIDGenerator &&idGenerator, vector<WorkerThread> &&workers, vector<unique_ptr<EntitiesStream>> &&streams) override;
@@ -125,7 +125,7 @@ namespace ECSTest
             ui32 executionFrame = 0;
             vector<ManagedDirectSystem> directSystems{};
             vector<ManagedIndirectSystem> indirectSystems{};
-            optional<ui32> stepMicroSeconds{};
+            optional<TimeDifference> executionStep{};
             vector<StableTypeId> writeComponents{};
         };
 

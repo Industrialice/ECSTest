@@ -3,14 +3,14 @@
 
 namespace ECSTest
 {
-    class ECSEntities : public EntitiesStream
+    class ECSEntitiesMT : public EntitiesStream
     {
         std::weak_ptr<const SystemsManagerMT> _parent{};
         vector<ComponentDesc> _tempComponents{};
         decltype(SystemsManagerMT::_entitiesLocations)::const_iterator _it{};
 
     public:
-        ECSEntities(const shared_ptr<const SystemsManagerMT> &parent) : _parent(parent)
+        ECSEntitiesMT(const shared_ptr<const SystemsManagerMT> &parent) : _parent(parent)
         {
             ASSUME(parent->_isPausedExecution);
             _it = parent->_entitiesLocations.begin();
@@ -137,14 +137,20 @@ shared_ptr<SystemsManagerMT> SystemsManagerMT::New()
     return make_shared<Inherited>();
 }
 
-auto SystemsManagerMT::CreatePipelineGroup(optional<ui32> stepMicroSeconds, bool isMergeIfSuchPipelineExists) -> PipelineGroup
+auto SystemsManagerMT::CreatePipelineGroup(optional<TimeDifference> executionStep, bool isMergeIfSuchPipelineExists) -> PipelineGroup
 {
+    if (executionStep && executionStep->ToMSec() < 0)
+    {
+        HARDBREAK; // negative execution step
+        executionStep = {};
+    }
+
     PipelineGroup group;
     if (isMergeIfSuchPipelineExists)
     {
         for (ui32 index = 0; index < (ui32)_pipelines.size(); ++index)
         {
-            if (_pipelines[index].stepMicroSeconds == stepMicroSeconds)
+            if (_pipelines[index].executionStep == executionStep)
             {
                 group.index = index;
                 return group;
@@ -153,7 +159,7 @@ auto SystemsManagerMT::CreatePipelineGroup(optional<ui32> stepMicroSeconds, bool
     }
     group.index = (ui32)_pipelines.size();
     _pipelines.emplace_back();
-    _pipelines.back().stepMicroSeconds = stepMicroSeconds;
+    _pipelines.back().executionStep = executionStep;
     return group;
 }
 
@@ -465,7 +471,7 @@ bool SystemsManagerMT::IsPaused() const
 
 shared_ptr<EntitiesStream> SystemsManagerMT::StreamOut() const
 {
-    return make_shared<ECSEntities>(shared_from_this());
+    return make_shared<ECSEntitiesMT>(shared_from_this());
 }
 
 auto SystemsManagerMT::FindArchetypeGroup(const ArchetypeFull &archetype, Array<const SerializedComponent> components) -> ArchetypeGroup &

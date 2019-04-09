@@ -1,6 +1,66 @@
 #include "PreHeader.hpp"
 #include "SystemsManagerST.hpp"
 
+namespace ECSTest
+{
+    class ECSEntitiesST : public EntitiesStream
+    {
+        std::weak_ptr<const SystemsManagerST> _parent{};
+        vector<ComponentDesc> _tempComponents{};
+        decltype(SystemsManagerST::_entitiesLocations)::const_iterator _it{};
+
+    public:
+        ECSEntitiesST(const shared_ptr<const SystemsManagerST> &parent) : _parent(parent)
+        {
+            ASSUME(parent->_isPausedExecution);
+            _it = parent->_entitiesLocations.begin();
+        }
+
+        [[nodiscard]] virtual optional<StreamedEntity> Next() override
+        {
+            auto locked = _parent.lock();
+            ASSUME(locked);
+
+            ASSUME(locked->_isPausedExecution);
+
+            if (_it == locked->_entitiesLocations.end())
+            {
+                return {};
+            }
+
+            _tempComponents.clear();
+
+            auto[group, entityIndex] = _it->second;
+
+            for (uiw componentIndex = 0; componentIndex < group->uniqueTypedComponentsCount; ++componentIndex)
+            {
+                const auto &source = group->components[componentIndex];
+
+                for (uiw offset = 0; offset < source.stride; ++offset)
+                {
+                    uiw index = _tempComponents.size();
+                    _tempComponents.emplace_back();
+                    auto &target = _tempComponents[index];
+
+                    target.alignmentOf = source.alignmentOf;
+                    target.isUnique = source.isUnique;
+                    target.sizeOf = source.sizeOf;
+                    target.type = source.type;
+                    target.data = source.data.get() + entityIndex * source.sizeOf * source.stride + offset * source.sizeOf;
+                }
+            }
+
+            StreamedEntity streamed;
+            streamed.components = ToArray(_tempComponents);
+            streamed.entityId = _it->first;
+
+            ++_it;
+
+            return streamed;
+        }
+    };
+}
+
 using namespace ECSTest;
 
 shared_ptr<SystemsManagerST> SystemsManagerST::New()
@@ -13,24 +73,30 @@ shared_ptr<SystemsManagerST> SystemsManagerST::New()
     return make_shared<Inherited>();
 }
 
-auto SystemsManagerST::CreatePipelineGroup(optional<ui32> stepMicroSeconds, bool isMergeIfSuchPipelineExists) -> PipelineGroup
+auto SystemsManagerST::CreatePipelineGroup(optional<TimeDifference> executionStep, bool isMergeIfSuchPipelineExists) -> PipelineGroup
 {
-	PipelineGroup group;
-	if (isMergeIfSuchPipelineExists)
-	{
-		for (ui32 index = 0; index < (ui32)_pipelines.size(); ++index)
-		{
-			if (_pipelines[index].stepMicroSeconds == stepMicroSeconds)
-			{
-				group.index = index;
-				return group;
-			}
-		}
-	}
-	group.index = (ui32)_pipelines.size();
-	_pipelines.emplace_back();
-	_pipelines.back().stepMicroSeconds = stepMicroSeconds;
-	return group;
+    if (executionStep && executionStep->ToMSec() < 0)
+    {
+        HARDBREAK; // negative execution step
+        executionStep = {};
+    }
+
+    PipelineGroup group;
+    if (isMergeIfSuchPipelineExists)
+    {
+        for (ui32 index = 0; index < (ui32)_pipelines.size(); ++index)
+        {
+            if (_pipelines[index].executionStep == executionStep)
+            {
+                group.index = index;
+                return group;
+            }
+        }
+    }
+    group.index = (ui32)_pipelines.size();
+    _pipelines.emplace_back();
+    _pipelines.back().executionStep = executionStep;
+    return group;
 }
 
 void SystemsManagerST::Register(unique_ptr<System> system, PipelineGroup pipelineGroup)
@@ -324,8 +390,7 @@ bool SystemsManagerST::IsPaused() const
 
 shared_ptr<EntitiesStream> SystemsManagerST::StreamOut() const
 {
-	NOIMPL;
-	return {};
+    return make_shared<ECSEntitiesST>(shared_from_this());
 }
 
 auto SystemsManagerST::FindArchetypeGroup(const ArchetypeFull &archetype, Array<const SerializedComponent> components) -> ArchetypeGroup &
@@ -529,16 +594,11 @@ void SystemsManagerST::StartScheduler(vector<unique_ptr<EntitiesStream>> &&strea
 			{
 				ProcessMessages(*managed.system, managed.messageQueue);
 			}
+            managed.messageQueue.clear();
 		}
 	}
 
-	for (auto &pipeline : _pipelines)
-	{
-		for (auto &managed : pipeline.indirectSystems)
-		{
-			managed.messageQueue.clear();
-		}
-	}
+    _currentTime = TimeMoment::Now();
 
 	while (!_isStoppingExecution)
 	{
@@ -554,6 +614,12 @@ void SystemsManagerST::StartScheduler(vector<unique_ptr<EntitiesStream>> &&strea
 			_executionPauseNotifier.wait(waitLock, [this] { return _isPausedExecution == false; });
 
 			_isSchedulerPaused = false;
+            _currentTime = TimeMoment::Now();
+
+            for (auto &pipeline : _pipelines)
+            {
+                pipeline.lastExecutedTime = {};
+            }
 		}
 		else
 		{
@@ -564,14 +630,98 @@ void SystemsManagerST::StartScheduler(vector<unique_ptr<EntitiesStream>> &&strea
 
 void SystemsManagerST::SchedulerLoop()
 {
-	for (auto &pipeline : _pipelines)
-	{
-		ExecutePipeline(pipeline);
-	}
+    auto updateTimes = [this]() -> TimeMoment
+    {
+        auto currentTime = TimeMoment::Now();
+        _timeSinceStart += (currentTime - _currentTime);
+        _currentTime = currentTime;
+        return currentTime;
+    };
+
+    uiw repeatedIndex = uiw_max;
+    ui32 repeadedCount = 0;
+
+    for (uiw index = 0, size = _pipelines.size(); index < size; )
+    {
+        auto &pipeline = _pipelines[index];
+
+        if (pipeline.executionStep && pipeline.lastExecutedTime.HasValue())
+        {
+            auto nextExecution = pipeline.lastExecutedTime + *pipeline.executionStep;
+            if (_currentTime < nextExecution)
+            {
+                ++index;
+                continue;
+            }
+        }
+
+        ExecutePipeline(pipeline);
+
+        auto currentTime = updateTimes();
+
+        if (pipeline.executionStep)
+        {
+            if (pipeline.lastExecutedTime.HasValue())
+            {
+                pipeline.lastExecutedTime += *pipeline.executionStep;
+            }
+            else
+            {
+                pipeline.lastExecutedTime = currentTime;
+            }
+
+            if (repeatedIndex != index)
+            {
+                repeatedIndex = index;
+                repeadedCount = 1;
+            }
+            else
+            {
+                ++repeadedCount;
+                if (repeadedCount > 100)
+                {
+                    SOFTBREAK; // stuck in the loop, should slow execution down
+                    ++index;
+                }
+            }
+        }
+        else
+        {
+            pipeline.lastExecutedTime = currentTime;
+            ++index;
+        }
+    }
+
+    updateTimes();
 }
 
 void SystemsManagerST::ExecutePipeline(Pipeline &pipeline)
 {
+    for (auto &managed : pipeline.directSystems)
+    {
+        ++managed.executedTimes;
+    }
+
+    for (auto &managed : pipeline.indirectSystems)
+    {
+        System::Environment env =
+        {
+            0,
+            0,
+            0,
+            _idGenerator
+        };
+
+        managed.executedAt = pipeline.executionFrame;
+            
+        //CalculateGroupsToExectute(managed.system.get(), managed.groupsToExecute);
+
+        ExecuteIndirectSystem(*managed.system, managed.messageQueue, env);
+
+        ++managed.executedTimes;
+    }
+
+    ++pipeline.executionFrame;
 }
 
 void SystemsManagerST::CalculateGroupsToExectute(const System *system, vector<std::reference_wrapper<ArchetypeGroup>> &groups)
@@ -602,4 +752,212 @@ void SystemsManagerST::ProcessMessages(IndirectSystem &system, const ManagedIndi
 	{
 		system.ProcessMessages(stream);
 	}
+}
+
+void SystemsManagerST::ExecuteIndirectSystem(IndirectSystem &system, ManagedIndirectSystem::MessageQueue &messageQueue, System::Environment env)
+{
+    ProcessMessages(system, messageQueue);
+    messageQueue.clear();
+
+    MessageBuilder messageBuilder;
+    system.Update(env, messageBuilder);
+
+    // update the ECS using received messages
+
+    for (auto &[streamArchetype, stream] : messageBuilder.EntityAddedStreams()._data)
+    {
+        for (auto &entity : *stream)
+        {
+            AssignComponentIDs(ToArray(entity.components), _lastComponentId);
+
+            ArchetypeFull archetype = ComputeArchetype(ToArray(entity.components));
+
+            ArchetypeGroup *group;
+            auto groupSearch = _archetypeGroupsFull.find(archetype);
+            if (groupSearch == _archetypeGroupsFull.end())
+            {
+                group = &AddNewArchetypeGroup(archetype, ToArray(entity.components));
+            }
+            else
+            {
+                group = &groupSearch->second;
+            }
+
+            AddEntityToArchetypeGroup(archetype, *group, entity.entityID, ToArray(entity.components), nullptr);
+        }
+    }
+
+    for (const auto &[componentType, stream] : messageBuilder.ComponentChangedStreams()._data)
+    {
+        for (const auto &info : stream->infos)
+        {
+            auto entityLocation = _entitiesLocations.find(info.entityID);
+            ASSUME(entityLocation != _entitiesLocations.end());
+
+            auto &[group, entityIndex] = entityLocation->second;
+
+            uiw componentIndex = 0;
+            for (; ; ++componentIndex)
+            {
+                ASSUME(componentIndex < group->uniqueTypedComponentsCount);
+                if (group->components[componentIndex].type == componentType)
+                {
+                    break;
+                }
+            }
+
+            auto &componentArray = group->components[componentIndex];
+
+            ASSUME(info.component.alignmentOf == componentArray.alignmentOf);
+            ASSUME(info.component.isUnique == componentArray.isUnique);
+            ASSUME(info.component.sizeOf == componentArray.sizeOf);
+            ASSUME(info.component.type == componentArray.type);
+
+            uiw offset = 0;
+            if (!info.component.isUnique)
+            {
+                for (; ; ++offset)
+                {
+                    ASSUME(offset < componentArray.stride);
+                    if (info.component.id == componentArray.ids[entityIndex * componentArray.stride + offset])
+                    {
+                        break;
+                    }
+                }
+            }
+
+            memcpy(componentArray.data.get() + componentArray.sizeOf * componentArray.stride * entityIndex + componentArray.sizeOf * offset, info.component.data, info.component.sizeOf);
+        }
+    }
+
+    for (const auto &[streamArchetype, stream] : messageBuilder.EntityRemovedStreams()._data)
+    {
+        for (auto &entity : *stream)
+        {
+            auto entityLocation = _entitiesLocations.find(entity);
+            ASSUME(entityLocation != _entitiesLocations.end());
+
+            auto &[group, index] = entityLocation->second;
+
+            --group->entitiesCount;
+            uiw replaceIndex = group->entitiesCount;
+
+            bool isReplaceWithLast = replaceIndex != index;
+
+            if (isReplaceWithLast)
+            {
+                // copy entity id
+                group->entities[index] = group->entities[replaceIndex];
+
+                // copy components data and optionally components ids
+                for (uiw componentIndex = 0; componentIndex < group->uniqueTypedComponentsCount; ++componentIndex)
+                {
+                    auto &arr = group->components[componentIndex];
+                    void *target = arr.data.get() + arr.sizeOf * index * arr.stride;
+                    void *source = arr.data.get() + arr.sizeOf * replaceIndex * arr.stride;
+                    uiw copySize = arr.sizeOf * arr.stride;
+                    memcpy(target, source, copySize);
+
+                    if (!arr.isUnique)
+                    {
+                		ComponentID *idTarget = arr.ids.get() + index * arr.stride;
+                		ComponentID *idSource = arr.ids.get() + replaceIndex * arr.stride;
+                		uiw idCopySize = sizeof(ComponentID) * arr.stride;
+                        memcpy(idTarget, idSource, idCopySize);
+                    }
+                }
+            }
+
+            // remove deleted entity location
+            _entitiesLocations.erase(entityLocation);
+
+            if (isReplaceWithLast)
+            {
+                // patch replaced entity's index
+                entityLocation = _entitiesLocations.find(group->entities[index]);
+                ASSUME(entityLocation != _entitiesLocations.end());
+                entityLocation->second.index = index;
+            }
+        }
+    }
+
+    // queue messages to other indirect systems
+
+    for (auto &[streamArchetype, streamPointer] : messageBuilder.EntityAddedStreams()._data)
+    {
+        auto reflected = _archetypeReflector.Reflect(streamArchetype);
+        auto stream = MessageStreamEntityAdded(streamArchetype, streamPointer);
+
+        for (auto &pipeline : _pipelines)
+        {
+            for (auto &managed : pipeline.indirectSystems)
+            {
+                if (managed.system.get() != &system && ArchetypeReflector::Satisfies(reflected, managed.system->RequestedComponents().archetypeDefining))
+                {
+                    managed.messageQueue.entityAddedStreams.emplace_back(stream);
+                }
+            }
+        }
+    }
+
+    for (const auto &[componentType, streamPointer] : messageBuilder.ComponentChangedStreams()._data)
+    {
+        auto stream = MessageStreamComponentChanged(componentType, streamPointer);
+
+        for (auto &pipeline : _pipelines)
+        {
+            for (auto &managed : pipeline.indirectSystems)
+            {
+                if (managed.system.get() != &system)
+                {
+                    auto requested = managed.system->RequestedComponents();
+                    auto searchPredicate = [componentType](const System::RequestedComponent &stored) { return componentType == stored.type; };
+
+                    if (requested.subtractive.find(searchPredicate) != requested.subtractive.end())
+                    {
+                        continue;
+                    }
+
+                    if (requested.required.empty() ||
+                        requested.required.find(searchPredicate) != requested.required.end() ||
+                        requested.optional.find(searchPredicate) != requested.optional.end())
+                    {
+                        managed.messageQueue.componentChangedStreams.emplace_back(stream);
+                    }
+                }
+            }
+        }
+    }
+
+    for (const auto &[streamArchetype, streamPointer] : messageBuilder.EntityRemovedStreams()._data)
+    {
+        auto reflected = _archetypeReflector.Reflect(streamArchetype);
+        auto stream = MessageStreamEntityRemoved(streamArchetype, streamPointer);
+
+        for (auto &pipeline : _pipelines)
+        {
+            for (auto &managed : pipeline.indirectSystems)
+            {
+                if (managed.system.get() != &system && ArchetypeReflector::Satisfies(reflected, managed.system->RequestedComponents().archetypeDefining))
+                {
+                    managed.messageQueue.entityRemovedStreams.emplace_back(stream);
+                }
+            }
+        }
+    }
+}
+
+void SystemsManagerST::ManagedIndirectSystem::MessageQueue::clear()
+{
+    entityAddedStreams.clear();
+    componentChangedStreams.clear();
+    entityRemovedStreams.clear();
+}
+
+bool SystemsManagerST::ManagedIndirectSystem::MessageQueue::empty() const
+{
+    return
+        entityAddedStreams.empty() &&
+        componentChangedStreams.empty() &&
+        entityRemovedStreams.empty();
 }
