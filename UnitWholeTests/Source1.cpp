@@ -280,6 +280,11 @@ static void GenerateScene(EntityIDGenerator &idGenerator, SystemsManager &manage
 		t.position.z = rand() / (f32)RAND_MAX * 100 - 50;
 		StreamComponent(t, entity);
 
+		string name = "Entity"s + std::to_string(index);
+		Name n;
+		strcpy_s(n.name.data(), n.name.size(), name.c_str());
+		StreamComponent(n, entity);
+
         stream.AddEntity(idGenerator.Generate(), move(entity));
     }
 }
