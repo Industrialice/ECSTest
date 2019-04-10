@@ -71,6 +71,55 @@ namespace ECSTest
         }
     };
 
+    class MessageStreamComponentAdded
+    {
+        friend class SystemsManagerMT;
+        friend class SystemsManagerST;
+        friend UnitTests;
+        friend class MessageBuilder;
+        friend class MessageStreamsBuilderComponentAdded;
+
+    public:
+        struct ComponentInfo
+        {
+            friend class MessageBuilder;
+
+            EntityID entityID;
+            SerializedComponent component;
+        };
+
+    private:
+        struct InfoWithData
+        {
+            vector<ComponentInfo> infos;
+            unique_ptr<ui8[], AlignedMallocDeleter> data;
+        };
+
+        shared_ptr<InfoWithData> _source{};
+        StableTypeId _type{};
+
+        MessageStreamComponentAdded(StableTypeId type, const shared_ptr<InfoWithData> &source) : _type(type), _source(source)
+        {
+            ASSUME(source->infos.size());
+        }
+
+    public:
+        [[nodiscard]] const ComponentInfo *begin() const
+        {
+            return _source->infos.data();
+        }
+
+        [[nodiscard]] const ComponentInfo *end() const
+        {
+            return _source->infos.data() + _source->infos.size();
+        }
+
+        [[nodiscard]] StableTypeId Type() const
+        {
+            return _type;
+        }
+    };
+
     class MessageStreamComponentChanged
     {
         friend class SystemsManagerMT;
@@ -172,6 +221,16 @@ namespace ECSTest
         std::unordered_map<Archetype, shared_ptr<vector<MessageStreamEntityAdded::EntityWithComponents>>> _data{};
     };
 
+    class MessageStreamsBuilderComponentAdded
+    {
+        friend class SystemsManagerMT;
+        friend class SystemsManagerST;
+        friend class MessageBuilder;
+        friend UnitTests;
+
+        std::unordered_map<StableTypeId, shared_ptr<MessageStreamComponentAdded::InfoWithData>> _data{};
+    };
+
     class MessageStreamsBuilderComponentChanged
     {
         friend class SystemsManagerMT;
@@ -202,6 +261,7 @@ namespace ECSTest
         void Clear();
 		void Flush();
         [[nodiscard]] MessageStreamsBuilderEntityAdded &EntityAddedStreams();
+        [[nodiscard]] MessageStreamsBuilderComponentAdded &ComponentAddedStreams();
         [[nodiscard]] MessageStreamsBuilderComponentChanged &ComponentChangedStreams();
         [[nodiscard]] MessageStreamsBuilderEntityRemoved &EntityRemovedStreams();
 
@@ -236,6 +296,30 @@ namespace ECSTest
             }
         };
 
+        template <typename T, typename = std::enable_if_t<T::IsUnique()>> void ComponentAdded(EntityID entityID, const T &component)
+        {
+            SerializedComponent sc;
+            sc.alignmentOf = alignof(T);
+            sc.sizeOf = sizeof(T);
+            sc.isUnique = T::IsUnique();
+            sc.type = T::GetTypeId();
+            sc.data = (ui8 *)&component;
+            sc.id = {};
+            ComponentAdded(entityID, sc);
+        }
+
+        template <typename T, typename = std::enable_if_t<T::IsUnique() == false>> void ComponentAdded(EntityID entityID, const T &component, ComponentID id)
+        {
+            SerializedComponent sc;
+            sc.alignmentOf = alignof(T);
+            sc.sizeOf = sizeof(T);
+            sc.isUnique = T::IsUnique();
+            sc.type = T::GetTypeId();
+            sc.data = (ui8 *)&component;
+            sc.id = id;
+            ComponentAdded(entityID, sc);
+        }
+
 		template <typename T, typename = std::enable_if_t<T::IsUnique()>> void ComponentChanged(EntityID entityID, const T &component)
 		{
 			SerializedComponent sc;
@@ -261,12 +345,14 @@ namespace ECSTest
         }
 
         ComponentArrayBuilder &EntityAdded(EntityID entityID); // archetype will be computed after all the components were added, you can ignore the returned value if you don't want to add any components
+        void ComponentAdded(EntityID entityID, const SerializedComponent &sc);
         void ComponentChanged(EntityID entityID, const SerializedComponent &sc);
         void EntityRemoved(Archetype archetype, EntityID entityID);
     
 	private:
 		ComponentArrayBuilder _cab{};
 		MessageStreamsBuilderEntityAdded _entityAddedStreams{};
+        MessageStreamsBuilderComponentAdded _componentAddedStreams{};
         MessageStreamsBuilderComponentChanged _componentChangedStreams{};
         MessageStreamsBuilderEntityRemoved _entityRemovedStreams{};
 		EntityID _currentEntityId{};

@@ -74,6 +74,7 @@ namespace ECSTest
 			struct MessageQueue
 			{
 				vector<MessageStreamEntityAdded> entityAddedStreams{};
+                vector<MessageStreamComponentAdded> componentAddedStreams{};
 				vector<MessageStreamComponentChanged> componentChangedStreams{};
 				vector<MessageStreamEntityRemoved> entityRemovedStreams{};
 
@@ -131,6 +132,8 @@ namespace ECSTest
 
         TimeDifference _timeSinceStart{0_ms};
         TimeMoment _currentTime{};
+
+        vector<SerializedComponent> _tempComponents{};
 
 	private:
 		[[nodiscard]] ArchetypeGroup &FindArchetypeGroup(const ArchetypeFull &archetype, Array<const SerializedComponent> components);

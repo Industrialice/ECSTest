@@ -23,6 +23,12 @@ COMPONENT(AverageHeight)
 	ui32 sources;
 };
 
+COMPONENT(HeightFixerInfo)
+{
+    ui32 runTimes;
+    ui32 heightsFixed;
+};
+
 INDIRECT_SYSTEM(TransformGeneratorSystem)
 {
     INDIRECT_ACCEPT_COMPONENTS(Array<Name> &, SubtractiveComponent<Transform>);
@@ -37,6 +43,10 @@ void TransformGeneratorSystem::ProcessMessages(const MessageStreamEntityAdded &s
     {
         _entitiesToGenerate.push_back(entity.entityID);
     }
+}
+
+void TransformGeneratorSystem::ProcessMessages(const MessageStreamComponentAdded &stream)
+{
 }
 
 void TransformGeneratorSystem::ProcessMessages(const MessageStreamComponentChanged &stream)
@@ -60,6 +70,7 @@ void TransformGeneratorSystem::Update(Environment &env, MessageBuilder &messageB
         t.position.x = rand() / (f32)RAND_MAX * 100 - 50;
         t.position.y = rand() / (f32)RAND_MAX * 100 - 50;
         t.position.z = rand() / (f32)RAND_MAX * 100 - 50;
+        messageBuilder.ComponentAdded(id, t);
     }
     _entitiesToGenerate.clear();
 }
@@ -69,11 +80,41 @@ INDIRECT_SYSTEM(TransformHeightFixerSystem)
     INDIRECT_ACCEPT_COMPONENTS(Array<Transform> &);
 
 private:
-	vector<pair<EntityID, Transform>> _entitiesToFix{};
+	std::map<EntityID, Transform> _entitiesToFix{};
+    HeightFixerInfo _info{};
+    EntityID _infoId{};
 };
 
 void TransformHeightFixerSystem::ProcessMessages(const MessageStreamEntityAdded &stream)
-{}
+{
+    for (auto &entity : stream)
+    {
+        auto pred = [](const SerializedComponent &c) { return c.type == Transform::GetTypeId(); };
+        auto it = std::find_if(entity.components.begin(), entity.components.end(), pred);
+        Transform t = *(Transform *)it->data;
+        if (t.position.y < 0)
+        {
+            t.position.y = 100;
+            _entitiesToFix[entity.entityID] = t;
+        }
+    }
+}
+
+void TransformHeightFixerSystem::ProcessMessages(const MessageStreamComponentAdded &stream)
+{
+    for (auto &entity : stream)
+    {
+        if (entity.component.type == Transform::GetTypeId())
+        {
+            Transform t = *(Transform *)entity.component.data;
+            if (t.position.y < 0)
+            {
+                t.position.y = 100;
+                _entitiesToFix[entity.entityID] = t;
+            }
+        }
+    }
+}
 
 void TransformHeightFixerSystem::ProcessMessages(const MessageStreamComponentChanged &stream)
 {
@@ -84,21 +125,39 @@ void TransformHeightFixerSystem::ProcessMessages(const MessageStreamComponentCha
 		if (t.position.y < 0)
 		{
 			t.position.y = 100;
-			_entitiesToFix.push_back({entity.entityID, t});
+			_entitiesToFix[entity.entityID] = t;
 		}
 	}
 }
 
 void TransformHeightFixerSystem::ProcessMessages(const MessageStreamEntityRemoved &stream)
-{}
+{
+    for (auto &entity : stream)
+    {
+        _entitiesToFix.erase(entity);
+    }
+}
 
 void TransformHeightFixerSystem::Update(Environment &env, MessageBuilder &messageBuilder)
 {
+    ++_info.runTimes;
+    _info.heightsFixed += (ui32)_entitiesToFix.size();
+
 	for (auto &entity : _entitiesToFix)
 	{
 		messageBuilder.ComponentChanged(entity.first, entity.second);
 	}
 	_entitiesToFix.clear();
+
+    if (_infoId.IsValid())
+    {
+        messageBuilder.ComponentChanged(_infoId, _info);
+    }
+    else
+    {
+        _infoId = env.idGenerator.Generate();
+        messageBuilder.EntityAdded(_infoId).AddComponent(_info);
+    }
 }
 
 INDIRECT_SYSTEM(TransformFallingSystem)
@@ -117,6 +176,17 @@ void TransformFallingSystem::ProcessMessages(const MessageStreamEntityAdded &str
 		auto it = std::find_if(entity.components.begin(), entity.components.end(), pred);
 		_entities[entity.entityID] = *(Transform *)it->data;
 	}
+}
+
+void TransformFallingSystem::ProcessMessages(const MessageStreamComponentAdded &stream)
+{
+    for (auto &entity : stream)
+    {
+        if (entity.component.type == Transform::GetTypeId())
+        {
+            _entities[entity.entityID] = *(Transform *)entity.component.data;
+        }
+    }
 }
 
 void TransformFallingSystem::ProcessMessages(const MessageStreamComponentChanged &stream)
@@ -163,6 +233,18 @@ void AverageHeightAnalyzerSystem::ProcessMessages(const MessageStreamEntityAdded
 		_entities[entity.entityID] = (*(Transform *)it->data).position.y;
 	}
 	_isChanged = true;
+}
+
+void AverageHeightAnalyzerSystem::ProcessMessages(const MessageStreamComponentAdded &stream)
+{
+    for (auto &entity : stream)
+    {
+        if (entity.component.type == Transform::GetTypeId())
+        {
+            _entities[entity.entityID] = (*(Transform *)entity.component.data).position.y;
+            _isChanged = true;
+        }
+    }
 }
 
 void AverageHeightAnalyzerSystem::ProcessMessages(const MessageStreamComponentChanged &stream)
@@ -274,11 +356,11 @@ static void GenerateScene(EntityIDGenerator &idGenerator, SystemsManager &manage
     {
         TestEntities::PreStreamedEntity entity;
 
-		Transform t;
+		/*Transform t;
 		t.position.x = rand() / (f32)RAND_MAX * 100 - 50;
 		t.position.y = rand() / (f32)RAND_MAX * 100 - 50;
 		t.position.z = rand() / (f32)RAND_MAX * 100 - 50;
-		StreamComponent(t, entity);
+		StreamComponent(t, entity);*/
 
 		string name = "Entity"s + std::to_string(index);
 		Name n;
@@ -300,6 +382,11 @@ static void PrintStreamInfo(EntitiesStream &stream, bool isFirstPass)
 				auto a = *(AverageHeight *)c.data;
 				printf("average height %f based on %u sources\n", a.height, a.sources);
 			}
+            else if (c.type == HeightFixerInfo::GetTypeId())
+            {
+                auto i = *(HeightFixerInfo *)c.data;
+                printf("height fixer run %u times, fixed %u heights\n", i.runTimes, i.heightsFixed);
+            }
 		}
 	}
 

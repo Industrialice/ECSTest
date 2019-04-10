@@ -92,6 +92,11 @@ MessageStreamsBuilderEntityAdded &MessageBuilder::EntityAddedStreams()
     return _entityAddedStreams;
 }
 
+MessageStreamsBuilderComponentAdded &MessageBuilder::ComponentAddedStreams()
+{
+    return _componentAddedStreams;
+}
+
 MessageStreamsBuilderComponentChanged &MessageBuilder::ComponentChangedStreams()
 {
     return _componentChangedStreams;
@@ -109,6 +114,42 @@ auto ECSTest::MessageBuilder::EntityAdded(EntityID entityID) -> ComponentArrayBu
     _currentEntityId = entityID;
     _cab.Clear();
     return _cab;
+}
+
+void MessageBuilder::ComponentAdded(EntityID entityID, const SerializedComponent &sc)
+{
+    auto &entry = _componentAddedStreams._data[sc.type];
+    if (!entry)
+    {
+        entry = make_shared<MessageStreamComponentAdded::InfoWithData>();
+    }
+
+    uiw copyIndex = sc.sizeOf * entry->infos.size();
+
+    ui8 *oldPtr = entry->data.release();
+    ui8 *newPtr = (ui8 *)_aligned_realloc(oldPtr, copyIndex + sc.sizeOf, sc.alignmentOf);
+    entry->data.reset(newPtr);
+
+    if (oldPtr != newPtr)
+    {
+        for (auto &stored : entry->infos)
+        {
+            if (newPtr > oldPtr)
+            {
+                stored.component.data += newPtr - oldPtr;
+            }
+            else
+            {
+                stored.component.data -= oldPtr - newPtr;
+            }
+        }
+    }
+
+    entry->infos.push_back({entityID, sc});
+    SerializedComponent &added = entry->infos.back().component;
+    std::copy(sc.data, sc.data + sc.sizeOf, entry->data.get() + copyIndex);
+
+    added.data = entry->data.get() + copyIndex;
 }
 
 void MessageBuilder::ComponentChanged(EntityID entityID, const SerializedComponent &sc)

@@ -352,6 +352,7 @@ namespace ECSTest
     } \
     \
 	virtual void ProcessMessages(const MessageStreamEntityAdded &stream) override; \
+    virtual void ProcessMessages(const MessageStreamComponentAdded &stream) override; \
     virtual void ProcessMessages(const MessageStreamComponentChanged &stream) override; \
 	virtual void ProcessMessages(const MessageStreamEntityRemoved &stream) override; \
     virtual void Update(Environment &env, MessageBuilder &messageBuilder) override
