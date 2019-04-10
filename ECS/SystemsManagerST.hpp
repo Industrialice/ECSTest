@@ -138,7 +138,7 @@ namespace ECSTest
 		void AddEntityToArchetypeGroup(const ArchetypeFull &archetype, ArchetypeGroup &group, EntityID entityId, Array<const SerializedComponent> components, MessageBuilder *messageBuilder);
 		void StartScheduler(vector<unique_ptr<EntitiesStream>> &&streams);
 		void SchedulerLoop();
-		void ExecutePipeline(Pipeline &pipeline);
+		void ExecutePipeline(Pipeline &pipeline, const System::Environment &env);
 		void CalculateGroupsToExectute(const System *system, vector<std::reference_wrapper<ArchetypeGroup>> &groups);
 		static void ProcessMessages(IndirectSystem &system, const ManagedIndirectSystem::MessageQueue &messageQueue);
         void ExecuteIndirectSystem(IndirectSystem &system, ManagedIndirectSystem::MessageQueue &messageQueue, System::Environment env);

@@ -1,0 +1,210 @@
+Write locks: exclusive and inclusive.
+Exclusive write lock: others can't write or read.
+Inclusive write lock: others can't write, but can read.
+
+
+Archetypes: each entity has its archetype in two forms: Archetype and ArchetypeFull. The
+  first archetype is used for everything except storing the entities, it's computed based
+  only on entity's components types. The second archetype is used for storing entities
+  because adding a new component, even with the same type as some of the already attached
+  components, must change entity's storage.
+
+
+Direct systems: use read locks when reading only, use exclusive write locks when writing
+  to components. After the system had finished updating, the manager generates
+  ComponentChanged messages for all components that were locked for write and are tracked
+  by any indirect system. In theory, a system can be updated multiple times within a 
+  single frame at very different times, it depends on what archetypes can be successfully
+  locked for the update. So it's possible to have a situation where you have to direct
+  systems A and B, A runs its update for some archetypes, then B fully updates, then A
+  finishes updates for all its archetypes. But in the current implementation that approach
+  is not utilized because there're implication that need to be worked out in the future,
+  so currently the system can only be updated in one go.
+
+Indirect systems: never use read locks, only use inclusive write locks. All notifications 
+  regarding changes are both received and sent through messages. Every system has a
+  message queue that it has to process before it starts its update. The system can start
+  processing the messages without acquiring any locks because the only state it changes is
+  its internal state, but after acquiring the locks, if the system changes any components,
+  it must process all the messages that may have arrived after acquiring the locks. In 
+  that case it must acquire write locks for the corresponding ComponentArrays. It needs a 
+  write lock because of the following scenario: 2 indirect systems start running in 
+  parallel, they perform changes to the same components. When the messages they generated 
+  get processed, changes made by one of those systems will get discarded. An inclusive
+  write lock will ensure that the systems will wait for each other to finish, so even
+  though their order or execution is still undefined, the changes they make will be
+  properly seen.
+  
+  
+Pipelines: each pipeline has its own scheduler. Pipelines can be either continious,
+  which means they start a new iteration as soon as they're done with the previous one,
+  or fixed, where they have some fixed update interval. Different continious or fixed
+  pipelines can exist without being related in any other way. If a fixed pipeline can't
+  keep up with its update interval, it must slow down total time scale used by all
+  pipelines. If that scale is 0.5, the game will appear to be running 2 times slower
+  than normal. The only synchronization points between pipelines are locks performed
+  on the ECS scene. Pipelines lock ComponentType for write, two pipelines can't request
+  write access to the same ComponentType. This lock is acquired once and then cannot be
+  transferred.
+  
+  
+Component requirement types:
+  Required: an entity must contain every required component from the list.
+  Subtractive: an entity cannot contain any subtractive component from the list.
+  Optional: doesn't affect archetype selection, after all the archetypes that contain
+    all the required component types and don't contain any subtractive types were 
+	selected, their required components are passed into the system. If these entities
+	have any components specified as optional, these components get passed as well.
+	When used for indirect systems, you get notifications regarding optional components
+	the same way you get notifications for required components.
+  If a required types list is empty, it is a special case that means selecting all
+    archetypes except the ones that contain component types requested as subtractive. 
+	For a direct system, requesting no required and no optional components doesn't make
+	sense, for an indirect system it means you'll be receiving messages for all
+	archetypes except the ones that contain subtractive components. Requesting optional
+	components will allow you to request write access, all implicitly reqested
+	components will be read-only.
+  
+  
+ComponentID: each component that allows multiple components of that type to be attached
+  to an entity has a unique ID assigned during runtime, the IDs are not
+  serialized. Implementation-wise it is achieved by having a ui32 variable that
+  increments its value each time a new component is added. 0 value is reserved for
+  invalid ID value, that value is used for unique components.
+  
+ 
+Component arrays: earch addition or removal of a component changes entity's archetype,
+  thus selecting a new ArchetypeGroup for it. Components of the same type are always
+  stored together linearly in memory. When you then iterate through components that
+  allow multiple components of that type to be attached to an entity, your Array<T> 
+  acts as Array<pair<T[], ComponentID[]>>. Components that allow multiple instances 
+  should use ComponentID for identification.
+  
+  
+Parenting: there's no parenting at ECS level. Each component (like Transform) can
+  specify its parents using EntityID as part of component's data.
+  
+  
+System limitations: only one system type can be registered at any time across all
+  pipelines. Reasoning is that registering the same system type twice is almost
+  certainly an error.
+  
+  
+Enabling/disabling components and entities:
+
+
+Enabling/disabling and adding/removing systems:
+
+
+Streaming in new entities:
+
+
+Message types:
+ComponentChanged: header contains ComponentType and an array of 
+  {EntityID, ComponentID, ComponentData}.
+ComponentRemoved: header contains an array of {EntityID, ComponentType, ComponentID}.
+ComponentAdded: header contains an array of 
+  {EntityID, ComponentType, ComponentID, ComponentData}.
+EntityRemoved: header contains an array of {EntityID}.
+EntityAdded: header contains Archetype and an array of
+  {EntityID, array of {ComponentType, ComponentID, ComponentData}}.
+  
+  
+Messages execution order:
+  EntityAdded, ComponentAdded, ComponentChanged, ComponentRemoved, EntityRemoved.
+  This ordering might be problematic, if you did ComponentAdded, ComponentRemoved,
+  ComponentAdded for the same component and the component type is unique, you'll
+  have an error.
+
+Message sending rules:
+  ComponentChanged: any system can send it if its pipeline has locked that ComponentType.
+    The system must acquire a write lock first (both inclusive and exclusive will work,
+	but exclusive may be redundant). Only systems that requested that type of component will
+	receive this message.
+    Reasoning: without restricting locks to a single pipeline you'll have undefined order of
+	changes, which means your code can't have predictable behavior. Without a write lock
+	you may have 2 writing systems running in parallel, the last one to finish will simply
+	overwrite the changes done by the first system. Acquiring proper write locks will fix
+	that, but it will also create a synchronization point between the pipelines, which may
+	lead to huge stalls of the whole pipeline. Imagine the following scenario: you have a
+	physics system (PS) in pipeline A and a jiggle bones system (JBS) in pipeline B, both 
+	want to	change RigidBody component. JBS tries to acquire a lock, but PS just started
+	running and will preclude that. Renderer system can't start running until JBS is done
+	with its update. If PS runs for the next 10ms, pipeline B will just sit and wait that
+	whole time before it can continue its update. The solution is to move JBS into pipeline
+	A, but to prevent such scenarios from happening it makes sense to lock the ability to
+	change some type of component to a pipeline.
+  ComponentRemoved: any system can send it.
+    No lock is required, the order of execution should be controlled by system dependencies
+	instead. Only systems that requested that type of component will receive this message.
+	Reasoning: 
+  ComponentAdded: same as for ComponentRemoved.
+  EntityRemoved: any system can call it. The order will be undefined, so keep that in mind.
+    Only systems that track that Archetype will receive this message.
+  EntityAdded: same as EntityRemoved. And try to specify as many components as possible
+    in that message. Adding components later through ComponentAdded will be much less
+	efficient. Only systems that track that Archetype will receive this message.
+  
+  
+Message processing:
+  ComponentChanged: after the system finished running, the system's lock is transferred to the
+    scheduler. Then there're 2 scenarios:
+      1. system had an exclusive lock. That type of lock is enough for the scheduler.
+	  2. system had an inclusive lock. In that case the pipeline scheduler transforms that lock
+	    into an exclusive lock.
+	The scheduler then updates corresponding components' data. Then sends the message to other
+	system within its pipeline, then to other pipelines and releases the locks.
+  ComponentRemoved: after the system finished running, the scheduler acquires a direct write
+    lock over ArchetypeGroup where the component is located. Locking ComponentArray is not
+	necessary because anyone who wants to access it must acquire at least a read lock over the
+	ArchetypeGroup. If an ArchetypeGroup for the entity with component removed doesn't yet exist,
+	the scheduler locks _archetypeGroups and creates a new group. Then it locks that 
+	ArchetypeGroup for direct write as well. Releases its lock over _archetypeGroups.
+	Locks _entitiesLocations. It then moves the entity and all its components except the
+	removed one to the new ArchetypeGroup. Fills the gaps in the old ArchetypeGroup if needed.
+	Patches	_entitiesLocations, unlocks it, unlocks the groups.
+  ComponentAdded: same as for ComponentRemoved.
+  EntityRemoved: after the system finished running, the scheduler acquires a direct write lock
+    over _entitiesLocations, then over the entity's ArchetypeGroup. Then it removes that entity
+	with all its components, filling the gaps if needed. Patches _entitiesLocations, unlocks it,
+	unlocks the group.
+  EntityAdded: after the system finished running, the scheduler computes the target ArchetypeGroup.
+    If it doesn't exist, locks _archetypeGroups, creates a new group, unlocks _archetypeGroups.
+    Acquires a direct write lock over the group. Locks _entitiesLocations. It then adds the entity
+	with all its components to the group. Patches _entitiesLocations, unlocks it, unlocks the group.
+	
+  The message stays in the pipeline queue until all the systems withing the	pipeline received it.
+  If an ArchetypeGroup became empty, it doesn't get removed.
+
+
+Message merging when applied to the same entity/component:
+After ComponentChanged
+  ComponentChanged: apply
+  ComponentRemoved: apply
+  ComponentAdded: add if non-unique, if unique apply modifications to the component, ignore addition, issue a warning
+  EntityRemoved: apply
+  EntityAdded: -
+After ComponentRemoved
+  ComponentChanged: ignore
+  ComponentRemoved: ignore
+  ComponentAdded: -
+  EntityRemoved: apply
+  EntityAdded: -
+After ComponentAdded
+  ComponentChanged: apply
+  ComponentRemoved: apply
+  ComponentAdded: add if non-unique, if unique apply modifications to the component, ignore addition, issue a warning
+  EntityRemoved: apply
+  EntityAdded: -
+After EntityRemoved
+  ComponentChanged: ignore
+  ComponentRemoved: ignore
+  ComponentAdded: ignore
+  EntityRemoved: ignore
+  EntityAdded: -
+After EntityAdded
+  ComponentChanged: apply
+  ComponentRemoved: apply
+  ComponentAdded: apply
+  EntityRemoved: apply
+  EntityAdded: -

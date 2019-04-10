@@ -10,9 +10,9 @@ namespace ECSTest
     public:
         struct Environment
         {
-            f32 timeSinceLastFrame;
+			f32 timeSinceLastFrame;
             ui32 frameNumber;
-            f64 timeSinceStarted;
+			TimeDifference timeSinceStarted;
             EntityIDGenerator &idGenerator;
         };
 

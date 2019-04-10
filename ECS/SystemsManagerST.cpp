@@ -655,7 +655,21 @@ void SystemsManagerST::SchedulerLoop()
             }
         }
 
-        ExecutePipeline(pipeline);
+		TimeDifference timeSinceLastFrame = 0_s;
+		if (pipeline.lastExecutedTime.HasValue())
+		{
+			timeSinceLastFrame = TimeMoment::Now() - pipeline.lastExecutedTime;
+		}
+
+		System::Environment env =
+		{
+			timeSinceLastFrame.ToSec(),
+			pipeline.executionFrame,
+			_timeSinceStart,
+			_idGenerator
+		};
+
+        ExecutePipeline(pipeline, env);
 
         auto currentTime = updateTimes();
 
@@ -695,7 +709,7 @@ void SystemsManagerST::SchedulerLoop()
     updateTimes();
 }
 
-void SystemsManagerST::ExecutePipeline(Pipeline &pipeline)
+void SystemsManagerST::ExecutePipeline(Pipeline &pipeline, const System::Environment &env)
 {
     for (auto &managed : pipeline.directSystems)
     {
@@ -704,14 +718,6 @@ void SystemsManagerST::ExecutePipeline(Pipeline &pipeline)
 
     for (auto &managed : pipeline.indirectSystems)
     {
-        System::Environment env =
-        {
-            0,
-            0,
-            0,
-            _idGenerator
-        };
-
         managed.executedAt = pipeline.executionFrame;
             
         //CalculateGroupsToExectute(managed.system.get(), managed.groupsToExecute);
@@ -762,7 +768,7 @@ void SystemsManagerST::ExecuteIndirectSystem(IndirectSystem &system, ManagedIndi
     MessageBuilder messageBuilder;
     system.Update(env, messageBuilder);
 
-    // update the ECS using received messages
+    // update the ECS using the received messages
 
     for (auto &[streamArchetype, stream] : messageBuilder.EntityAddedStreams()._data)
     {

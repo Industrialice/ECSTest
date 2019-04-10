@@ -216,6 +216,10 @@ namespace ECSTest
 			void Clear();
 
         public:
+			ComponentArrayBuilder() = default;
+			ComponentArrayBuilder(ComponentArrayBuilder &&) = default;
+			ComponentArrayBuilder &operator = (ComponentArrayBuilder &&) = default;
+
             ComponentArrayBuilder &AddComponent(const EntitiesStream::ComponentDesc &desc, ComponentID id); // the data will be copied over
             ComponentArrayBuilder &AddComponent(const SerializedComponent &sc); // the data will be copied over
 
@@ -232,7 +236,19 @@ namespace ECSTest
             }
         };
 
-        template <typename T> void ComponentChanged(EntityID entityID, const T &component, ComponentID id)
+		template <typename T, typename = std::enable_if_t<T::IsUnique()>> void ComponentChanged(EntityID entityID, const T &component)
+		{
+			SerializedComponent sc;
+			sc.alignmentOf = alignof(T);
+			sc.sizeOf = sizeof(T);
+			sc.isUnique = T::IsUnique();
+			sc.type = T::GetTypeId();
+			sc.data = (ui8 *)&component;
+			sc.id = {};
+			ComponentChanged(entityID, sc);
+		}
+
+        template <typename T, typename = std::enable_if_t<T::IsUnique() == false>> void ComponentChanged(EntityID entityID, const T &component, ComponentID id)
         {
             SerializedComponent sc;
             sc.alignmentOf = alignof(T);

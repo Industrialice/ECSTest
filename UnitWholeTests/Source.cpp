@@ -70,7 +70,7 @@ void TestIndirectSystem0::Update(Environment &env, MessageBuilder &messageBuilde
 
     TestComponent0 c;
     c.value = 1;
-    messageBuilder.ComponentChanged(*_entities.begin(), c, 0);
+    messageBuilder.ComponentChanged(*_entities.begin(), c);
     _entities.erase(_entities.begin());
 }
 

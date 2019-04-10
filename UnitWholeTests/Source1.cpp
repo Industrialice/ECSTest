@@ -17,6 +17,12 @@ COMPONENT(Transform)
     Vector3 position;
 };
 
+COMPONENT(AverageHeight)
+{
+	f32 height;
+	ui32 sources;
+};
+
 INDIRECT_SYSTEM(TransformGeneratorSystem)
 {
     INDIRECT_ACCEPT_COMPONENTS(Array<Name> &, SubtractiveComponent<Transform>);
@@ -63,57 +69,151 @@ INDIRECT_SYSTEM(TransformHeightFixerSystem)
     INDIRECT_ACCEPT_COMPONENTS(Array<Transform> &);
 
 private:
+	vector<pair<EntityID, Transform>> _entitiesToFix{};
 };
 
 void TransformHeightFixerSystem::ProcessMessages(const MessageStreamEntityAdded &stream)
 {}
 
 void TransformHeightFixerSystem::ProcessMessages(const MessageStreamComponentChanged &stream)
-{}
+{
+	for (auto &entity : stream)
+	{
+		ASSUME(entity.component.type == Transform::GetTypeId());
+		Transform t = *(Transform *)entity.component.data;
+		if (t.position.y < 0)
+		{
+			t.position.y = 100;
+			_entitiesToFix.push_back({entity.entityID, t});
+		}
+	}
+}
 
 void TransformHeightFixerSystem::ProcessMessages(const MessageStreamEntityRemoved &stream)
 {}
 
 void TransformHeightFixerSystem::Update(Environment &env, MessageBuilder &messageBuilder)
-{}
+{
+	for (auto &entity : _entitiesToFix)
+	{
+		messageBuilder.ComponentChanged(entity.first, entity.second);
+	}
+	_entitiesToFix.clear();
+}
 
 INDIRECT_SYSTEM(TransformFallingSystem)
 {
     INDIRECT_ACCEPT_COMPONENTS(Array<Transform> &);
 
 private:
+	std::map<EntityID, Transform> _entities{};
 };
 
 void TransformFallingSystem::ProcessMessages(const MessageStreamEntityAdded &stream)
-{}
+{
+	for (auto &entity : stream)
+	{
+		auto pred = [](const SerializedComponent &c) { return c.type == Transform::GetTypeId(); };
+		auto it = std::find_if(entity.components.begin(), entity.components.end(), pred);
+		_entities[entity.entityID] = *(Transform *)it->data;
+	}
+}
 
 void TransformFallingSystem::ProcessMessages(const MessageStreamComponentChanged &stream)
-{}
+{
+	for (auto &entity : stream)
+	{
+		_entities[entity.entityID] = *(Transform *)entity.component.data;
+	}
+}
 
 void TransformFallingSystem::ProcessMessages(const MessageStreamEntityRemoved &stream)
-{}
+{
+	for (auto &entity : stream)
+	{
+		_entities.erase(entity);
+	}
+}
 
 void TransformFallingSystem::Update(Environment &env, MessageBuilder &messageBuilder)
-{}
+{
+	for (auto &[entityID, component] : _entities)
+	{
+		component.position.y -= env.timeSinceLastFrame * 9.81f;
+		messageBuilder.ComponentChanged(entityID, component);
+	}
+}
 
 INDIRECT_SYSTEM(AverageHeightAnalyzerSystem)
 {
     INDIRECT_ACCEPT_COMPONENTS(const Array<Transform> &);
 
 private:
+	std::map<EntityID, f32> _entities{};
+	bool _isChanged = false;
+	EntityID _entityID{};
 };
 
 void AverageHeightAnalyzerSystem::ProcessMessages(const MessageStreamEntityAdded &stream)
-{}
+{
+	for (auto &entity : stream)
+	{
+		auto pred = [](const SerializedComponent &c) { return c.type == Transform::GetTypeId(); };
+		auto it = std::find_if(entity.components.begin(), entity.components.end(), pred);
+		_entities[entity.entityID] = (*(Transform *)it->data).position.y;
+	}
+	_isChanged = true;
+}
 
 void AverageHeightAnalyzerSystem::ProcessMessages(const MessageStreamComponentChanged &stream)
-{}
+{
+	for (auto &entity : stream)
+	{
+		_entities[entity.entityID] = (*(Transform *)entity.component.data).position.y;
+	}
+	_isChanged = true;
+}
 
 void AverageHeightAnalyzerSystem::ProcessMessages(const MessageStreamEntityRemoved &stream)
-{}
+{
+	for (auto &entity : stream)
+	{
+		_entities.erase(entity);
+	}
+	_isChanged = true;
+}
 
 void AverageHeightAnalyzerSystem::Update(Environment &env, MessageBuilder &messageBuilder)
-{}
+{
+	if (!_isChanged)
+	{
+		return;
+	}
+
+	f64 sum = 0;
+	for (auto &[id, y] : _entities)
+	{
+		sum += y;
+	}
+	sum /= _entities.size();
+
+	AverageHeight h;
+	h.height = (f32)sum;
+	h.sources = (ui32)_entities.size();
+
+	if (_entityID.IsValid() == false)
+	{
+		_entityID = env.idGenerator.Generate();
+		auto &c = messageBuilder.EntityAdded(_entityID);
+		c.AddComponent(h);
+	}
+	else
+	{
+		messageBuilder.ComponentChanged(_entityID, h);
+	}
+
+	_isChanged = false;
+}
 
 using namespace ECSTest;
 
@@ -174,6 +274,11 @@ static void GenerateScene(EntityIDGenerator &idGenerator, SystemsManager &manage
     {
         TestEntities::PreStreamedEntity entity;
 
+		Transform t;
+		t.position.x = rand() / (f32)RAND_MAX * 100 - 50;
+		t.position.y = rand() / (f32)RAND_MAX * 100 - 50;
+		t.position.z = rand() / (f32)RAND_MAX * 100 - 50;
+		StreamComponent(t, entity);
 
         stream.AddEntity(idGenerator.Generate(), move(entity));
     }
@@ -181,6 +286,19 @@ static void GenerateScene(EntityIDGenerator &idGenerator, SystemsManager &manage
 
 static void PrintStreamInfo(EntitiesStream &stream, bool isFirstPass)
 {
+	while (auto entity = stream.Next())
+	{
+		for (auto &c : entity->components)
+		{
+			if (c.type == AverageHeight::GetTypeId())
+			{
+				auto a = *(AverageHeight *)c.data;
+				printf("average height %f based on %u sources\n", a.height, a.sources);
+			}
+		}
+	}
+
+	printf("finished %s\n", isFirstPass ? "first" : "second");
 }
 
 int main()
@@ -195,16 +313,13 @@ int main()
 
     GenerateScene(idGenerator, *manager, *stream);
 
-    auto testPipelineGroup0 = manager->CreatePipelineGroup(1_ms, false);
-    auto testPipelineGroup1 = manager->CreatePipelineGroup(1.5_ms, false);
+    auto testPipelineGroup0 = manager->CreatePipelineGroup(5_ms, false);
+    auto testPipelineGroup1 = manager->CreatePipelineGroup(6.5_ms, false);
 
     manager->Register(make_unique<TransformGeneratorSystem>(), testPipelineGroup0);
-
-    manager->Register(make_unique<TestIndirectSystem1>(), testPipelineGroup0);
-
-    manager->Register(make_unique<TestIndirectSystem2>(), testPipelineGroup0);
-
-    manager->Register(make_unique<MonitoringSystem>(), testPipelineGroup1);
+    manager->Register(make_unique<TransformHeightFixerSystem>(), testPipelineGroup0);
+    manager->Register(make_unique<TransformFallingSystem>(), testPipelineGroup0);
+	manager->Register(make_unique<AverageHeightAnalyzerSystem>(), testPipelineGroup1);
 
     vector<WorkerThread> workers;
     if (isMT)
