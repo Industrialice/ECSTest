@@ -52,7 +52,7 @@ namespace ECSTest
 
         MessageStreamEntityAdded(Archetype archetype, const shared_ptr<vector<EntityWithComponents>> &source) : _archetype(archetype), _source(source)
         {
-            ASSUME(source->size());
+            ASSUME(_source->size());
         }
 
     public:
@@ -112,7 +112,8 @@ namespace ECSTest
 
         MessageStreamComponentAdded(StableTypeId type, const shared_ptr<InfoWithData> &source) : _type(type), _source(source)
         {
-            ASSUME(source->infos.size());
+            ASSUME(_source->infos.size());
+			ASSUME(_type != StableTypeId{});
         }
 
     public:
@@ -161,7 +162,8 @@ namespace ECSTest
 
         MessageStreamComponentChanged(StableTypeId type, const shared_ptr<InfoWithData> &source) : _type(type), _source(source)
         {
-            ASSUME(source->infos.size());
+            ASSUME(_source->infos.size());
+			ASSUME(_type != StableTypeId{});
         }
 
     public:
@@ -202,9 +204,10 @@ namespace ECSTest
         shared_ptr<vector<ComponentInfo>> _source{};
         StableTypeId _type{};
 
-        MessageStreamComponentRemoved(StableTypeId type, const shared_ptr<vector<ComponentInfo>> &source) : _source(source)
+        MessageStreamComponentRemoved(StableTypeId type, const shared_ptr<vector<ComponentInfo>> &source) : _type(type), _source(source)
         {
-            ASSUME(source->size());
+            ASSUME(_source->size());
+			ASSUME(_type != StableTypeId{});
         }
 
     public:

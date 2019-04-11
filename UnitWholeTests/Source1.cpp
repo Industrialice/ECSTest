@@ -398,6 +398,7 @@ void CooldownUpdater::ProcessMessages(const MessageStreamComponentAdded &stream)
 
 void CooldownUpdater::ProcessMessages(const MessageStreamComponentChanged &stream)
 {
+	SOFTBREAK;
     for (auto &entity : stream)
     {
         _cooldowns[entity.entityID] = *(NegativeHeightCooldown *)entity.component.data;
@@ -406,7 +407,8 @@ void CooldownUpdater::ProcessMessages(const MessageStreamComponentChanged &strea
 
 void CooldownUpdater::ProcessMessages(const MessageStreamComponentRemoved &stream)
 {
-    for (auto &entity : stream)
+	SOFTBREAK;
+	for (auto &entity : stream)
     {
         _cooldowns.erase(entity.entityID);
     }
