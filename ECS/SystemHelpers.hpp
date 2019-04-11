@@ -297,7 +297,8 @@ namespace ECSTest
     virtual Requests RequestedComponents() const override \
     { \
         using thisType = std::remove_reference_t<std::remove_cv_t<decltype(*this)>>; \
-		using types = typename FunctionInfo::Info<decltype(&thisType::Acceptor)>::args; \
+		struct Local { static void Temp(__VA_ARGS__); }; \
+		using types = typename FunctionInfo::Info<decltype(Local::Temp)>::args; \
         static constexpr auto arr = _TupleToComponents<types>::Convert(); \
         static constexpr auto arrSorted = Funcs::SortCompileTime(arr); \
         static constexpr auto required = _FindMatchingComponents(arrSorted, RequirementForComponent::Required); \
@@ -320,11 +321,12 @@ namespace ECSTest
     virtual void Accept(Environment &env, void **array) override \
     { \
         using thisType = std::remove_reference_t<std::remove_cv_t<decltype(*this)>>; \
-		using types = typename FunctionInfo::Info<decltype(&thisType::Acceptor)>::args; \
+		struct Local { static void Temp(__VA_ARGS__); }; \
+		using types = typename FunctionInfo::Info<decltype(Local::Temp)>::args; \
 		static constexpr uiw count = std::tuple_size_v<types>; \
-        _AcceptCaller<&thisType::Acceptor, types>::Call(this, array, std::integral_constant<uiw, count>()); \
+        _AcceptCaller<&thisType::Update, types>::Call(this, env, array, std::integral_constant<uiw, count>()); \
     } \
-    void Acceptor(Environment &env, __VA_ARGS__)
+    void Update(Environment &env, __VA_ARGS__)
 
 #define INDIRECT_ACCEPT_COMPONENTS(...) \
     virtual Requests RequestedComponents() const override \

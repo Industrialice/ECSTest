@@ -10,6 +10,7 @@ using namespace ECSTest;
 namespace
 {
     constexpr ui32 EntitiesToTest = 100;
+	constexpr bool IsUseDirectForFalling = true;
 }
 
 COMPONENT(Name)
@@ -222,7 +223,7 @@ void TransformHeightFixerSystem::Update(Environment &env, MessageBuilder &messag
     }
 }
 
-INDIRECT_SYSTEM(TransformFallingSystem)
+INDIRECT_SYSTEM(TransformFallingIndirectSystem)
 {
     INDIRECT_ACCEPT_COMPONENTS(Array<Transform> &);
 
@@ -230,7 +231,7 @@ private:
 	std::map<EntityID, Transform> _entities{};
 };
 
-void TransformFallingSystem::ProcessMessages(const MessageStreamEntityAdded &stream)
+void TransformFallingIndirectSystem::ProcessMessages(const MessageStreamEntityAdded &stream)
 {
 	for (auto &entity : stream)
 	{
@@ -238,7 +239,7 @@ void TransformFallingSystem::ProcessMessages(const MessageStreamEntityAdded &str
 	}
 }
 
-void TransformFallingSystem::ProcessMessages(const MessageStreamComponentAdded &stream)
+void TransformFallingIndirectSystem::ProcessMessages(const MessageStreamComponentAdded &stream)
 {
     for (auto &entity : stream)
     {
@@ -249,7 +250,7 @@ void TransformFallingSystem::ProcessMessages(const MessageStreamComponentAdded &
     }
 }
 
-void TransformFallingSystem::ProcessMessages(const MessageStreamComponentChanged &stream)
+void TransformFallingIndirectSystem::ProcessMessages(const MessageStreamComponentChanged &stream)
 {
 	for (auto &entity : stream)
 	{
@@ -257,7 +258,7 @@ void TransformFallingSystem::ProcessMessages(const MessageStreamComponentChanged
 	}
 }
 
-void TransformFallingSystem::ProcessMessages(const MessageStreamComponentRemoved &stream)
+void TransformFallingIndirectSystem::ProcessMessages(const MessageStreamComponentRemoved &stream)
 {
     for (auto &entity : stream)
     {
@@ -265,7 +266,7 @@ void TransformFallingSystem::ProcessMessages(const MessageStreamComponentRemoved
     }
 }
 
-void TransformFallingSystem::ProcessMessages(const MessageStreamEntityRemoved &stream)
+void TransformFallingIndirectSystem::ProcessMessages(const MessageStreamEntityRemoved &stream)
 {
 	for (auto &entity : stream)
 	{
@@ -273,7 +274,7 @@ void TransformFallingSystem::ProcessMessages(const MessageStreamEntityRemoved &s
 	}
 }
 
-void TransformFallingSystem::Update(Environment &env, MessageBuilder &messageBuilder)
+void TransformFallingIndirectSystem::Update(Environment &env, MessageBuilder &messageBuilder)
 {
 	for (auto &[entityID, component] : _entities)
 	{
@@ -281,6 +282,17 @@ void TransformFallingSystem::Update(Environment &env, MessageBuilder &messageBui
 		messageBuilder.ComponentChanged(entityID, component);
 	}
 }
+
+DIRECT_SYSTEM(TransformFallingDirectSystem)
+{
+	DIRECT_ACCEPT_COMPONENTS(Array<Transform> &transforms)
+	{
+		for (auto &t : transforms)
+		{
+			t.position.y -= env.timeSinceLastFrame * 50.0f;
+		}
+	}
+};
 
 INDIRECT_SYSTEM(AverageHeightAnalyzerSystem)
 {
@@ -585,7 +597,14 @@ int main()
 
     manager->Register(make_unique<TransformGeneratorSystem>(), testPipelineGroup0);
     manager->Register(make_unique<TransformHeightFixerSystem>(), testPipelineGroup0);
-    manager->Register(make_unique<TransformFallingSystem>(), testPipelineGroup0);
+	if (IsUseDirectForFalling)
+	{
+		manager->Register(make_unique<TransformFallingDirectSystem>(), testPipelineGroup0);
+	}
+	else
+	{
+		manager->Register(make_unique<TransformFallingIndirectSystem>(), testPipelineGroup0);
+	}
 	manager->Register(make_unique<AverageHeightAnalyzerSystem>(), testPipelineGroup1);
     manager->Register(make_unique<CooldownUpdater>(), testPipelineGroup1);
 

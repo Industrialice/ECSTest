@@ -15,7 +15,7 @@ Direct systems: use read locks when reading only, use exclusive write locks when
   ComponentChanged messages for all components that were locked for write and are tracked
   by any indirect system. In theory, a system can be updated multiple times within a 
   single frame at very different times, it depends on what archetypes can be successfully
-  locked for the update. So it's possible to have a situation where you have to direct
+  locked for the update. So it's possible to have a situation where you have two direct
   systems A and B, A runs its update for some archetypes, then B fully updates, then A
   finishes updates for all its archetypes. But in the current implementation that approach
   is not utilized because there're implication that need to be worked out in the future,
