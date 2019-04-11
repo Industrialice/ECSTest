@@ -48,6 +48,7 @@ namespace ECSTest
         virtual void ProcessMessages(const MessageStreamEntityAdded &stream) = 0;
         virtual void ProcessMessages(const MessageStreamComponentAdded &stream) = 0;
         virtual void ProcessMessages(const MessageStreamComponentChanged &stream) = 0;
+        virtual void ProcessMessages(const MessageStreamComponentRemoved &stream) = 0;
 		virtual void ProcessMessages(const MessageStreamEntityRemoved &stream) = 0;
         virtual void Update(Environment &env, MessageBuilder &messageBuilder) = 0;
 	};

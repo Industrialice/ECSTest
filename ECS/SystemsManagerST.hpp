@@ -76,6 +76,7 @@ namespace ECSTest
 				vector<MessageStreamEntityAdded> entityAddedStreams{};
                 vector<MessageStreamComponentAdded> componentAddedStreams{};
 				vector<MessageStreamComponentChanged> componentChangedStreams{};
+                vector<MessageStreamComponentRemoved> componentRemovedStreams{};
 				vector<MessageStreamEntityRemoved> entityRemovedStreams{};
 
 				void clear();

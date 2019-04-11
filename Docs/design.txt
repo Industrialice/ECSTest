@@ -102,9 +102,10 @@ Streaming in new entities:
 Message types:
 ComponentChanged: header contains ComponentType and an array of 
   {EntityID, ComponentID, ComponentData}.
-ComponentRemoved: header contains an array of {EntityID, ComponentType, ComponentID}.
-ComponentAdded: header contains an array of 
-  {EntityID, ComponentType, ComponentID, ComponentData}.
+ComponentRemoved: header contains ComponentType and an array of 
+  {EntityID, ComponentID}.
+ComponentAdded: header contains ComponentType and an array of 
+  {EntityID, ComponentID, ComponentData}.
 EntityRemoved: header contains an array of {EntityID}.
 EntityAdded: header contains Archetype and an array of
   {EntityID, array of {ComponentType, ComponentID, ComponentData}}.

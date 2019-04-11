@@ -30,6 +30,18 @@ namespace ECSTest
             EntityID entityID;
             vector<SerializedComponent> components;
 
+            template <typename T> const T *FindComponent() const
+            {
+                for (auto &c : components)
+                {
+                    if (c.type == T::GetTypeId())
+                    {
+                        return (T *)c.data;
+                    }
+                }
+                return nullptr;
+            }
+
         private:
             vector<ui8> componentsData;
         };
@@ -167,17 +179,49 @@ namespace ECSTest
         {
             return _type;
         }
+    };
 
-    /*private:
-        [[nodiscard]] ComponentInfo *begin()
+    class MessageStreamComponentRemoved
+    {
+        friend class SystemsManagerMT;
+        friend class SystemsManagerST;
+        friend UnitTests;
+        friend class MessageBuilder;
+        friend class MessageStreamsBuilderComponentRemoved;
+
+    public:
+        struct ComponentInfo
         {
-            return _source->infos.data();
+            friend class MessageBuilder;
+
+            EntityID entityID;
+            ComponentID componentID;
+        };
+
+    private:
+        shared_ptr<vector<ComponentInfo>> _source{};
+        StableTypeId _type{};
+
+        MessageStreamComponentRemoved(StableTypeId type, const shared_ptr<vector<ComponentInfo>> &source) : _source(source)
+        {
+            ASSUME(source->size());
         }
 
-        [[nodiscard]] ComponentInfo *end()
+    public:
+        [[nodiscard]] const ComponentInfo *begin() const
         {
-            return _source->infos.data() + _source->infos.size();
-        }*/
+            return _source->data();
+        }
+
+        [[nodiscard]] const ComponentInfo *end() const
+        {
+            return _source->data() + _source->size();
+        }
+
+        [[nodiscard]] StableTypeId Type() const
+        {
+            return _type;
+        }
     };
 
 	class MessageStreamEntityRemoved
@@ -241,6 +285,16 @@ namespace ECSTest
         std::unordered_map<StableTypeId, shared_ptr<MessageStreamComponentChanged::InfoWithData>> _data{};
     };
 
+    class MessageStreamsBuilderComponentRemoved
+    {
+        friend class SystemsManagerMT;
+        friend class SystemsManagerST;
+        friend class MessageBuilder;
+        friend UnitTests;
+
+        std::unordered_map<StableTypeId, shared_ptr<vector<MessageStreamComponentRemoved::ComponentInfo>>> _data{};
+    };
+
     class MessageStreamsBuilderEntityRemoved
     {
         friend class SystemsManagerMT;
@@ -263,6 +317,7 @@ namespace ECSTest
         [[nodiscard]] MessageStreamsBuilderEntityAdded &EntityAddedStreams();
         [[nodiscard]] MessageStreamsBuilderComponentAdded &ComponentAddedStreams();
         [[nodiscard]] MessageStreamsBuilderComponentChanged &ComponentChangedStreams();
+        [[nodiscard]] MessageStreamsBuilderComponentRemoved &ComponentRemovedStreams();
         [[nodiscard]] MessageStreamsBuilderEntityRemoved &EntityRemovedStreams();
 
     public:
@@ -283,7 +338,19 @@ namespace ECSTest
             ComponentArrayBuilder &AddComponent(const EntitiesStream::ComponentDesc &desc, ComponentID id); // the data will be copied over
             ComponentArrayBuilder &AddComponent(const SerializedComponent &sc); // the data will be copied over
 
-			template <typename T> ComponentArrayBuilder &AddComponent(const T &component, ComponentID id = {})
+            template <typename T, typename = std::enable_if_t<T::IsUnique()>> ComponentArrayBuilder &AddComponent(const T &component)
+            {
+                SerializedComponent sc;
+                sc.alignmentOf = alignof(T);
+                sc.sizeOf = sizeof(T);
+                sc.isUnique = T::IsUnique();
+                sc.type = T::GetTypeId();
+                sc.data = (ui8 *)&component;
+                sc.id = {};
+                return AddComponent(sc);
+            }
+
+			template <typename T, typename = std::enable_if_t<T::IsUnique() == false>> ComponentArrayBuilder &AddComponent(const T &component, ComponentID id)
             {
                 SerializedComponent sc;
                 sc.alignmentOf = alignof(T);
@@ -344,9 +411,20 @@ namespace ECSTest
             ComponentChanged(entityID, sc);
         }
 
+        template <typename T, typename = std::enable_if_t<T::IsUnique()>> void ComponentRemoved(EntityID entityID, const T &)
+        {
+            ComponentRemoved(entityID, T::GetTypeId(), {});
+        }
+
+        template <typename T, typename = std::enable_if_t<T::IsUnique() == false>> void ComponentRemoved(EntityID entityID, const T &, ComponentID id)
+        {
+            ComponentRemoved(entityID, T::GetTypeId(), id);
+        }
+        
         ComponentArrayBuilder &EntityAdded(EntityID entityID); // archetype will be computed after all the components were added, you can ignore the returned value if you don't want to add any components
         void ComponentAdded(EntityID entityID, const SerializedComponent &sc);
         void ComponentChanged(EntityID entityID, const SerializedComponent &sc);
+        void ComponentRemoved(EntityID entityID, StableTypeId type, ComponentID componentID);
         void EntityRemoved(Archetype archetype, EntityID entityID);
     
 	private:
@@ -354,6 +432,7 @@ namespace ECSTest
 		MessageStreamsBuilderEntityAdded _entityAddedStreams{};
         MessageStreamsBuilderComponentAdded _componentAddedStreams{};
         MessageStreamsBuilderComponentChanged _componentChangedStreams{};
+        MessageStreamsBuilderComponentRemoved _componentRemovedStreams{};
         MessageStreamsBuilderEntityRemoved _entityRemovedStreams{};
 		EntityID _currentEntityId{};
 	};

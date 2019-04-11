@@ -2,7 +2,7 @@
 
 #include <TypeIdentifiable.hpp>
 
-#ifdef DEBUG
+#ifdef USE_ID_NAMES
     #define IDINPUT <bool isUnique, ui64 stableId, ui64 encoded0, ui64 encoded1, ui64 encoded2>
     #define IDOUTPUT <stableId, encoded0, encoded1, encoded2>
 #else
@@ -70,7 +70,7 @@ namespace ECSTest
         }
     };
 
-#ifdef DEBUG
+#ifdef USE_ID_NAMES
     #define _CREATE_COMPONENT(name, isUnique) struct name final : public _BaseComponent<isUnique, Hash::FNVHashCT<Hash::Precision::P64, char, CountOf(TOSTR(name)), true>(TOSTR(name)), \
         CompileTimeStrings::EncodeASCII(TOSTR(name), CountOf(TOSTR(name)), CompileTimeStrings::CharsPerNumber * 0), \
         CompileTimeStrings::EncodeASCII(TOSTR(name), CountOf(TOSTR(name)), CompileTimeStrings::CharsPerNumber * 1), \

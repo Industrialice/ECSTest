@@ -53,7 +53,13 @@ auto MessageBuilder::ComponentArrayBuilder::AddComponent(const SerializedCompone
 
 bool MessageBuilder::IsEmpty() const
 {
-    return _cab._components.empty() && _entityAddedStreams._data.empty() && _entityRemovedStreams._data.empty() && _componentChangedStreams._data.empty();
+    return 
+        _cab._components.empty() && 
+        _entityAddedStreams._data.empty() && 
+        _entityRemovedStreams._data.empty() && 
+        _componentChangedStreams._data.empty() &&
+        _componentAddedStreams._data.empty() &&
+        _componentRemovedStreams._data.empty();
 }
 
 void MessageBuilder::Clear()
@@ -61,7 +67,9 @@ void MessageBuilder::Clear()
     _cab.Clear();
     _entityAddedStreams._data.clear();
     _entityRemovedStreams._data.clear();
+    _componentAddedStreams._data.clear();
     _componentChangedStreams._data.clear();
+    _componentRemovedStreams._data.clear();
 }
 
 void MessageBuilder::Flush()
@@ -100,6 +108,11 @@ MessageStreamsBuilderComponentAdded &MessageBuilder::ComponentAddedStreams()
 MessageStreamsBuilderComponentChanged &MessageBuilder::ComponentChangedStreams()
 {
     return _componentChangedStreams;
+}
+
+MessageStreamsBuilderComponentRemoved &MessageBuilder::ComponentRemovedStreams()
+{
+    return _componentRemovedStreams;
 }
 
 MessageStreamsBuilderEntityRemoved &MessageBuilder::EntityRemovedStreams()
@@ -186,6 +199,17 @@ void MessageBuilder::ComponentChanged(EntityID entityID, const SerializedCompone
     std::copy(sc.data, sc.data + sc.sizeOf, entry->data.get() + copyIndex);
 
     added.data = entry->data.get() + copyIndex;
+}
+
+void MessageBuilder::ComponentRemoved(EntityID entityID, StableTypeId type, ComponentID componentID)
+{
+    auto &entry = _componentRemovedStreams._data[type];
+    if (!entry)
+    {
+        entry = make_shared<vector<MessageStreamComponentRemoved::ComponentInfo>>();
+    }
+
+    entry->push_back({entityID, componentID});
 }
 
 void MessageBuilder::EntityRemoved(Archetype archetype, EntityID entityID)

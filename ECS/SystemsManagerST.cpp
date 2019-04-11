@@ -758,6 +758,10 @@ void SystemsManagerST::ProcessMessages(IndirectSystem &system, const ManagedIndi
 	{
 		system.ProcessMessages(stream);
 	}
+    for (const auto &stream : messageQueue.componentRemovedStreams)
+    {
+        system.ProcessMessages(stream);
+    }
 	for (const auto &stream : messageQueue.entityRemovedStreams)
 	{
 		system.ProcessMessages(stream);
@@ -820,6 +824,61 @@ void SystemsManagerST::ExecuteIndirectSystem(IndirectSystem &system, ManagedIndi
         }
     };
 
+    auto addOrRemoveComponent = [this, removeEntity](EntityID entityID, StableTypeId typeToIgnore, ComponentID componentIDToIgnore, optional<SerializedComponent> componentToAdd)
+    {
+        auto entityLocation = _entitiesLocations.find(entityID);
+        ASSUME(entityLocation != _entitiesLocations.end());
+
+        auto &[group, index] = entityLocation->second;
+
+        _tempComponents.clear();
+
+        // collect the current components
+        for (ui32 componentIndex = 0; componentIndex < group->uniqueTypedComponentsCount; ++componentIndex)
+        {
+            auto &row = group->components[componentIndex];
+            for (ui32 nonUniqueIndex = 0; nonUniqueIndex < row.stride; ++nonUniqueIndex)
+            {
+                SerializedComponent serialized;
+                if (row.isUnique == false)
+                {
+                    serialized.id = row.ids[componentIndex * row.stride + nonUniqueIndex];
+                }
+                serialized.type = row.type;
+                if (serialized.id == componentIDToIgnore && serialized.type == typeToIgnore)
+                {
+                    continue;
+                }
+                serialized.alignmentOf = row.alignmentOf;
+                serialized.isUnique = row.isUnique;
+                serialized.sizeOf = row.sizeOf;
+                serialized.data = row.data.get() + row.sizeOf * componentIndex * row.stride + row.sizeOf * nonUniqueIndex;
+                _tempComponents.push_back(serialized);
+            }
+        }
+
+        if (componentToAdd)
+        {
+            _tempComponents.push_back(*componentToAdd);
+        }
+
+        ArchetypeFull archetype = ComputeArchetype(ToArray(_tempComponents));
+        auto groupSearch = _archetypeGroupsFull.find(archetype);
+        if (groupSearch == _archetypeGroupsFull.end())
+        {
+            group = &AddNewArchetypeGroup(archetype, ToArray(_tempComponents));
+        }
+        else
+        {
+            ASSUME(&groupSearch->second != group);
+            group = &groupSearch->second;
+        }
+
+        AddEntityToArchetypeGroup(archetype, *group, entityID, ToArray(_tempComponents), nullptr);
+
+        removeEntity(entityLocation, false);
+    };
+
     // update the ECS using the received messages
 
     for (auto &[streamArchetype, stream] : messageBuilder.EntityAddedStreams()._data)
@@ -849,51 +908,7 @@ void SystemsManagerST::ExecuteIndirectSystem(IndirectSystem &system, ManagedIndi
     {
         for (const auto &info : stream->infos)
         {
-            auto entityLocation = _entitiesLocations.find(info.entityID);
-            ASSUME(entityLocation != _entitiesLocations.end());
-
-            auto &[group, index] = entityLocation->second;
-
-            _tempComponents.clear();
-
-            // collect the current components
-            for (ui32 componentIndex = 0; componentIndex < group->uniqueTypedComponentsCount; ++componentIndex)
-            {
-                auto &row = group->components[componentIndex];
-                for (ui32 nonUniqueIndex = 0; nonUniqueIndex < row.stride; ++nonUniqueIndex)
-                {
-                    SerializedComponent serialized;
-                    serialized.alignmentOf = row.alignmentOf;
-                    serialized.isUnique = row.isUnique;
-                    serialized.sizeOf = row.sizeOf;
-                    serialized.type = row.type;
-                    serialized.data = row.data.get() + row.sizeOf * componentIndex * row.stride + row.sizeOf * nonUniqueIndex;
-                    if (row.isUnique == false)
-                    {
-                        serialized.id = row.ids[componentIndex * row.stride + nonUniqueIndex];
-                    }
-                    _tempComponents.push_back(serialized);
-                }
-            }
-
-            // add the new component
-            _tempComponents.push_back(info.component);
-
-            ArchetypeFull archetype = ComputeArchetype(ToArray(_tempComponents));
-            auto groupSearch = _archetypeGroupsFull.find(archetype);
-            if (groupSearch == _archetypeGroupsFull.end())
-            {
-                group = &AddNewArchetypeGroup(archetype, ToArray(_tempComponents));
-            }
-            else
-            {
-                ASSUME(&groupSearch->second != group);
-                group = &groupSearch->second;
-            }
-
-            AddEntityToArchetypeGroup(archetype, *group, info.entityID, ToArray(_tempComponents), nullptr);
-
-            removeEntity(entityLocation, false);
+            addOrRemoveComponent(info.entityID, {}, {}, info.component);
         }
     }
 
@@ -937,6 +952,14 @@ void SystemsManagerST::ExecuteIndirectSystem(IndirectSystem &system, ManagedIndi
             }
 
             memcpy(componentArray.data.get() + componentArray.sizeOf * componentArray.stride * entityIndex + componentArray.sizeOf * offset, info.component.data, info.component.sizeOf);
+        }
+    }
+
+    for (const auto &[componentType, stream] : messageBuilder.ComponentRemovedStreams()._data)
+    {
+        for (const auto &[entityID, componentID] : *stream)
+        {
+            addOrRemoveComponent(entityID, componentType, componentID, nullopt);
         }
     }
 
@@ -1027,6 +1050,35 @@ void SystemsManagerST::ExecuteIndirectSystem(IndirectSystem &system, ManagedIndi
         }
     }
 
+    for (const auto &[componentType, streamPointer] : messageBuilder.ComponentRemovedStreams()._data)
+    {
+        auto stream = MessageStreamComponentRemoved(componentType, streamPointer);
+
+        for (auto &pipeline : _pipelines)
+        {
+            for (auto &managed : pipeline.indirectSystems)
+            {
+                if (managed.system.get() != &system)
+                {
+                    auto requested = managed.system->RequestedComponents();
+                    auto searchPredicate = [componentType](const System::RequestedComponent &stored) { return componentType == stored.type; };
+
+                    if (requested.subtractive.find(searchPredicate) != requested.subtractive.end())
+                    {
+                        continue;
+                    }
+
+                    if (requested.required.empty() ||
+                        requested.required.find(searchPredicate) != requested.required.end() ||
+                        requested.optional.find(searchPredicate) != requested.optional.end())
+                    {
+                        managed.messageQueue.componentRemovedStreams.emplace_back(stream);
+                    }
+                }
+            }
+        }
+    }
+
     for (const auto &[streamArchetype, streamPointer] : messageBuilder.EntityRemovedStreams()._data)
     {
         auto reflected = _archetypeReflector.Reflect(streamArchetype);
@@ -1050,6 +1102,7 @@ void SystemsManagerST::ManagedIndirectSystem::MessageQueue::clear()
     entityAddedStreams.clear();
     componentAddedStreams.clear();
     componentChangedStreams.clear();
+    componentRemovedStreams.clear();
     entityRemovedStreams.clear();
 }
 
@@ -1059,5 +1112,6 @@ bool SystemsManagerST::ManagedIndirectSystem::MessageQueue::empty() const
         entityAddedStreams.empty() &&
         componentAddedStreams.empty() &&
         componentChangedStreams.empty() &&
+        componentRemovedStreams.empty() &&
         entityRemovedStreams.empty();
 }
