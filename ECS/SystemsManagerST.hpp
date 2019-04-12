@@ -59,7 +59,6 @@ namespace ECSTest
 		{
 			ui32 executedAt{}; // last executed frame, gets set to Pipeline::executionFrame at first execution attempt on a new frame
             ui32 executedTimes{};
-			vector<std::reference_wrapper<ArchetypeGroup>> groupsToExecute{}; // group still left to be executed for the current frame
 		};
 
 		struct ManagedDirectSystem : ManagedSystem
@@ -135,6 +134,8 @@ namespace ECSTest
         TimeMoment _currentTime{};
 
         vector<SerializedComponent> _tempComponents{};
+        vector<Array<ui8>> _tempArrayArgs{};
+        vector<void *> _tempArgs{};
 
 	private:
 		[[nodiscard]] ArchetypeGroup &FindArchetypeGroup(const ArchetypeFull &archetype, Array<const SerializedComponent> components);
@@ -143,8 +144,8 @@ namespace ECSTest
 		void StartScheduler(vector<unique_ptr<EntitiesStream>> &&streams);
 		void SchedulerLoop();
 		void ExecutePipeline(Pipeline &pipeline, const System::Environment &env);
-		void CalculateGroupsToExectute(const System *system, vector<std::reference_wrapper<ArchetypeGroup>> &groups);
 		static void ProcessMessages(IndirectSystem &system, const ManagedIndirectSystem::MessageQueue &messageQueue);
         void ExecuteIndirectSystem(IndirectSystem &system, ManagedIndirectSystem::MessageQueue &messageQueue, System::Environment env);
+        void ExecuteDirectSystem(DirectSystem &system, System::Environment env);
 	};
 }

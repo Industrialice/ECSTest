@@ -31,6 +31,7 @@ namespace ECSTest
             Array<const RequestedComponent> writeAccess; // contains only components with write access (write access is ignored for subtractive components)
             Array<const pair<StableTypeId, RequirementForComponent>> archetypeDefining; // contains only required and subtractive components
             Array<const RequestedComponent> all; // contains all reqested components
+            Array<const RequestedComponent> allOriginalOrder; // contains all reqested components in the order they are declared
         };
 
 		[[nodiscard]] virtual Requests RequestedComponents() const = 0;

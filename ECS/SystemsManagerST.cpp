@@ -713,14 +713,16 @@ void SystemsManagerST::ExecutePipeline(Pipeline &pipeline, const System::Environ
 {
     for (auto &managed : pipeline.directSystems)
     {
+        managed.executedAt = pipeline.executionFrame;
+
+        ExecuteDirectSystem(*managed.system, env);
+
         ++managed.executedTimes;
     }
 
     for (auto &managed : pipeline.indirectSystems)
     {
         managed.executedAt = pipeline.executionFrame;
-            
-        //CalculateGroupsToExectute(managed.system.get(), managed.groupsToExecute);
 
         ExecuteIndirectSystem(*managed.system, managed.messageQueue, env);
 
@@ -728,20 +730,6 @@ void SystemsManagerST::ExecutePipeline(Pipeline &pipeline, const System::Environ
     }
 
     ++pipeline.executionFrame;
-}
-
-void SystemsManagerST::CalculateGroupsToExectute(const System *system, vector<std::reference_wrapper<ArchetypeGroup>> &groups)
-{
-	groups.clear();
-
-	const auto &archetypes = _archetypeReflector.FindMatchingArchetypes((uiw)system);
-
-	for (Archetype archetype : archetypes)
-	{
-		auto it = _archetypeGroups.find(archetype);
-		ASSUME(it != _archetypeGroups.end());
-		groups.insert(groups.end(), it->second.begin(), it->second.end());
-	}
 }
 
 void SystemsManagerST::ProcessMessages(IndirectSystem &system, const ManagedIndirectSystem::MessageQueue &messageQueue)
@@ -1093,6 +1081,62 @@ void SystemsManagerST::ExecuteIndirectSystem(IndirectSystem &system, ManagedIndi
                     managed.messageQueue.entityRemovedStreams.emplace_back(stream);
                 }
             }
+        }
+    }
+}
+
+void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, System::Environment env)
+{
+    uiw maxArgs = system.RequestedComponents().required.size() + system.RequestedComponents().optional.size();
+
+    _tempArrayArgs.reserve(maxArgs);
+    _tempArgs.reserve(maxArgs);
+
+    const auto &archetypes = _archetypeReflector.FindMatchingArchetypes((uiw)&system);
+
+    for (const Archetype &archetype : archetypes)
+    {
+        auto it = _archetypeGroups.find(archetype);
+        ASSUME(it != _archetypeGroups.end());
+
+        _tempArrayArgs.clear();
+        _tempArgs.clear();
+
+        ASSUME(_tempArgs.capacity() >= maxArgs && _tempArrayArgs.capacity() >= maxArgs); // any unexpected reallocation will break the program
+
+        for (const auto &group : it->second)
+        {
+            if (group.get().entitiesCount == 0)
+            {
+                continue;
+            }
+
+            for (const System::RequestedComponent &arg : system.RequestedComponents().allOriginalOrder)
+            {
+                ui32 index = 0;
+                for (; index < group.get().uniqueTypedComponentsCount; ++index)
+                {
+                    if (group.get().components[index].type == arg.type)
+                    {
+                        break;
+                    }
+                }
+
+                if (arg.requirement == RequirementForComponent::Subtractive)
+                {
+                    ASSUME(index == group.get().uniqueTypedComponentsCount);
+                    continue;
+                }
+
+                ASSUME(group.get().components[index].isUnique); // TODO: support for non-unique components
+
+                _tempArrayArgs.push_back({group.get().components[index].data.get(), group.get().entitiesCount});
+                _tempArgs.push_back(&_tempArrayArgs.back());
+            }
+
+            ASSUME(_tempArgs.size());
+
+            system.Accept(env, _tempArgs.data());
         }
     }
 }

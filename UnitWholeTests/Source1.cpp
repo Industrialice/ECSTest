@@ -11,6 +11,7 @@ namespace
 {
     constexpr ui32 EntitiesToTest = 100;
 	constexpr bool IsUseDirectForFalling = true;
+    constexpr bool IsPreGenerateTransform = false;
 }
 
 COMPONENT(Name)
@@ -513,11 +514,14 @@ static void GenerateScene(EntityIDGenerator &idGenerator, SystemsManager &manage
     {
         TestEntities::PreStreamedEntity entity;
 
-		/*Transform t;
-		t.position.x = rand() / (f32)RAND_MAX * 100 - 50;
-		t.position.y = rand() / (f32)RAND_MAX * 100 - 50;
-		t.position.z = rand() / (f32)RAND_MAX * 100 - 50;
-		StreamComponent(t, entity);*/
+        if (IsPreGenerateTransform)
+        {
+            Transform t;
+            t.position.x = rand() / (f32)RAND_MAX * 100 - 50;
+            t.position.y = rand() / (f32)RAND_MAX * 100 - 50;
+            t.position.z = rand() / (f32)RAND_MAX * 100 - 50;
+            StreamComponent(t, entity);
+        }
 
 		string name = "Entity"s + std::to_string(index);
 		Name n;

@@ -313,7 +313,8 @@ namespace ECSTest
             ToArray(subtractive.first.data(), subtractive.second), \
             ToArray(writeAccess.first.data(), writeAccess.second), \
             ToArray(archetypeDefining.first.data(), archetypeDefining.second), \
-            ToArray(arrSorted) \
+            ToArray(arrSorted), \
+            ToArray(arr) \
         }; \
         return requests; \
     } \
@@ -348,7 +349,8 @@ namespace ECSTest
             ToArray(subtractive.first.data(), subtractive.second), \
             ToArray(writeAccess.first.data(), writeAccess.second), \
             ToArray(archetypeDefining.first.data(), archetypeDefining.second), \
-            ToArray(arrSorted) \
+            ToArray(arrSorted), \
+            ToArray(arr) \
         }; \
         return requests; \
     } \

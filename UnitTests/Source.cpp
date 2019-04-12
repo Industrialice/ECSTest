@@ -95,7 +95,7 @@ static void ReflectorTests()
         ComponentDateOfBirth::GetTypeId(),
         ComponentSpouse::GetTypeId()
     };
-    auto arch0 = GenerateArchetype(ent0);
+    auto arch0 = GenerateArchetype(Funcs::SortCompileTime(ent0));
 
     array<StableTypeId, 3> ent1 =
     {
@@ -103,7 +103,7 @@ static void ReflectorTests()
         ComponentProgrammer::GetTypeId(),
         ComponentArtist::GetTypeId()
     };
-    auto arch1 = GenerateArchetype(ent1);
+    auto arch1 = GenerateArchetype(Funcs::SortCompileTime(ent1));
 
     // same as ent1, but different order
     array<StableTypeId, 3> ent2 =
@@ -112,7 +112,7 @@ static void ReflectorTests()
         ComponentCompany::GetTypeId(),
         ComponentArtist::GetTypeId()
     };
-    auto arch2 = GenerateArchetype(ent2);
+    auto arch2 = GenerateArchetype(Funcs::SortCompileTime(ent2));
     ASSUME(arch1 == arch2);
 
     array<StableTypeId, 5> ent3 =
@@ -123,7 +123,7 @@ static void ReflectorTests()
         ComponentEmployee::GetTypeId(),
         ComponentDesigner::GetTypeId()
     };
-    auto arch3 = GenerateArchetype(ent3);
+    auto arch3 = GenerateArchetype(Funcs::SortCompileTime(ent3));
 
     array<StableTypeId, 4> ent4 =
     {
@@ -132,7 +132,7 @@ static void ReflectorTests()
         ComponentSpouse::GetTypeId(),
         ComponentGender::GetTypeId()
     };
-    auto arch4 = GenerateArchetype(ent4);
+    auto arch4 = GenerateArchetype(Funcs::SortCompileTime(ent4));
 
     array<StableTypeId, 5> ent5 =
     {
@@ -142,7 +142,7 @@ static void ReflectorTests()
         ComponentGender::GetTypeId(),
         ComponentCompany::GetTypeId()
     };
-    auto arch5 = GenerateArchetype(ent5);
+    auto arch5 = GenerateArchetype(Funcs::SortCompileTime(ent5));
 
     // ent0 fits
     array<System::RequestedComponent, 3> req0 =
@@ -172,14 +172,14 @@ static void ReflectorTests()
     req2 = Funcs::SortCompileTime(req2);
 
     ArchetypeReflector reflector;
-    reflector.AddToLibrary(arch0, ToTypes(ent0));
-    reflector.AddToLibrary(arch1, ToTypes(ent1));
+    reflector.AddToLibrary(arch0, ToTypes(Funcs::SortCompileTime(ent0)));
+    reflector.AddToLibrary(arch1, ToTypes(Funcs::SortCompileTime(ent1)));
 
     auto reflected = reflector.Reflect(arch0);
-    ASSUME(IsReflectedEqual(reflected, ent0));
+    ASSUME(IsReflectedEqual(reflected, Funcs::SortCompileTime(ent0)));
 
     reflected = reflector.Reflect(arch1);
-    ASSUME(IsReflectedEqual(reflected, ent1));
+    ASSUME(IsReflectedEqual(reflected, Funcs::SortCompileTime(ent1)));
 
     reflector.StartTrackingMatchingArchetypes(0, ToArray(ToRequired(req0)));
     reflector.StartTrackingMatchingArchetypes(1, ToArray(ToRequired(req1)));
@@ -195,10 +195,10 @@ static void ReflectorTests()
     match = reflector.FindMatchingArchetypes(2);
     ASSUME(match.size() == 0);
 
-    reflector.AddToLibrary(arch2, ToTypes(ent2));
-    reflector.AddToLibrary(arch3, ToTypes(ent3));
-    reflector.AddToLibrary(arch4, ToTypes(ent4));
-    reflector.AddToLibrary(arch5, ToTypes(ent5));
+    reflector.AddToLibrary(arch2, ToTypes(Funcs::SortCompileTime(ent2)));
+    reflector.AddToLibrary(arch3, ToTypes(Funcs::SortCompileTime(ent3)));
+    reflector.AddToLibrary(arch4, ToTypes(Funcs::SortCompileTime(ent4)));
+    reflector.AddToLibrary(arch5, ToTypes(Funcs::SortCompileTime(ent5)));
 
     match = reflector.FindMatchingArchetypes(0);
     ASSUME(match.size() == 1);
@@ -267,7 +267,7 @@ public:
                 ComponentArtist artist;
                 artist.area = ComponentArtist::Areas::Concept;
 
-                componentBuilder.AddComponent(name).AddComponent(artist);
+                componentBuilder.AddComponent(name).AddComponent(artist, {});
             }
 
             if (rand() % 10 == 0)
@@ -287,7 +287,7 @@ public:
             {
                 ComponentFirstName changed = generateName();
 
-                builder.ComponentChanged(gen.LastGenerated(), changed, 0);
+                builder.ComponentChanged(gen.LastGenerated(), changed);
 
                 entityAfterChangeNames[gen.LastGenerated()] = changed;
             }
