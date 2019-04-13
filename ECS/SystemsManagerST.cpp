@@ -764,24 +764,22 @@ void SystemsManagerST::ExecuteIndirectSystem(IndirectSystem &system, ManagedIndi
     MessageBuilder messageBuilder;
     system.Update(env, messageBuilder);
 
-    auto removeEntity = [this](decltype(_entitiesLocations)::iterator entityLocation, bool isEraseFromEntityLocation)
+    auto removeEntity = [this](ArchetypeGroup &group, ui32 index, optional<decltype(_entitiesLocations)::iterator> entityLocation)
     {
-        auto &[group, index] = entityLocation->second;
-
-        --group->entitiesCount;
-        uiw replaceIndex = group->entitiesCount;
+        --group.entitiesCount;
+        uiw replaceIndex = group.entitiesCount;
 
         bool isReplaceWithLast = replaceIndex != index;
 
         if (isReplaceWithLast)
         {
             // copy entity id
-            group->entities[index] = group->entities[replaceIndex];
+            group.entities[index] = group.entities[replaceIndex];
 
             // copy components data and optionally components ids
-            for (uiw componentIndex = 0; componentIndex < group->uniqueTypedComponentsCount; ++componentIndex)
+            for (uiw componentIndex = 0; componentIndex < group.uniqueTypedComponentsCount; ++componentIndex)
             {
-                auto &arr = group->components[componentIndex];
+                auto &arr = group.components[componentIndex];
                 void *target = arr.data.get() + arr.sizeOf * index * arr.stride;
                 void *source = arr.data.get() + arr.sizeOf * replaceIndex * arr.stride;
                 uiw copySize = arr.sizeOf * arr.stride;
@@ -797,18 +795,18 @@ void SystemsManagerST::ExecuteIndirectSystem(IndirectSystem &system, ManagedIndi
             }
         }
 
-        if (isEraseFromEntityLocation)
+        if (entityLocation)
         {
             // remove deleted entity location
-            _entitiesLocations.erase(entityLocation);
+            _entitiesLocations.erase(*entityLocation);
         }
 
         if (isReplaceWithLast)
         {
             // patch replaced entity's index
-            entityLocation = _entitiesLocations.find(group->entities[index]);
-            ASSUME(entityLocation != _entitiesLocations.end());
-            entityLocation->second.index = index;
+            auto location = _entitiesLocations.find(group.entities[index]);
+            ASSUME(location != _entitiesLocations.end());
+			location->second.index = index;
         }
     };
 
@@ -817,7 +815,7 @@ void SystemsManagerST::ExecuteIndirectSystem(IndirectSystem &system, ManagedIndi
         auto entityLocation = _entitiesLocations.find(entityID);
         ASSUME(entityLocation != _entitiesLocations.end());
 
-        auto &[group, index] = entityLocation->second;
+        auto [group, index] = entityLocation->second;
 
         _tempComponents.clear();
 
@@ -850,21 +848,22 @@ void SystemsManagerST::ExecuteIndirectSystem(IndirectSystem &system, ManagedIndi
             _tempComponents.push_back(*componentToAdd);
         }
 
+		ArchetypeGroup *newGroup;
         ArchetypeFull archetype = ComputeArchetype(ToArray(_tempComponents));
         auto groupSearch = _archetypeGroupsFull.find(archetype);
         if (groupSearch == _archetypeGroupsFull.end())
         {
-            group = &AddNewArchetypeGroup(archetype, ToArray(_tempComponents));
+			newGroup = &AddNewArchetypeGroup(archetype, ToArray(_tempComponents));
         }
         else
         {
             ASSUME(&groupSearch->second != group);
-            group = &groupSearch->second;
+			newGroup = &groupSearch->second;
         }
 
-        AddEntityToArchetypeGroup(archetype, *group, entityID, ToArray(_tempComponents), nullptr);
+        AddEntityToArchetypeGroup(archetype, *newGroup, entityID, ToArray(_tempComponents), nullptr);
 
-        removeEntity(entityLocation, false);
+        removeEntity(*group, index, nullopt);
     };
 
     // update the ECS using the received messages
@@ -957,7 +956,7 @@ void SystemsManagerST::ExecuteIndirectSystem(IndirectSystem &system, ManagedIndi
         {
             auto entityLocation = _entitiesLocations.find(entity);
             ASSUME(entityLocation != _entitiesLocations.end());
-            removeEntity(entityLocation, true);
+            removeEntity(*entityLocation->second.group, entityLocation->second.index, entityLocation);
         }
     }
 
