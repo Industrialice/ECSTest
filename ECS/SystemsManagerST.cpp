@@ -1086,6 +1086,8 @@ void SystemsManagerST::ExecuteIndirectSystem(IndirectSystem &system, ManagedIndi
 
 void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, System::Environment env)
 {
+	MessageBuilder messageBuilder;
+
     uiw maxArgs = system.RequestedComponents().required.size() + system.RequestedComponents().optional.size();
 
     _tempArrayArgs.reserve(maxArgs);
@@ -1136,7 +1138,69 @@ void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, System::Environ
             ASSUME(_tempArgs.size());
 
             system.Accept(env, _tempArgs.data());
+
+			for (const System::RequestedComponent &arg : system.RequestedComponents().writeAccess)
+			{
+				ui32 index = 0;
+				for (; index < group.get().uniqueTypedComponentsCount; ++index)
+				{
+					if (group.get().components[index].type == arg.type)
+					{
+						break;
+					}
+				}
+
+				auto &stored = group.get().components[index];
+				ASSUME(stored.isUnique); // TODO: support for non-unique components
+
+				SerializedComponent serialized;
+				serialized.alignmentOf = stored.alignmentOf;
+				serialized.isUnique = stored.isUnique;
+				serialized.sizeOf = stored.sizeOf;
+				serialized.type = stored.type;
+
+				for (ui32 component = 0; component < group.get().entitiesCount; ++component)
+				{
+					EntityID entityID = group.get().entities[component];
+					for (ui32 stride = 0; stride < stored.stride; ++stride)
+					{
+						serialized.data = stored.data.get() + stored.sizeOf * component * stored.stride + stride * stored.sizeOf;
+						if (stored.isUnique == false)
+						{
+							serialized.id = stored.ids[component * stored.stride + stride];
+						}
+
+						messageBuilder.ComponentChanged(entityID, serialized);
+					}
+				}
+			}
         }
+
+		for (const auto &[componentType, streamPointer] : messageBuilder.ComponentChangedStreams()._data)
+		{
+			auto stream = MessageStreamComponentChanged(componentType, streamPointer);
+
+			for (auto &pipeline : _pipelines)
+			{
+				for (auto &managed : pipeline.indirectSystems)
+				{
+					auto requested = managed.system->RequestedComponents();
+					auto searchPredicate = [componentType](const System::RequestedComponent &stored) { return componentType == stored.type; };
+
+					if (requested.subtractive.find(searchPredicate) != requested.subtractive.end())
+					{
+						continue;
+					}
+
+					if (requested.required.empty() ||
+						requested.required.find(searchPredicate) != requested.required.end() ||
+						requested.optional.find(searchPredicate) != requested.optional.end())
+					{
+						managed.messageQueue.componentChangedStreams.emplace_back(stream);
+					}
+				}
+			}
+		}
     }
 }
 
