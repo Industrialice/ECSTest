@@ -914,7 +914,7 @@ void SystemsManagerMT::ExecutePipeline(Pipeline &pipeline)
         managed.messageQueue = {};
         messageQueueLock.Unlock();
 
-        auto work = std::bind(&SystemsManagerMT::TaskExecuteIndirectSystem, this, std::ref(*managed.system), move(movedOutMessageQueue), env, std::ref(*pipeline.systemsAtExecution), std::ref(managed.groupLocks), std::ref(managed.componentLocks));
+        auto work = std::bind(&SystemsManagerMT::TaskExecuteIndirectSystem, this, std::ref(*managed.system), move(movedOutMessageQueue), std::ref(env), std::ref(*pipeline.systemsAtExecution), std::ref(managed.groupLocks), std::ref(managed.componentLocks));
         FindBestWorker().AddWork(work);
         isAddedWork = true;
     }
@@ -972,12 +972,12 @@ void SystemsManagerMT::TaskProcessMessages(IndirectSystem &system, const Managed
     }
 }
 
-void SystemsManagerMT::TaskExecuteIndirectSystem(IndirectSystem &system, ManagedIndirectSystem::MessageQueue messageQueue, System::Environment env, std::atomic<ui32> &decrementAtCompletion, vector<shared_ptr<ManagedSystem::GroupLock>> &groupLocks, vector<shared_ptr<ManagedSystem::ComponentLock>> &componentLocks)
+void SystemsManagerMT::TaskExecuteIndirectSystem(IndirectSystem &system, ManagedIndirectSystem::MessageQueue messageQueue, System::Environment &env, std::atomic<ui32> &decrementAtCompletion, vector<shared_ptr<ManagedSystem::GroupLock>> &groupLocks, vector<shared_ptr<ManagedSystem::ComponentLock>> &componentLocks)
 {
     TaskProcessMessages(system, messageQueue);
 
-    auto messageBuilder = make_shared<MessageBuilder>();
-    system.Update(env, *messageBuilder);
+    //auto messageBuilder = make_shared<MessageBuilder>();
+    //system.Update(env, *messageBuilder);
 
     //auto lockOrTransition = [&groupLocks](const ArchetypeFull &archetype) -> auto
     //{
@@ -1282,7 +1282,7 @@ void SystemsManagerMT::TaskExecuteIndirectSystem(IndirectSystem &system, Managed
     //}
     //groupLocks.clear();
 
-    _messageMerger.Merge(move(messageBuilder), groupLocks, componentLocks);
+    //_messageMerger.Merge(move(messageBuilder), groupLocks, componentLocks);
 
     --decrementAtCompletion;
 }

@@ -194,6 +194,6 @@ namespace ECSTest
         [[nodiscard]] WorkerThread &FindBestWorker();
 
         static void TaskProcessMessages(IndirectSystem &system, const ManagedIndirectSystem::MessageQueue &messageQueue);
-        void TaskExecuteIndirectSystem(IndirectSystem &system, ManagedIndirectSystem::MessageQueue messageQueue, System::Environment env, std::atomic<ui32> &decrementAtCompletion, vector<shared_ptr<ManagedSystem::GroupLock>> &groupLocks, vector<shared_ptr<ManagedSystem::ComponentLock>> &componentLocks);
+        void TaskExecuteIndirectSystem(IndirectSystem &system, ManagedIndirectSystem::MessageQueue messageQueue, System::Environment &env, std::atomic<ui32> &decrementAtCompletion, vector<shared_ptr<ManagedSystem::GroupLock>> &groupLocks, vector<shared_ptr<ManagedSystem::ComponentLock>> &componentLocks);
     };
 }

@@ -709,7 +709,7 @@ void SystemsManagerST::SchedulerLoop()
     updateTimes();
 }
 
-void SystemsManagerST::ExecutePipeline(Pipeline &pipeline, const System::Environment &env)
+void SystemsManagerST::ExecutePipeline(Pipeline &pipeline, System::Environment &env)
 {
     for (auto &managed : pipeline.directSystems)
     {
@@ -756,13 +756,12 @@ void SystemsManagerST::ProcessMessages(IndirectSystem &system, const ManagedIndi
 	}
 }
 
-void SystemsManagerST::ExecuteIndirectSystem(IndirectSystem &system, ManagedIndirectSystem::MessageQueue &messageQueue, System::Environment env)
+void SystemsManagerST::ExecuteIndirectSystem(IndirectSystem &system, ManagedIndirectSystem::MessageQueue &messageQueue, System::Environment &env)
 {
     ProcessMessages(system, messageQueue);
     messageQueue.clear();
 
-    MessageBuilder messageBuilder;
-    system.Update(env, messageBuilder);
+    system.Update(env);
 
     auto removeEntity = [this](ArchetypeGroup &group, ui32 index, optional<decltype(_entitiesLocations)::iterator> entityLocation)
     {
@@ -868,7 +867,7 @@ void SystemsManagerST::ExecuteIndirectSystem(IndirectSystem &system, ManagedIndi
 
     // update the ECS using the received messages
 
-    for (auto &[streamArchetype, stream] : messageBuilder.EntityAddedStreams()._data)
+    for (auto &[streamArchetype, stream] : env.messageBuilder.EntityAddedStreams()._data)
     {
         for (auto &entity : *stream)
         {
@@ -891,7 +890,7 @@ void SystemsManagerST::ExecuteIndirectSystem(IndirectSystem &system, ManagedIndi
         }
     }
 
-    for (auto &[componentType, stream] : messageBuilder.ComponentAddedStreams()._data)
+    for (auto &[componentType, stream] : env.messageBuilder.ComponentAddedStreams()._data)
     {
         for (const auto &info : stream->infos)
         {
@@ -899,7 +898,7 @@ void SystemsManagerST::ExecuteIndirectSystem(IndirectSystem &system, ManagedIndi
         }
     }
 
-    for (const auto &[componentType, stream] : messageBuilder.ComponentChangedStreams()._data)
+    for (const auto &[componentType, stream] : env.messageBuilder.ComponentChangedStreams()._data)
     {
         for (const auto &info : stream->infos)
         {
@@ -942,7 +941,7 @@ void SystemsManagerST::ExecuteIndirectSystem(IndirectSystem &system, ManagedIndi
         }
     }
 
-    for (const auto &[componentType, stream] : messageBuilder.ComponentRemovedStreams()._data)
+    for (const auto &[componentType, stream] : env.messageBuilder.ComponentRemovedStreams()._data)
     {
         for (const auto &[entityID, componentID] : *stream)
         {
@@ -950,7 +949,7 @@ void SystemsManagerST::ExecuteIndirectSystem(IndirectSystem &system, ManagedIndi
         }
     }
 
-    for (const auto &[streamArchetype, stream] : messageBuilder.EntityRemovedStreams()._data)
+    for (const auto &[streamArchetype, stream] : env.messageBuilder.EntityRemovedStreams()._data)
     {
         for (auto &entity : *stream)
         {
@@ -960,134 +959,13 @@ void SystemsManagerST::ExecuteIndirectSystem(IndirectSystem &system, ManagedIndi
         }
     }
 
-    // queue messages to other indirect systems
+    PassMessagesToIndirectSystems(env.messageBuilder, &system);
 
-    for (auto &[streamArchetype, streamPointer] : messageBuilder.EntityAddedStreams()._data)
-    {
-        auto reflected = _archetypeReflector.Reflect(streamArchetype);
-        auto stream = MessageStreamEntityAdded(streamArchetype, streamPointer);
-
-        for (auto &pipeline : _pipelines)
-        {
-            for (auto &managed : pipeline.indirectSystems)
-            {
-                if (managed.system.get() != &system && ArchetypeReflector::Satisfies(reflected, managed.system->RequestedComponents().archetypeDefining))
-                {
-                    managed.messageQueue.entityAddedStreams.emplace_back(stream);
-                }
-            }
-        }
-    }
-
-    for (const auto &[componentType, streamPointer] : messageBuilder.ComponentAddedStreams()._data)
-    {
-        auto stream = MessageStreamComponentAdded(componentType, streamPointer);
-
-        for (auto &pipeline : _pipelines)
-        {
-            for (auto &managed : pipeline.indirectSystems)
-            {
-                if (managed.system.get() != &system)
-                {
-                    auto requested = managed.system->RequestedComponents();
-                    auto searchPredicate = [componentType](const System::RequestedComponent &stored) { return componentType == stored.type; };
-
-                    if (requested.subtractive.find(searchPredicate) != requested.subtractive.end())
-                    {
-                        continue;
-                    }
-
-                    if (requested.required.empty() ||
-                        requested.required.find(searchPredicate) != requested.required.end() ||
-                        requested.optional.find(searchPredicate) != requested.optional.end())
-                    {
-                        managed.messageQueue.componentAddedStreams.emplace_back(stream);
-                    }
-                }
-            }
-        }
-    }
-
-    for (const auto &[componentType, streamPointer] : messageBuilder.ComponentChangedStreams()._data)
-    {
-        auto stream = MessageStreamComponentChanged(componentType, streamPointer);
-
-        for (auto &pipeline : _pipelines)
-        {
-            for (auto &managed : pipeline.indirectSystems)
-            {
-                if (managed.system.get() != &system)
-                {
-                    auto requested = managed.system->RequestedComponents();
-                    auto searchPredicate = [componentType](const System::RequestedComponent &stored) { return componentType == stored.type; };
-
-                    if (requested.subtractive.find(searchPredicate) != requested.subtractive.end())
-                    {
-                        continue;
-                    }
-
-                    if (requested.required.empty() ||
-                        requested.required.find(searchPredicate) != requested.required.end() ||
-                        requested.optional.find(searchPredicate) != requested.optional.end())
-                    {
-                        managed.messageQueue.componentChangedStreams.emplace_back(stream);
-                    }
-                }
-            }
-        }
-    }
-
-    for (const auto &[componentType, streamPointer] : messageBuilder.ComponentRemovedStreams()._data)
-    {
-        auto stream = MessageStreamComponentRemoved(componentType, streamPointer);
-
-        for (auto &pipeline : _pipelines)
-        {
-            for (auto &managed : pipeline.indirectSystems)
-            {
-                if (managed.system.get() != &system)
-                {
-                    auto requested = managed.system->RequestedComponents();
-                    auto searchPredicate = [componentType](const System::RequestedComponent &stored) { return componentType == stored.type; };
-
-                    if (requested.subtractive.find(searchPredicate) != requested.subtractive.end())
-                    {
-                        continue;
-                    }
-
-                    if (requested.required.empty() ||
-                        requested.required.find(searchPredicate) != requested.required.end() ||
-                        requested.optional.find(searchPredicate) != requested.optional.end())
-                    {
-                        managed.messageQueue.componentRemovedStreams.emplace_back(stream);
-                    }
-                }
-            }
-        }
-    }
-
-    for (const auto &[streamArchetype, streamPointer] : messageBuilder.EntityRemovedStreams()._data)
-    {
-        auto reflected = _archetypeReflector.Reflect(streamArchetype);
-        auto stream = MessageStreamEntityRemoved(streamArchetype, streamPointer);
-
-        for (auto &pipeline : _pipelines)
-        {
-            for (auto &managed : pipeline.indirectSystems)
-            {
-                if (managed.system.get() != &system && ArchetypeReflector::Satisfies(reflected, managed.system->RequestedComponents().archetypeDefining))
-                {
-                    managed.messageQueue.entityRemovedStreams.emplace_back(stream);
-                }
-            }
-        }
-    }
+    Funcs::Reinitialize(env.messageBuilder);
 }
 
-void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, System::Environment env)
+void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, System::Environment &env)
 {
-	MessageBuilder messageBuilder;
-
     uiw maxArgs = system.RequestedComponents().required.size() + system.RequestedComponents().optional.size();
 
     _tempArrayArgs.reserve(maxArgs);
@@ -1170,37 +1048,145 @@ void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, System::Environ
 							serialized.id = stored.ids[component * stored.stride + stride];
 						}
 
-						messageBuilder.ComponentChanged(entityID, serialized);
+						env.messageBuilder.ComponentChanged(entityID, serialized);
 					}
 				}
 			}
         }
+    }
 
-		for (const auto &[componentType, streamPointer] : messageBuilder.ComponentChangedStreams()._data)
-		{
-			auto stream = MessageStreamComponentChanged(componentType, streamPointer);
+    PassMessagesToIndirectSystems(env.messageBuilder, nullptr);
 
-			for (auto &pipeline : _pipelines)
-			{
-				for (auto &managed : pipeline.indirectSystems)
-				{
-					auto requested = managed.system->RequestedComponents();
-					auto searchPredicate = [componentType](const System::RequestedComponent &stored) { return componentType == stored.type; };
+    Funcs::Reinitialize(env.messageBuilder);
+}
 
-					if (requested.subtractive.find(searchPredicate) != requested.subtractive.end())
-					{
-						continue;
-					}
+void SystemsManagerST::PassMessagesToIndirectSystems(MessageBuilder &messageBuilder, System *systemToIgnore)
+{
+    for (auto &[streamArchetype, streamPointer] : messageBuilder.EntityAddedStreams()._data)
+    {
+        auto reflected = _archetypeReflector.Reflect(streamArchetype);
+        auto stream = MessageStreamEntityAdded(streamArchetype, streamPointer);
 
-					if (requested.required.empty() ||
-						requested.required.find(searchPredicate) != requested.required.end() ||
-						requested.optional.find(searchPredicate) != requested.optional.end())
-					{
-						managed.messageQueue.componentChangedStreams.emplace_back(stream);
-					}
-				}
-			}
-		}
+        for (auto &pipeline : _pipelines)
+        {
+            for (auto &managed : pipeline.indirectSystems)
+            {
+                if (managed.system.get() != systemToIgnore)
+                {
+                    if (ArchetypeReflector::Satisfies(reflected, managed.system->RequestedComponents().archetypeDefining))
+                    {
+                        managed.messageQueue.entityAddedStreams.emplace_back(stream);
+                    }
+                }
+            }
+        }
+    }
+
+    for (const auto &[componentType, streamPointer] : messageBuilder.ComponentAddedStreams()._data)
+    {
+        auto stream = MessageStreamComponentAdded(componentType, streamPointer);
+
+        for (auto &pipeline : _pipelines)
+        {
+            for (auto &managed : pipeline.indirectSystems)
+            {
+                if (managed.system.get() != systemToIgnore)
+                {
+                    auto requested = managed.system->RequestedComponents();
+                    auto searchPredicate = [componentType](const System::RequestedComponent &stored) { return componentType == stored.type; };
+
+                    if (requested.subtractive.find(searchPredicate) != requested.subtractive.end())
+                    {
+                        continue;
+                    }
+
+                    if (requested.required.empty() ||
+                        requested.required.find(searchPredicate) != requested.required.end() ||
+                        requested.optional.find(searchPredicate) != requested.optional.end())
+                    {
+                        managed.messageQueue.componentAddedStreams.emplace_back(stream);
+                    }
+                }
+            }
+        }
+    }
+
+    for (const auto &[componentType, streamPointer] : messageBuilder.ComponentChangedStreams()._data)
+    {
+        auto stream = MessageStreamComponentChanged(componentType, streamPointer);
+
+        for (auto &pipeline : _pipelines)
+        {
+            for (auto &managed : pipeline.indirectSystems)
+            {
+                if (managed.system.get() != systemToIgnore)
+                {
+                    auto requested = managed.system->RequestedComponents();
+                    auto searchPredicate = [componentType](const System::RequestedComponent &stored) { return componentType == stored.type; };
+
+                    if (requested.subtractive.find(searchPredicate) != requested.subtractive.end())
+                    {
+                        continue;
+                    }
+
+                    if (requested.required.empty() ||
+                        requested.required.find(searchPredicate) != requested.required.end() ||
+                        requested.optional.find(searchPredicate) != requested.optional.end())
+                    {
+                        managed.messageQueue.componentChangedStreams.emplace_back(stream);
+                    }
+                }
+            }
+        }
+    }
+
+    for (const auto &[componentType, streamPointer] : messageBuilder.ComponentRemovedStreams()._data)
+    {
+        auto stream = MessageStreamComponentRemoved(componentType, streamPointer);
+
+        for (auto &pipeline : _pipelines)
+        {
+            for (auto &managed : pipeline.indirectSystems)
+            {
+                if (managed.system.get() != systemToIgnore)
+                {
+                    auto requested = managed.system->RequestedComponents();
+                    auto searchPredicate = [componentType](const System::RequestedComponent &stored) { return componentType == stored.type; };
+
+                    if (requested.subtractive.find(searchPredicate) != requested.subtractive.end())
+                    {
+                        continue;
+                    }
+
+                    if (requested.required.empty() ||
+                        requested.required.find(searchPredicate) != requested.required.end() ||
+                        requested.optional.find(searchPredicate) != requested.optional.end())
+                    {
+                        managed.messageQueue.componentRemovedStreams.emplace_back(stream);
+                    }
+                }
+            }
+        }
+    }
+
+    for (const auto &[streamArchetype, streamPointer] : messageBuilder.EntityRemovedStreams()._data)
+    {
+        auto reflected = _archetypeReflector.Reflect(streamArchetype);
+        auto stream = MessageStreamEntityRemoved(streamArchetype, streamPointer);
+
+        for (auto &pipeline : _pipelines)
+        {
+            for (auto &managed : pipeline.indirectSystems)
+            {
+                if (managed.system.get() != systemToIgnore)
+                {
+                    if (ArchetypeReflector::Satisfies(reflected, managed.system->RequestedComponents().archetypeDefining))
+                    {
+                        managed.messageQueue.entityRemovedStreams.emplace_back(stream);
+                    }
+                }
+            }
+        }
     }
 }
 

@@ -14,6 +14,8 @@
 #include <map>
 #include <cstdlib>
 #include <stack>
+//#include <experimental/coroutine>
+//#include <experimental/generator>
 
 #include <StdMiscellaneousLib.hpp>
 #include <MatrixMathTypes.hpp>
@@ -35,6 +37,11 @@ using std::make_shared;
 using std::make_unique;
 using namespace std::literals;
 using std::nullopt;
+
+//namespace std
+//{
+//    using experimental::generator;
+//}
 
 #include "Array.hpp"
 

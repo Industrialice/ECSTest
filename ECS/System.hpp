@@ -10,10 +10,11 @@ namespace ECSTest
     public:
         struct Environment
         {
-			f32 timeSinceLastFrame;
-            ui32 frameNumber;
-			TimeDifference timeSinceStarted;
+			const f32 timeSinceLastFrame;
+            const ui32 frameNumber;
+			const TimeDifference timeSinceStarted;
             EntityIDGenerator &idGenerator;
+            MessageBuilder messageBuilder;
         };
 
         struct RequestedComponent
@@ -51,7 +52,7 @@ namespace ECSTest
         virtual void ProcessMessages(const MessageStreamComponentChanged &stream) = 0;
         virtual void ProcessMessages(const MessageStreamComponentRemoved &stream) = 0;
 		virtual void ProcessMessages(const MessageStreamEntityRemoved &stream) = 0;
-        virtual void Update(Environment &env, MessageBuilder &messageBuilder) = 0;
+        virtual void Update(Environment &env) = 0;
 	};
 
 	struct DirectSystem : public System

@@ -10,8 +10,9 @@ using namespace ECSTest;
 namespace
 {
     constexpr ui32 EntitiesToTest = 100;
-	constexpr bool IsUseDirectForFalling = true;
+	constexpr bool IsUseDirectForFalling = false;
     constexpr bool IsPreGenerateTransform = false;
+    constexpr bool IsMultiThreadedECS = false;
 }
 
 COMPONENT(Name)
@@ -43,7 +44,18 @@ COMPONENT(NegativeHeightCooldown)
 
 INDIRECT_SYSTEM(TransformGeneratorSystem)
 {
-    INDIRECT_ACCEPT_COMPONENTS(Array<Name> &, SubtractiveComponent<Transform>);
+    INDIRECT_ACCEPT_COMPONENTS(Array<Name> &, SubtractiveComponent<Transform>)
+    {
+        for (auto &id : _entitiesToGenerate)
+        {
+            Transform t;
+            t.position.x = rand() / (f32)RAND_MAX * 100 - 50;
+            t.position.y = rand() / (f32)RAND_MAX * 100 - 50;
+            t.position.z = rand() / (f32)RAND_MAX * 100 - 50;
+            env.messageBuilder.ComponentAdded(id, t);
+        }
+        _entitiesToGenerate.clear();
+    }
 
 private:
     vector<EntityID> _entitiesToGenerate{};
@@ -58,8 +70,7 @@ void TransformGeneratorSystem::ProcessMessages(const MessageStreamEntityAdded &s
 }
 
 void TransformGeneratorSystem::ProcessMessages(const MessageStreamComponentAdded &stream)
-{
-}
+{}
 
 void TransformGeneratorSystem::ProcessMessages(const MessageStreamComponentChanged &stream)
 {}
@@ -77,22 +88,43 @@ void TransformGeneratorSystem::ProcessMessages(const MessageStreamEntityRemoved 
     }
 }
 
-void TransformGeneratorSystem::Update(Environment &env, MessageBuilder &messageBuilder)
-{
-    for (auto &id : _entitiesToGenerate)
-    {
-        Transform t;
-        t.position.x = rand() / (f32)RAND_MAX * 100 - 50;
-        t.position.y = rand() / (f32)RAND_MAX * 100 - 50;
-        t.position.z = rand() / (f32)RAND_MAX * 100 - 50;
-        messageBuilder.ComponentAdded(id, t);
-    }
-    _entitiesToGenerate.clear();
-}
-
 INDIRECT_SYSTEM(TransformHeightFixerSystem)
 {
-    INDIRECT_ACCEPT_COMPONENTS(Array<Transform> &, Array<NegativeHeightCooldown> *cooldowns);
+    INDIRECT_ACCEPT_COMPONENTS(Array<Transform> &, Array<NegativeHeightCooldown> *cooldowns)
+    {
+        ++_info.runTimes;
+
+        for (auto it = _entitiesToFix.begin(); it != _entitiesToFix.end(); )
+        {
+            if (_entitiesWithCooldown.find(it->first) == _entitiesWithCooldown.end())
+            {
+                ++_info.heightsFixed;
+
+                env.messageBuilder.ComponentChanged(it->first, it->second);
+
+                NegativeHeightCooldown cooldown;
+                cooldown.cooldown = 0.1f;
+                env.messageBuilder.ComponentAdded(it->first, cooldown);
+                _entitiesWithCooldown.insert(it->first);
+
+                it = _entitiesToFix.erase(it);
+            }
+            else
+            {
+                ++it;
+            }
+        }
+
+        if (_infoId.IsValid())
+        {
+            env.messageBuilder.ComponentChanged(_infoId, _info);
+        }
+        else
+        {
+            _infoId = env.idGenerator.Generate();
+            env.messageBuilder.EntityAdded(_infoId).AddComponent(_info);
+        }
+    }
 
 private:
 	std::map<EntityID, Transform> _entitiesToFix{};
@@ -188,45 +220,16 @@ void TransformHeightFixerSystem::ProcessMessages(const MessageStreamEntityRemove
     }
 }
 
-void TransformHeightFixerSystem::Update(Environment &env, MessageBuilder &messageBuilder)
-{
-    ++_info.runTimes;
-
-    for (auto it = _entitiesToFix.begin(); it != _entitiesToFix.end(); )
-	{
-        if (_entitiesWithCooldown.find(it->first) == _entitiesWithCooldown.end())
-        {
-            ++_info.heightsFixed;
-
-            messageBuilder.ComponentChanged(it->first, it->second);
-
-            NegativeHeightCooldown cooldown;
-            cooldown.cooldown = 0.1f;
-            messageBuilder.ComponentAdded(it->first, cooldown);
-            _entitiesWithCooldown.insert(it->first);
-
-            it = _entitiesToFix.erase(it);
-        }
-        else
-        {
-            ++it;
-        }
-	}
-
-    if (_infoId.IsValid())
-    {
-        messageBuilder.ComponentChanged(_infoId, _info);
-    }
-    else
-    {
-        _infoId = env.idGenerator.Generate();
-        messageBuilder.EntityAdded(_infoId).AddComponent(_info);
-    }
-}
-
 INDIRECT_SYSTEM(TransformFallingIndirectSystem)
 {
-    INDIRECT_ACCEPT_COMPONENTS(Array<Transform> &);
+    INDIRECT_ACCEPT_COMPONENTS(Array<Transform> &)
+    {
+        for (auto &[entityID, component] : _entities)
+        {
+            component.position.y -= env.timeSinceLastFrame * 50.0f;
+            env.messageBuilder.ComponentChanged(entityID, component);
+        }
+    }
 
 private:
 	std::map<EntityID, Transform> _entities{};
@@ -275,15 +278,6 @@ void TransformFallingIndirectSystem::ProcessMessages(const MessageStreamEntityRe
 	}
 }
 
-void TransformFallingIndirectSystem::Update(Environment &env, MessageBuilder &messageBuilder)
-{
-	for (auto &[entityID, component] : _entities)
-	{
-		component.position.y -= env.timeSinceLastFrame * 50.0f;
-		messageBuilder.ComponentChanged(entityID, component);
-	}
-}
-
 DIRECT_SYSTEM(TransformFallingDirectSystem)
 {
 	DIRECT_ACCEPT_COMPONENTS(Array<Transform> &transforms)
@@ -297,7 +291,37 @@ DIRECT_SYSTEM(TransformFallingDirectSystem)
 
 INDIRECT_SYSTEM(AverageHeightAnalyzerSystem)
 {
-    INDIRECT_ACCEPT_COMPONENTS(const Array<Transform> &);
+    INDIRECT_ACCEPT_COMPONENTS(const Array<Transform> &)
+    {
+        if (!_isChanged)
+        {
+            return;
+        }
+
+        f64 sum = 0;
+        for (auto &[id, y] : _entities)
+        {
+            sum += y;
+        }
+        sum /= _entities.size();
+
+        AverageHeight h;
+        h.height = (f32)sum;
+        h.sources = (ui32)_entities.size();
+
+        if (_entityID.IsValid() == false)
+        {
+            _entityID = env.idGenerator.Generate();
+            auto &c = env.messageBuilder.EntityAdded(_entityID);
+            c.AddComponent(h);
+        }
+        else
+        {
+            env.messageBuilder.ComponentChanged(_entityID, h);
+        }
+
+        _isChanged = false;
+    }
 
 private:
 	std::map<EntityID, f32> _entities{};
@@ -353,41 +377,27 @@ void AverageHeightAnalyzerSystem::ProcessMessages(const MessageStreamEntityRemov
 	_isChanged = true;
 }
 
-void AverageHeightAnalyzerSystem::Update(Environment &env, MessageBuilder &messageBuilder)
-{
-	if (!_isChanged)
-	{
-		return;
-	}
-
-	f64 sum = 0;
-	for (auto &[id, y] : _entities)
-	{
-		sum += y;
-	}
-	sum /= _entities.size();
-
-	AverageHeight h;
-	h.height = (f32)sum;
-	h.sources = (ui32)_entities.size();
-
-	if (_entityID.IsValid() == false)
-	{
-		_entityID = env.idGenerator.Generate();
-		auto &c = messageBuilder.EntityAdded(_entityID);
-		c.AddComponent(h);
-	}
-	else
-	{
-		messageBuilder.ComponentChanged(_entityID, h);
-	}
-
-	_isChanged = false;
-}
-
 INDIRECT_SYSTEM(CooldownUpdater)
 {
-    INDIRECT_ACCEPT_COMPONENTS(const Array<NegativeHeightCooldown> &);
+    INDIRECT_ACCEPT_COMPONENTS(const Array<NegativeHeightCooldown> &)
+    {
+        for (auto it = _cooldowns.begin(); it != _cooldowns.end(); )
+        {
+            auto &[id, component] = *it;
+
+            component.cooldown -= env.timeSinceLastFrame;
+            if (component.cooldown <= 0)
+            {
+                env.messageBuilder.ComponentRemoved(id, component);
+                it = _cooldowns.erase(it);
+            }
+            else
+            {
+                env.messageBuilder.ComponentChanged(id, component);
+                ++it;
+            }
+        }
+    }
 
 private:
     std::map<EntityID, NegativeHeightCooldown> _cooldowns{};
@@ -432,26 +442,6 @@ void CooldownUpdater::ProcessMessages(const MessageStreamEntityRemoved &stream)
     for (auto &entity : stream)
     {
         _cooldowns.erase(entity);
-    }
-}
-
-void CooldownUpdater::Update(Environment &env, MessageBuilder &messageBuilder)
-{
-    for (auto it = _cooldowns.begin(); it != _cooldowns.end(); )
-    {
-        auto &[id, component] = *it;
-
-        component.cooldown -= env.timeSinceLastFrame;
-        if (component.cooldown <= 0)
-        {
-            messageBuilder.ComponentRemoved(id, component);
-            it = _cooldowns.erase(it);
-        }
-        else
-        {
-            messageBuilder.ComponentChanged(id, component);
-            ++it;
-        }
     }
 }
 
@@ -587,11 +577,9 @@ static void PrintStreamInfo(EntitiesStream &stream, bool isFirstPass)
 int main()
 {
     StdLib::Initialization::Initialize({});
-
-    constexpr bool isMT = false;
-
+    
     auto stream = make_unique<TestEntities>();
-    auto manager = SystemsManager::New(isMT);
+    auto manager = SystemsManager::New(IsMultiThreadedECS);
     EntityIDGenerator idGenerator;
 
     GenerateScene(idGenerator, *manager, *stream);
@@ -613,7 +601,7 @@ int main()
     manager->Register(make_unique<CooldownUpdater>(), testPipelineGroup1);
 
     vector<WorkerThread> workers;
-    if (isMT)
+    if (IsMultiThreadedECS)
     {
         workers.resize(SystemInfo::LogicalCPUCores());
     }
