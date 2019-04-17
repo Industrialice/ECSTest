@@ -35,6 +35,11 @@ Indirect systems: never use read locks, only use inclusive write locks. All noti
   though their order or execution is still undefined, the changes they make will be
   properly seen.
   
+Each system can optionally declare OnCreate and OnDestroy events. The events would allow
+  the system to create or destroy new entities or components of the ECS and also create
+  and destroy its internal state. OnCreate is the first method to be called when the
+  system starts executing. When is OnDestroy called?
+  
   
 Pipelines: each pipeline has its own scheduler. Pipelines can be either continious,
   which means they start a new iteration as soon as they're done with the previous one,

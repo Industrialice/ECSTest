@@ -69,7 +69,8 @@ bool MessageBuilder::IsEmpty() const
         _entityRemovedStreams._data.empty() && 
         _componentChangedStreams._data.empty() &&
         _componentAddedStreams._data.empty() &&
-        _componentRemovedStreams._data.empty();
+        _componentRemovedStreams._data.empty() &&
+        _entityRemovedNoArchetype.empty();
 }
 
 void MessageBuilder::Clear()
@@ -80,6 +81,7 @@ void MessageBuilder::Clear()
     _componentAddedStreams._data.clear();
     _componentChangedStreams._data.clear();
     _componentRemovedStreams._data.clear();
+    _entityRemovedNoArchetype.clear();
 }
 
 void MessageBuilder::Flush()
@@ -128,6 +130,11 @@ MessageStreamsBuilderComponentRemoved &MessageBuilder::ComponentRemovedStreams()
 MessageStreamsBuilderEntityRemoved &MessageBuilder::EntityRemovedStreams()
 {
 	return _entityRemovedStreams;
+}
+
+const vector<EntityID> &MessageBuilder::EntityRemovedNoArchetype()
+{
+    return _entityRemovedNoArchetype;
 }
 
 auto ECSTest::MessageBuilder::EntityAdded(EntityID entityID) -> ComponentArrayBuilder &
@@ -222,7 +229,13 @@ void MessageBuilder::ComponentRemoved(EntityID entityID, StableTypeId type, Comp
     entry->push_back({entityID, componentID});
 }
 
-void MessageBuilder::EntityRemoved(Archetype archetype, EntityID entityID)
+void MessageBuilder::EntityRemoved(EntityID entityID)
+{
+    ASSUME(entityID.IsValid());
+    _entityRemovedNoArchetype.push_back(entityID);
+}
+
+void MessageBuilder::EntityRemoved(EntityID entityID, Archetype archetype)
 {
 	ASSUME(entityID.IsValid());
     auto &target = _entityRemovedStreams._data[archetype];

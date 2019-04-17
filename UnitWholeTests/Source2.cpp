@@ -76,9 +76,7 @@ INDIRECT_SYSTEM(GeneratorSystem)
 
         if (_toEntityRemove.size())
         {
-            auto type = GeneratedComponent::GetTypeId();
-            Array<const StableTypeId> arr = ToArray(type);
-            env.messageBuilder.EntityRemoved(Archetype::Create(arr), _toEntityRemove.front());
+            env.messageBuilder.EntityRemoved(_toEntityRemove.front());
             _toEntityRemove.pop();
         }
     }
@@ -143,19 +141,22 @@ INDIRECT_SYSTEM(ConsumerSystem)
 {
     INDIRECT_ACCEPT_COMPONENTS(Array<GeneratedComponent> &)
     {
-        if (_infoID.IsValid() == false)
+        if (MemOps::Compare(&_info, &_infoPassed, sizeof(_infoPassed)))
         {
-            _infoID = env.idGenerator.Generate();
-            env.messageBuilder.EntityAdded(_infoID).AddComponent(_info);
-        }
-        else
-        {
-            if (MemOps::Compare(&_info, &_infoPassed, sizeof(_infoPassed)))
-            {
-                env.messageBuilder.ComponentChanged(_infoID, _info);
-            }
+            env.messageBuilder.ComponentChanged(_infoID, _info);
         }
         _infoPassed = _info;
+    }
+
+    virtual void OnCreate(Environment &env) override 
+    {
+        _infoID = env.idGenerator.Generate();
+        env.messageBuilder.EntityAdded(_infoID).AddComponent(_info);
+    }
+
+    virtual void OnDestroy(Environment &env) override
+    {
+        env.messageBuilder.EntityRemoved(_infoID);
     }
 
 private:

@@ -667,7 +667,8 @@ void SystemsManagerST::SchedulerLoop()
 			timeSinceLastFrame.ToSec(),
 			pipeline.executionFrame,
 			_timeSinceStart,
-			_idGenerator
+			_idGenerator,
+            MessageBuilder()
 		};
 
         ExecutePipeline(pipeline, env);
@@ -714,7 +715,16 @@ void SystemsManagerST::ExecutePipeline(Pipeline &pipeline, System::Environment &
 {
     for (auto &managed : pipeline.directSystems)
     {
+        env.messageBuilder.SourceName(managed.system->Type().Name());
+
         managed.executedAt = pipeline.executionFrame;
+
+        if (managed.executedTimes == 0)
+        {
+            managed.system->OnCreate(env);
+            UpdateECSFromMessages(env.messageBuilder);
+            PassMessagesToIndirectSystems(env.messageBuilder, nullptr);
+        }
 
         ExecuteDirectSystem(*managed.system, env);
 
@@ -723,7 +733,16 @@ void SystemsManagerST::ExecutePipeline(Pipeline &pipeline, System::Environment &
 
     for (auto &managed : pipeline.indirectSystems)
     {
+        env.messageBuilder.SourceName(managed.system->Type().Name());
+
         managed.executedAt = pipeline.executionFrame;
+
+        if (managed.executedTimes == 0)
+        {
+            managed.system->OnCreate(env);
+            UpdateECSFromMessages(env.messageBuilder);
+            PassMessagesToIndirectSystems(env.messageBuilder, managed.system.get());
+        }
 
         ExecuteIndirectSystem(*managed.system, managed.messageQueue, env);
 
@@ -759,218 +778,17 @@ void SystemsManagerST::ProcessMessages(IndirectSystem &system, const ManagedIndi
 
 void SystemsManagerST::ExecuteIndirectSystem(IndirectSystem &system, ManagedIndirectSystem::MessageQueue &messageQueue, System::Environment &env)
 {
-    env.messageBuilder.SourceName(system.Type().Name());
-
     ProcessMessages(system, messageQueue);
     messageQueue.clear();
 
     system.Update(env);
 
-    auto removeEntity = [this](ArchetypeGroup &group, ui32 index, optional<decltype(_entitiesLocations)::iterator> entityLocation)
-    {
-        --group.entitiesCount;
-        uiw replaceIndex = group.entitiesCount;
-
-        bool isReplaceWithLast = replaceIndex != index;
-
-        if (isReplaceWithLast)
-        {
-            // copy entity id
-            group.entities[index] = group.entities[replaceIndex];
-
-            // copy components data and optionally components ids
-            for (uiw componentIndex = 0; componentIndex < group.uniqueTypedComponentsCount; ++componentIndex)
-            {
-                auto &arr = group.components[componentIndex];
-                void *target = arr.data.get() + arr.sizeOf * index * arr.stride;
-                void *source = arr.data.get() + arr.sizeOf * replaceIndex * arr.stride;
-                uiw copySize = arr.sizeOf * arr.stride;
-                memcpy(target, source, copySize);
-
-                if (!arr.isUnique)
-                {
-                    ComponentID *idTarget = arr.ids.get() + index * arr.stride;
-                    ComponentID *idSource = arr.ids.get() + replaceIndex * arr.stride;
-                    uiw idCopySize = sizeof(ComponentID) * arr.stride;
-                    memcpy(idTarget, idSource, idCopySize);
-                }
-            }
-        }
-
-        if (entityLocation)
-        {
-            // remove deleted entity location
-            _entitiesLocations.erase(*entityLocation);
-        }
-
-        if (isReplaceWithLast)
-        {
-            // patch replaced entity's index
-            auto location = _entitiesLocations.find(group.entities[index]);
-            ASSUME(location != _entitiesLocations.end());
-			location->second.index = index;
-        }
-    };
-
-    auto addOrRemoveComponent = [this, removeEntity](EntityID entityID, StableTypeId typeToIgnore, ComponentID componentIDToIgnore, optional<SerializedComponent> componentToAdd)
-    {
-        auto entityLocation = _entitiesLocations.find(entityID);
-        ASSUME(entityLocation != _entitiesLocations.end());
-
-        auto [group, index] = entityLocation->second;
-
-        _tempComponents.clear();
-
-        // collect the current components
-        for (ui32 componentIndex = 0; componentIndex < group->uniqueTypedComponentsCount; ++componentIndex)
-        {
-            auto &row = group->components[componentIndex];
-            for (ui32 nonUniqueIndex = 0; nonUniqueIndex < row.stride; ++nonUniqueIndex)
-            {
-                SerializedComponent serialized;
-                if (row.isUnique == false)
-                {
-                    serialized.id = row.ids[componentIndex * row.stride + nonUniqueIndex];
-                }
-                serialized.type = row.type;
-                if (serialized.id == componentIDToIgnore && serialized.type == typeToIgnore)
-                {
-                    continue;
-                }
-                serialized.alignmentOf = row.alignmentOf;
-                serialized.isUnique = row.isUnique;
-                serialized.sizeOf = row.sizeOf;
-                serialized.data = row.data.get() + row.sizeOf * componentIndex * row.stride + row.sizeOf * nonUniqueIndex;
-                _tempComponents.push_back(serialized);
-            }
-        }
-
-        if (componentToAdd)
-        {
-            _tempComponents.push_back(*componentToAdd);
-        }
-
-		ArchetypeGroup *newGroup;
-        ArchetypeFull archetype = ComputeArchetype(ToArray(_tempComponents));
-        auto groupSearch = _archetypeGroupsFull.find(archetype);
-        if (groupSearch == _archetypeGroupsFull.end())
-        {
-			newGroup = &AddNewArchetypeGroup(archetype, ToArray(_tempComponents));
-        }
-        else
-        {
-            ASSUME(&groupSearch->second != group);
-			newGroup = &groupSearch->second;
-        }
-
-        AddEntityToArchetypeGroup(archetype, *newGroup, entityID, ToArray(_tempComponents), nullptr);
-
-        removeEntity(*group, index, nullopt);
-    };
-
-    // update the ECS using the received messages
-
-    for (auto &[streamArchetype, stream] : env.messageBuilder.EntityAddedStreams()._data)
-    {
-        for (auto &entity : *stream)
-        {
-            AssignComponentIDs(ToArray(entity.components), _lastComponentId);
-
-            ArchetypeFull archetype = ComputeArchetype(ToArray(entity.components));
-
-            ArchetypeGroup *group;
-            auto groupSearch = _archetypeGroupsFull.find(archetype);
-            if (groupSearch == _archetypeGroupsFull.end())
-            {
-                group = &AddNewArchetypeGroup(archetype, ToArray(entity.components));
-            }
-            else
-            {
-                group = &groupSearch->second;
-            }
-
-            AddEntityToArchetypeGroup(archetype, *group, entity.entityID, ToArray(entity.components), nullptr);
-        }
-    }
-
-    for (auto &[componentType, stream] : env.messageBuilder.ComponentAddedStreams()._data)
-    {
-        for (const auto &info : stream->infos)
-        {
-            addOrRemoveComponent(info.entityID, {}, {}, info.component);
-        }
-    }
-
-    for (const auto &[componentType, stream] : env.messageBuilder.ComponentChangedStreams()._data)
-    {
-        for (const auto &info : stream->infos)
-        {
-            auto entityLocation = _entitiesLocations.find(info.entityID);
-            ASSUME(entityLocation != _entitiesLocations.end());
-
-            auto &[group, entityIndex] = entityLocation->second;
-
-            uiw componentIndex = 0;
-            for (; ; ++componentIndex)
-            {
-                ASSUME(componentIndex < group->uniqueTypedComponentsCount);
-                if (group->components[componentIndex].type == componentType)
-                {
-                    break;
-                }
-            }
-
-            auto &componentArray = group->components[componentIndex];
-
-            ASSUME(info.component.alignmentOf == componentArray.alignmentOf);
-            ASSUME(info.component.isUnique == componentArray.isUnique);
-            ASSUME(info.component.sizeOf == componentArray.sizeOf);
-            ASSUME(info.component.type == componentArray.type);
-
-            uiw offset = 0;
-            if (!info.component.isUnique)
-            {
-                for (; ; ++offset)
-                {
-                    ASSUME(offset < componentArray.stride);
-                    if (info.component.id == componentArray.ids[entityIndex * componentArray.stride + offset])
-                    {
-                        break;
-                    }
-                }
-            }
-
-            memcpy(componentArray.data.get() + componentArray.sizeOf * componentArray.stride * entityIndex + componentArray.sizeOf * offset, info.component.data, info.component.sizeOf);
-        }
-    }
-
-    for (const auto &[componentType, stream] : env.messageBuilder.ComponentRemovedStreams()._data)
-    {
-        for (const auto &[entityID, componentID] : *stream)
-        {
-            addOrRemoveComponent(entityID, componentType, componentID, nullopt);
-        }
-    }
-
-    for (const auto &[streamArchetype, stream] : env.messageBuilder.EntityRemovedStreams()._data)
-    {
-        for (auto &entity : *stream)
-        {
-            auto entityLocation = _entitiesLocations.find(entity);
-            ASSUME(entityLocation != _entitiesLocations.end());
-            removeEntity(*entityLocation->second.group, entityLocation->second.index, entityLocation);
-        }
-    }
-
+    UpdateECSFromMessages(env.messageBuilder);
     PassMessagesToIndirectSystems(env.messageBuilder, &system);
-
-    Funcs::Reinitialize(env.messageBuilder);
 }
 
 void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, System::Environment &env)
 {
-    env.messageBuilder.SourceName(system.Type().Name());
-
     uiw maxArgs = system.RequestedComponents().required.size() + system.RequestedComponents().optional.size();
 
     _tempArrayArgs.reserve(maxArgs);
@@ -1060,9 +878,214 @@ void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, System::Environ
         }
     }
 
+    UpdateECSFromMessages(env.messageBuilder);
     PassMessagesToIndirectSystems(env.messageBuilder, nullptr);
+}
 
-    Funcs::Reinitialize(env.messageBuilder);
+void SystemsManagerST::UpdateECSFromMessages(MessageBuilder &messageBuilder)
+{
+    for (EntityID id : messageBuilder.EntityRemovedNoArchetype())
+    {
+        auto it = _entitiesLocations.find(id);
+        ASSUME(it != _entitiesLocations.end());
+        messageBuilder.EntityRemoved(id, it->second.group->archetype.ToShort());
+    }
+
+    auto removeEntity = [this](ArchetypeGroup &group, ui32 index, optional<decltype(_entitiesLocations)::iterator> entityLocation)
+    {
+        --group.entitiesCount;
+        uiw replaceIndex = group.entitiesCount;
+
+        bool isReplaceWithLast = replaceIndex != index;
+
+        if (isReplaceWithLast)
+        {
+            // copy entity id
+            group.entities[index] = group.entities[replaceIndex];
+
+            // copy components data and optionally components ids
+            for (uiw componentIndex = 0; componentIndex < group.uniqueTypedComponentsCount; ++componentIndex)
+            {
+                auto &arr = group.components[componentIndex];
+                void *target = arr.data.get() + arr.sizeOf * index * arr.stride;
+                void *source = arr.data.get() + arr.sizeOf * replaceIndex * arr.stride;
+                uiw copySize = arr.sizeOf * arr.stride;
+                memcpy(target, source, copySize);
+
+                if (!arr.isUnique)
+                {
+                    ComponentID *idTarget = arr.ids.get() + index * arr.stride;
+                    ComponentID *idSource = arr.ids.get() + replaceIndex * arr.stride;
+                    uiw idCopySize = sizeof(ComponentID) * arr.stride;
+                    memcpy(idTarget, idSource, idCopySize);
+                }
+            }
+        }
+
+        if (entityLocation)
+        {
+            // remove deleted entity location
+            _entitiesLocations.erase(*entityLocation);
+        }
+
+        if (isReplaceWithLast)
+        {
+            // patch replaced entity's index
+            auto location = _entitiesLocations.find(group.entities[index]);
+            ASSUME(location != _entitiesLocations.end());
+            location->second.index = index;
+        }
+    };
+
+    auto addOrRemoveComponent = [this, removeEntity](EntityID entityID, StableTypeId typeToIgnore, ComponentID componentIDToIgnore, optional<SerializedComponent> componentToAdd)
+    {
+        auto entityLocation = _entitiesLocations.find(entityID);
+        ASSUME(entityLocation != _entitiesLocations.end());
+
+        auto[group, index] = entityLocation->second;
+
+        _tempComponents.clear();
+
+        // collect the current components
+        for (ui32 componentIndex = 0; componentIndex < group->uniqueTypedComponentsCount; ++componentIndex)
+        {
+            auto &row = group->components[componentIndex];
+            for (ui32 nonUniqueIndex = 0; nonUniqueIndex < row.stride; ++nonUniqueIndex)
+            {
+                SerializedComponent serialized;
+                if (row.isUnique == false)
+                {
+                    serialized.id = row.ids[componentIndex * row.stride + nonUniqueIndex];
+                }
+                serialized.type = row.type;
+                if (serialized.id == componentIDToIgnore && serialized.type == typeToIgnore)
+                {
+                    continue;
+                }
+                serialized.alignmentOf = row.alignmentOf;
+                serialized.isUnique = row.isUnique;
+                serialized.sizeOf = row.sizeOf;
+                serialized.data = row.data.get() + row.sizeOf * componentIndex * row.stride + row.sizeOf * nonUniqueIndex;
+                _tempComponents.push_back(serialized);
+            }
+        }
+
+        if (componentToAdd)
+        {
+            _tempComponents.push_back(*componentToAdd);
+        }
+
+        ArchetypeGroup *newGroup;
+        ArchetypeFull archetype = ComputeArchetype(ToArray(_tempComponents));
+        auto groupSearch = _archetypeGroupsFull.find(archetype);
+        if (groupSearch == _archetypeGroupsFull.end())
+        {
+            newGroup = &AddNewArchetypeGroup(archetype, ToArray(_tempComponents));
+        }
+        else
+        {
+            ASSUME(&groupSearch->second != group);
+            newGroup = &groupSearch->second;
+        }
+
+        AddEntityToArchetypeGroup(archetype, *newGroup, entityID, ToArray(_tempComponents), nullptr);
+
+        removeEntity(*group, index, nullopt);
+    };
+
+    // update the ECS using the received messages
+
+    for (auto &[streamArchetype, stream] : messageBuilder.EntityAddedStreams()._data)
+    {
+        for (auto &entity : *stream)
+        {
+            AssignComponentIDs(ToArray(entity.components), _lastComponentId);
+
+            ArchetypeFull archetype = ComputeArchetype(ToArray(entity.components));
+
+            ArchetypeGroup *group;
+            auto groupSearch = _archetypeGroupsFull.find(archetype);
+            if (groupSearch == _archetypeGroupsFull.end())
+            {
+                group = &AddNewArchetypeGroup(archetype, ToArray(entity.components));
+            }
+            else
+            {
+                group = &groupSearch->second;
+            }
+
+            AddEntityToArchetypeGroup(archetype, *group, entity.entityID, ToArray(entity.components), nullptr);
+        }
+    }
+
+    for (auto &[componentType, stream] : messageBuilder.ComponentAddedStreams()._data)
+    {
+        for (const auto &info : stream->infos)
+        {
+            addOrRemoveComponent(info.entityID, {}, {}, info.component);
+        }
+    }
+
+    for (const auto &[componentType, stream] : messageBuilder.ComponentChangedStreams()._data)
+    {
+        for (const auto &info : stream->infos)
+        {
+            auto entityLocation = _entitiesLocations.find(info.entityID);
+            ASSUME(entityLocation != _entitiesLocations.end());
+
+            auto &[group, entityIndex] = entityLocation->second;
+
+            uiw componentIndex = 0;
+            for (; ; ++componentIndex)
+            {
+                ASSUME(componentIndex < group->uniqueTypedComponentsCount);
+                if (group->components[componentIndex].type == componentType)
+                {
+                    break;
+                }
+            }
+
+            auto &componentArray = group->components[componentIndex];
+
+            ASSUME(info.component.alignmentOf == componentArray.alignmentOf);
+            ASSUME(info.component.isUnique == componentArray.isUnique);
+            ASSUME(info.component.sizeOf == componentArray.sizeOf);
+            ASSUME(info.component.type == componentArray.type);
+
+            uiw offset = 0;
+            if (!info.component.isUnique)
+            {
+                for (; ; ++offset)
+                {
+                    ASSUME(offset < componentArray.stride);
+                    if (info.component.id == componentArray.ids[entityIndex * componentArray.stride + offset])
+                    {
+                        break;
+                    }
+                }
+            }
+
+            memcpy(componentArray.data.get() + componentArray.sizeOf * componentArray.stride * entityIndex + componentArray.sizeOf * offset, info.component.data, info.component.sizeOf);
+        }
+    }
+
+    for (const auto &[componentType, stream] : messageBuilder.ComponentRemovedStreams()._data)
+    {
+        for (const auto &[entityID, componentID] : *stream)
+        {
+            addOrRemoveComponent(entityID, componentType, componentID, nullopt);
+        }
+    }
+
+    for (const auto &[streamArchetype, stream] : messageBuilder.EntityRemovedStreams()._data)
+    {
+        for (auto &entity : *stream)
+        {
+            auto entityLocation = _entitiesLocations.find(entity);
+            ASSUME(entityLocation != _entitiesLocations.end());
+            removeEntity(*entityLocation->second.group, entityLocation->second.index, entityLocation);
+        }
+    }
 }
 
 void SystemsManagerST::PassMessagesToIndirectSystems(MessageBuilder &messageBuilder, System *systemToIgnore)
@@ -1193,6 +1216,8 @@ void SystemsManagerST::PassMessagesToIndirectSystems(MessageBuilder &messageBuil
             }
         }
     }
+
+    Funcs::Reinitialize(messageBuilder);
 }
 
 void SystemsManagerST::ManagedIndirectSystem::MessageQueue::clear()

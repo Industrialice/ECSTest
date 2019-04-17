@@ -41,6 +41,8 @@ namespace ECSTest
 		[[nodiscard]] virtual const struct IndirectSystem *AsIndirectSystem() const;
 		[[nodiscard]] virtual struct DirectSystem *AsDirectSystem();
 		[[nodiscard]] virtual const struct DirectSystem *AsDirectSystem() const;
+        virtual void OnCreate(Environment &env) {}
+        virtual void OnDestroy(Environment &env) {}
 	};
 
 	struct IndirectSystem : public System

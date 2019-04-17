@@ -384,6 +384,7 @@ namespace ECSTest
         [[nodiscard]] MessageStreamsBuilderComponentChanged &ComponentChangedStreams();
         [[nodiscard]] MessageStreamsBuilderComponentRemoved &ComponentRemovedStreams();
         [[nodiscard]] MessageStreamsBuilderEntityRemoved &EntityRemovedStreams();
+        [[nodiscard]] const vector<EntityID> &EntityRemovedNoArchetype();
 
     public:
         class ComponentArrayBuilder
@@ -490,7 +491,8 @@ namespace ECSTest
         void ComponentAdded(EntityID entityID, const SerializedComponent &sc);
         void ComponentChanged(EntityID entityID, const SerializedComponent &sc);
         void ComponentRemoved(EntityID entityID, StableTypeId type, ComponentID componentID);
-        void EntityRemoved(Archetype archetype, EntityID entityID);
+        void EntityRemoved(EntityID entityID);
+        void EntityRemoved(EntityID entityID, Archetype archetype);
     
 	private:
 		ComponentArrayBuilder _cab{};
@@ -499,6 +501,7 @@ namespace ECSTest
         MessageStreamsBuilderComponentChanged _componentChangedStreams{};
         MessageStreamsBuilderComponentRemoved _componentRemovedStreams{};
         MessageStreamsBuilderEntityRemoved _entityRemovedStreams{};
+        vector<EntityID> _entityRemovedNoArchetype{};
 		EntityID _currentEntityId{};
         string _sourceName{};
 	};
