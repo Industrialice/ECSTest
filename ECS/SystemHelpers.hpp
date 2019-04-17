@@ -266,7 +266,7 @@ namespace ECSTest
         uiw target = 0;
         for (uiw source = 0; source < arr.size(); ++source)
         {
-            if (arr[source].isWriteAccess)
+            if (arr[source].requirement != RequirementForComponent::Subtractive && arr[source].isWriteAccess)
             {
                 components[target++] = arr[source];
             }

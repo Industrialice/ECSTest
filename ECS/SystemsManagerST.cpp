@@ -554,6 +554,7 @@ void SystemsManagerST::AddEntityToArchetypeGroup(const ArchetypeFull &archetype,
 void SystemsManagerST::StartScheduler(vector<unique_ptr<EntitiesStream>> &&streams)
 {
 	MessageBuilder messageBulder;
+    messageBulder.SourceName("Initial Streaming");
 	vector<SerializedComponent> serialized;
 
 	for (auto &stream : streams)
@@ -572,7 +573,7 @@ void SystemsManagerST::StartScheduler(vector<unique_ptr<EntitiesStream>> &&strea
 	for (auto &[archetype, messages] : entityAddedStreams._data)
 	{
 		auto reflected = _archetypeReflector.Reflect(archetype);
-		MessageStreamEntityAdded stream = {archetype, messages};
+		MessageStreamEntityAdded stream = {archetype, messages, messageBulder.SourceName()};
 		for (auto &pipeline : _pipelines)
 		{
 			for (auto &managed : pipeline.indirectSystems)
@@ -758,6 +759,8 @@ void SystemsManagerST::ProcessMessages(IndirectSystem &system, const ManagedIndi
 
 void SystemsManagerST::ExecuteIndirectSystem(IndirectSystem &system, ManagedIndirectSystem::MessageQueue &messageQueue, System::Environment &env)
 {
+    env.messageBuilder.SourceName(system.Type().Name());
+
     ProcessMessages(system, messageQueue);
     messageQueue.clear();
 
@@ -966,6 +969,8 @@ void SystemsManagerST::ExecuteIndirectSystem(IndirectSystem &system, ManagedIndi
 
 void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, System::Environment &env)
 {
+    env.messageBuilder.SourceName(system.Type().Name());
+
     uiw maxArgs = system.RequestedComponents().required.size() + system.RequestedComponents().optional.size();
 
     _tempArrayArgs.reserve(maxArgs);
@@ -1065,7 +1070,7 @@ void SystemsManagerST::PassMessagesToIndirectSystems(MessageBuilder &messageBuil
     for (auto &[streamArchetype, streamPointer] : messageBuilder.EntityAddedStreams()._data)
     {
         auto reflected = _archetypeReflector.Reflect(streamArchetype);
-        auto stream = MessageStreamEntityAdded(streamArchetype, streamPointer);
+        auto stream = MessageStreamEntityAdded(streamArchetype, streamPointer, messageBuilder.SourceName());
 
         for (auto &pipeline : _pipelines)
         {
@@ -1084,7 +1089,7 @@ void SystemsManagerST::PassMessagesToIndirectSystems(MessageBuilder &messageBuil
 
     for (const auto &[componentType, streamPointer] : messageBuilder.ComponentAddedStreams()._data)
     {
-        auto stream = MessageStreamComponentAdded(componentType, streamPointer);
+        auto stream = MessageStreamComponentAdded(componentType, streamPointer, messageBuilder.SourceName());
 
         for (auto &pipeline : _pipelines)
         {
@@ -1113,7 +1118,7 @@ void SystemsManagerST::PassMessagesToIndirectSystems(MessageBuilder &messageBuil
 
     for (const auto &[componentType, streamPointer] : messageBuilder.ComponentChangedStreams()._data)
     {
-        auto stream = MessageStreamComponentChanged(componentType, streamPointer);
+        auto stream = MessageStreamComponentChanged(componentType, streamPointer, messageBuilder.SourceName());
 
         for (auto &pipeline : _pipelines)
         {
@@ -1142,7 +1147,7 @@ void SystemsManagerST::PassMessagesToIndirectSystems(MessageBuilder &messageBuil
 
     for (const auto &[componentType, streamPointer] : messageBuilder.ComponentRemovedStreams()._data)
     {
-        auto stream = MessageStreamComponentRemoved(componentType, streamPointer);
+        auto stream = MessageStreamComponentRemoved(componentType, streamPointer, messageBuilder.SourceName());
 
         for (auto &pipeline : _pipelines)
         {
@@ -1172,7 +1177,7 @@ void SystemsManagerST::PassMessagesToIndirectSystems(MessageBuilder &messageBuil
     for (const auto &[streamArchetype, streamPointer] : messageBuilder.EntityRemovedStreams()._data)
     {
         auto reflected = _archetypeReflector.Reflect(streamArchetype);
-        auto stream = MessageStreamEntityRemoved(streamArchetype, streamPointer);
+        auto stream = MessageStreamEntityRemoved(streamArchetype, streamPointer, messageBuilder.SourceName());
 
         for (auto &pipeline : _pipelines)
         {

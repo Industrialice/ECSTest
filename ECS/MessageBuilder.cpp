@@ -51,6 +51,16 @@ auto MessageBuilder::ComponentArrayBuilder::AddComponent(const SerializedCompone
 	return *this;
 }
 
+void MessageBuilder::SourceName(string_view name)
+{
+    _sourceName = name;
+}
+
+const string &MessageBuilder::SourceName() const
+{
+    return _sourceName;
+}
+
 bool MessageBuilder::IsEmpty() const
 {
     return 

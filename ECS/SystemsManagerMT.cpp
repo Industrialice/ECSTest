@@ -655,7 +655,7 @@ void SystemsManagerMT::StartScheduler(vector<unique_ptr<EntitiesStream>> &&strea
     for (auto &[archetype, messages] : entityAddedStreams._data)
     {
         auto reflected = _archetypeReflector.Reflect(archetype);
-        MessageStreamEntityAdded stream = {archetype, messages};
+        MessageStreamEntityAdded stream = {archetype, messages, messageBulder.SourceName()};
         for (auto &pipeline : _pipelines)
         {
             for (auto &managed : pipeline.indirectSystems)

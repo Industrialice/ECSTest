@@ -4,11 +4,13 @@
 #include <stdio.h>
 #include <tuple>
 #include <set>
+#include <queue>
 
 using namespace ECSTest;
 
 namespace
 {
+    constexpr ui32 EntitiesToAdd = 50;
     constexpr bool IsMultiThreadedECS = false;
 }
 
@@ -19,24 +21,97 @@ COMPONENT(GeneratedComponent)
 
 COMPONENT(ConsumerInfoComponent)
 {
-    ui32 received = 0;
+    ui32 entityAdded = 0;
+    ui32 entityRemoved = 0;
+    ui32 componentAdded = 0;
+    ui32 componentChanged = 0;
+    ui32 componentRemoved = 0;
 };
 
 INDIRECT_SYSTEM(GeneratorSystem)
 {
-    INDIRECT_ACCEPT_COMPONENTS(SubtractiveComponent<GeneratedComponent>)
+    INDIRECT_ACCEPT_COMPONENTS(SubtractiveComponent<GeneratedComponent>, SubtractiveComponent<ConsumerInfoComponent>)
     {
         if (_leftToGenerate)
         {
             GeneratedComponent c;
             c.value = 15;
             env.messageBuilder.EntityAdded(env.idGenerator.Generate()).AddComponent(c);
+            c.value = 25;
+            env.messageBuilder.ComponentChanged(env.idGenerator.LastGenerated(), c);
             --_leftToGenerate;
+            _toComponentChange.push(env.idGenerator.LastGenerated());
+            
+            if (!_pipeline.Advance())
+            {
+                return;
+            }
+        }
+
+        if (_toComponentChange.size())
+        {
+            GeneratedComponent c;
+            c.value = 35;
+            env.messageBuilder.ComponentChanged(_toComponentChange.front(), c);
+            _toComponentRemove.push(_toComponentChange.front());
+            _toComponentChange.pop();
+
+            if (!_pipeline.Advance())
+            {
+                return;
+            }
+        }
+
+        if (_toComponentRemove.size())
+        {
+            env.messageBuilder.ComponentRemoved(_toComponentRemove.front(), GeneratedComponent{});
+            _toEntityRemove.push(_toComponentRemove.front());
+            _toComponentRemove.pop();
+
+            if (!_pipeline.Advance())
+            {
+                return;
+            }
+        }
+
+        if (_toEntityRemove.size())
+        {
+            auto type = GeneratedComponent::GetTypeId();
+            Array<const StableTypeId> arr = ToArray(type);
+            env.messageBuilder.EntityRemoved(Archetype::Create(arr), _toEntityRemove.front());
+            _toEntityRemove.pop();
         }
     }
 
 private:
-    ui32 _leftToGenerate = 50;
+    class Pipeline
+    {
+        static constexpr ui32 _advanceLatency = 10;
+        ui32 _advancePassed = 0;
+        ui32 _phase = 0;
+
+    public:
+        bool Advance()
+        {
+            if (_phase != 3)
+            {
+                ++_advancePassed;
+                if (_advancePassed < _advanceLatency)
+                {
+                    return false;
+                }
+                _advancePassed = 0;
+                ++_phase;
+            }
+            return true;
+        }
+    };
+
+    ui32 _leftToGenerate = EntitiesToAdd;
+    std::queue<EntityID> _toComponentChange{};
+    std::queue<EntityID> _toComponentRemove{};
+    std::queue<EntityID> _toEntityRemove{};
+    Pipeline _pipeline{};
 };
 
 void GeneratorSystem::ProcessMessages(const MessageStreamEntityAdded &stream)
@@ -73,11 +148,26 @@ INDIRECT_SYSTEM(ConsumerSystem)
             _infoID = env.idGenerator.Generate();
             env.messageBuilder.EntityAdded(_infoID).AddComponent(_info);
         }
+        else
+        {
+            if (MemOps::Compare(&_info, &_infoPassed, sizeof(_infoPassed)))
+            {
+                env.messageBuilder.ComponentChanged(_infoID, _info);
+            }
+        }
+        _infoPassed = _info;
     }
 
 private:
+    struct EntityInfo
+    {
+        optional<GeneratedComponent> component;
+        bool isEntityRemoved = false;
+    };
+
     EntityID _infoID{};
-    ConsumerInfoComponent _info{};
+    ConsumerInfoComponent _info{}, _infoPassed{};
+    std::map<EntityID, EntityInfo> _entityInfos{};
 };
 
 void ConsumerSystem::ProcessMessages(const MessageStreamEntityAdded &stream)
@@ -86,7 +176,7 @@ void ConsumerSystem::ProcessMessages(const MessageStreamEntityAdded &stream)
     {
         if (auto c = entity.FindComponent<GeneratedComponent>(); c)
         {
-            ++_info.received;
+            ++_info.entityAdded;
             ASSUME(c->value == 15);
         }
     }
@@ -99,17 +189,56 @@ void ConsumerSystem::ProcessMessages(const MessageStreamComponentAdded &stream)
 
 void ConsumerSystem::ProcessMessages(const MessageStreamComponentChanged &stream)
 {
-    SOFTBREAK;
+    ASSUME(stream.Type() == GeneratedComponent::GetTypeId());
+
+    for (auto &entity : stream)
+    {
+        const auto &c = entity.component.Cast<GeneratedComponent>();
+        auto it = _entityInfos.find(entity.entityID);
+        if (it == _entityInfos.end())
+        {
+            ASSUME(c.value == 25);
+            _entityInfos[entity.entityID] = {c};
+        }
+        else
+        {
+            ASSUME(it->second.component != nullopt);
+            ASSUME(it->second.component->value == 25);
+            ASSUME(it->second.isEntityRemoved == false);
+            ASSUME(c.value == 35);
+            it->second.component = c;
+        }
+        ++_info.componentChanged;
+    }
 }
 
 void ConsumerSystem::ProcessMessages(const MessageStreamComponentRemoved &stream)
 {
-    SOFTBREAK;
+    ASSUME(stream.Type() == GeneratedComponent::GetTypeId());
+
+    for (auto &entity : stream)
+    {
+        auto it = _entityInfos.find(entity.entityID);
+        ASSUME(it != _entityInfos.end());
+        ASSUME(it->second.component != nullopt);
+        ASSUME(it->second.component->value == 35);
+        ASSUME(it->second.isEntityRemoved == false);
+        it->second.component = nullopt;
+        ++_info.componentRemoved;
+    }
 }
 
 void ConsumerSystem::ProcessMessages(const MessageStreamEntityRemoved &stream)
 {
-    SOFTBREAK;
+    for (auto &entity : stream)
+    {
+        auto it = _entityInfos.find(entity);
+        ASSUME(it != _entityInfos.end());
+        ASSUME(it->second.component == nullopt);
+        ASSUME(it->second.isEntityRemoved == false);
+        it->second.isEntityRemoved = true;
+        ++_info.entityRemoved;
+    }
 }
 
 using namespace ECSTest;
@@ -167,26 +296,26 @@ template <typename T> void StreamComponent(const T &component, TestEntities::Pre
 
 static void GenerateScene(EntityIDGenerator &idGenerator, SystemsManager &manager, TestEntities &stream)
 {
-    for (uiw index = 0; index < EntitiesToTest; ++index)
-    {
-        TestEntities::PreStreamedEntity entity;
+    //for (uiw index = 0; index < EntitiesToTest; ++index)
+    //{
+    //    TestEntities::PreStreamedEntity entity;
 
-        if (IsPreGenerateTransform)
-        {
-            Transform t;
-            t.position.x = rand() / (f32)RAND_MAX * 100 - 50;
-            t.position.y = rand() / (f32)RAND_MAX * 100 - 50;
-            t.position.z = rand() / (f32)RAND_MAX * 100 - 50;
-            StreamComponent(t, entity);
-        }
+    //    if (IsPreGenerateTransform)
+    //    {
+    //        Transform t;
+    //        t.position.x = rand() / (f32)RAND_MAX * 100 - 50;
+    //        t.position.y = rand() / (f32)RAND_MAX * 100 - 50;
+    //        t.position.z = rand() / (f32)RAND_MAX * 100 - 50;
+    //        StreamComponent(t, entity);
+    //    }
 
-        string name = "Entity"s + std::to_string(index);
-        Name n;
-        strcpy_s(n.name.data(), n.name.size(), name.c_str());
-        StreamComponent(n, entity);
+    //    string name = "Entity"s + std::to_string(index);
+    //    Name n;
+    //    strcpy_s(n.name.data(), n.name.size(), name.c_str());
+    //    StreamComponent(n, entity);
 
-        stream.AddEntity(idGenerator.Generate(), move(entity));
-    }
+    //    stream.AddEntity(idGenerator.Generate(), move(entity));
+    //}
 }
 
 static void PrintStreamInfo(EntitiesStream &stream, bool isFirstPass)
@@ -204,40 +333,23 @@ static void PrintStreamInfo(EntitiesStream &stream, bool isFirstPass)
         {
             componentCounts[c.type]++;
 
-            if (c.type == AverageHeight::GetTypeId())
+            if (c.type == ConsumerInfoComponent::GetTypeId())
             {
-                auto a = *(AverageHeight *)c.data;
-                printf("average height %f based on %u sources\n", a.height, a.sources);
-            }
-            else if (c.type == HeightFixerInfo::GetTypeId())
-            {
-                auto i = *(HeightFixerInfo *)c.data;
-                printf("height fixer run %u times, fixed %u heights\n", i.runTimes, i.heightsFixed);
-            }
-        }
-    }
+                const auto &t = *(ConsumerInfoComponent *)c.data;
+                printf("consumer stats:\n");
+                printf("  componentAdded %u\n", t.componentAdded);
+                printf("  componentChanged %u", t.componentChanged);
+                printf("  componentRemoved %u", t.componentRemoved);
+                printf("  entityAdded %u\n", t.entityAdded);
+                printf("  entityRemoved %u\n", t.entityRemoved);
 
-    printf("\n");
-    for (auto &[id, count] : componentCounts)
-    {
-        if (id == Transform::GetTypeId())
-        {
-            ASSUME(count == EntitiesToTest);
+                ASSUME(t.componentAdded == 0);
+                ASSUME(t.componentChanged == EntitiesToAdd * 2);
+                ASSUME(t.componentRemoved == EntitiesToAdd);
+                ASSUME(t.entityAdded == EntitiesToAdd);
+                ASSUME(t.entityRemoved == EntitiesToAdd);
+            }
         }
-        else if (id == Name::GetTypeId())
-        {
-            ASSUME(count == EntitiesToTest);
-        }
-        else if (id == AverageHeight::GetTypeId())
-        {
-            ASSUME(count == 1);
-        }
-        else if (id == HeightFixerInfo::GetTypeId())
-        {
-            ASSUME(count == 1);
-        }
-
-        printf("%s count %u\n", id.Name(), count);
     }
 }
 
@@ -255,17 +367,7 @@ int main()
     auto testPipelineGroup1 = manager->CreatePipelineGroup(6.5_ms, false);
 
     manager->Register(make_unique<GeneratorSystem>(), testPipelineGroup0);
-    manager->Register(make_unique<TransformHeightFixerSystem>(), testPipelineGroup0);
-    if (IsUseDirectForFalling)
-    {
-        manager->Register(make_unique<TransformFallingDirectSystem>(), testPipelineGroup0);
-    }
-    else
-    {
-        manager->Register(make_unique<TransformFallingIndirectSystem>(), testPipelineGroup0);
-    }
-    manager->Register(make_unique<AverageHeightAnalyzerSystem>(), testPipelineGroup1);
-    manager->Register(make_unique<CooldownUpdater>(), testPipelineGroup1);
+    manager->Register(make_unique<ConsumerSystem>(), testPipelineGroup1);
 
     vector<WorkerThread> workers;
     if (IsMultiThreadedECS)
