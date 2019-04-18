@@ -4,13 +4,14 @@
 #include <stdio.h>
 #include <tuple>
 #include <set>
+#include <random>
 
 using namespace ECSTest;
 
 namespace
 {
     constexpr ui32 EntitiesToTest = 100;
-	constexpr bool IsUseDirectForFalling = false;
+	constexpr bool IsUseDirectForFalling = true;
     constexpr bool IsPreGenerateTransform = false;
     constexpr bool IsMultiThreadedECS = false;
 }
@@ -42,6 +43,19 @@ COMPONENT(NegativeHeightCooldown)
     f32 cooldown;
 };
 
+COMPONENT(SpeedOfFall)
+{
+    f32 speed;
+};
+
+static Vector3 GeneratePosition()
+{
+    std::random_device rd; // obtain a random number from hardware
+    std::mt19937 eng(rd()); // seed the generator
+    std::uniform_real_distribution<> distr(-50, 50); // define the range
+    return {(f32)distr(eng), (f32)distr(eng), (f32)distr(eng)};
+}
+
 INDIRECT_SYSTEM(TransformGeneratorSystem)
 {
     INDIRECT_ACCEPT_COMPONENTS(Array<Name> &, SubtractiveComponent<Transform>)
@@ -49,10 +63,14 @@ INDIRECT_SYSTEM(TransformGeneratorSystem)
         for (auto &id : _entitiesToGenerate)
         {
             Transform t;
-            t.position.x = rand() / (f32)RAND_MAX * 100 - 50;
-            t.position.y = rand() / (f32)RAND_MAX * 100 - 50;
-            t.position.z = rand() / (f32)RAND_MAX * 100 - 50;
+            t.position = GeneratePosition();
             env.messageBuilder.ComponentAdded(id, t);
+            if (rand() % 2)
+            {
+                SpeedOfFall speed;
+                speed.speed = rand() % 25;
+                env.messageBuilder.ComponentAdded(id, speed);
+            }
         }
         _entitiesToGenerate.clear();
     }
@@ -115,15 +133,20 @@ INDIRECT_SYSTEM(TransformHeightFixerSystem)
             }
         }
 
-        if (_infoId.IsValid())
-        {
-            env.messageBuilder.ComponentChanged(_infoId, _info);
-        }
-        else
-        {
-            _infoId = env.idGenerator.Generate();
-            env.messageBuilder.EntityAdded(_infoId).AddComponent(_info);
-        }
+        env.messageBuilder.ComponentChanged(_infoId, _info);
+    }
+
+    virtual void OnCreate(Environment &env) override
+    {
+        ASSUME(_infoId.IsValid() == false);
+        _infoId = env.idGenerator.Generate();
+        env.messageBuilder.AddEntity(_infoId).AddComponent(_info);
+    }
+
+    virtual void OnDestroy(Environment &env) override
+    {
+        ASSUME(_infoId.IsValid());
+        env.messageBuilder.RemoveEntity(_infoId);
     }
 
 private:
@@ -141,14 +164,11 @@ void TransformHeightFixerSystem::ProcessMessages(const MessageStreamEntityAdded 
         if (t.position.y < 0)
         {
             auto cooldown = entity.FindComponent<NegativeHeightCooldown>();
-            if (cooldown == nullptr || cooldown->cooldown <= 0)
-            {
-                t.position.y = 100;
-            }
-            else
+            if (cooldown && cooldown->cooldown > 0)
             {
                 _entitiesWithCooldown.insert(entity.entityID);
             }
+            t.position.y = 100;
             _entitiesToFix[entity.entityID] = t;
         }
     }
@@ -163,10 +183,7 @@ void TransformHeightFixerSystem::ProcessMessages(const MessageStreamComponentAdd
             Transform t = *(Transform *)entity.component.data;
             if (t.position.y < 0)
             {
-                if (_entitiesWithCooldown.find(entity.entityID) == _entitiesWithCooldown.end())
-                {
-                    t.position.y = 100;
-                }
+                t.position.y = 100;
                 _entitiesToFix[entity.entityID] = t;
             }
         }
@@ -187,10 +204,7 @@ void TransformHeightFixerSystem::ProcessMessages(const MessageStreamComponentCha
             if (t.position.y < 0)
             {
                 t.position.y = 100;
-                if (_entitiesWithCooldown.find(entity.entityID) == _entitiesWithCooldown.end())
-                {
-                    _entitiesToFix[entity.entityID] = t;
-                }
+                _entitiesToFix[entity.entityID] = t;
             }
         }
 	}
@@ -222,24 +236,42 @@ void TransformHeightFixerSystem::ProcessMessages(const MessageStreamEntityRemove
 
 INDIRECT_SYSTEM(TransformFallingIndirectSystem)
 {
-    INDIRECT_ACCEPT_COMPONENTS(Array<Transform> &)
+private:
+    struct Components
     {
-        for (auto &[entityID, component] : _entities)
+        optional<Transform> transform{};
+        optional<SpeedOfFall> speedOfFall{};
+    };
+
+    INDIRECT_ACCEPT_COMPONENTS(Array<Transform> &, Array<SpeedOfFall> *)
+    {
+        for (auto &[entityID, components] : _entities)
         {
-            component.position.y -= env.timeSinceLastFrame * 50.0f;
-            env.messageBuilder.ComponentChanged(entityID, component);
+            ASSUME(components.transform);
+            f32 speedOfFall = 50.0f;
+            if (components.speedOfFall)
+            {
+                speedOfFall = components.speedOfFall->speed;
+            }
+            components.transform->position.y -= env.timeSinceLastFrame * speedOfFall;
+            env.messageBuilder.ComponentChanged(entityID, *components.transform);
         }
     }
 
 private:
-	std::map<EntityID, Transform> _entities{};
+	std::map<EntityID, Components> _entities{};
 };
 
 void TransformFallingIndirectSystem::ProcessMessages(const MessageStreamEntityAdded &stream)
 {
 	for (auto &entity : stream)
 	{
-        _entities[entity.entityID] = *entity.FindComponent<Transform>();
+        auto &target = _entities[entity.entityID];
+        target.transform = *entity.FindComponent<Transform>();
+        if (auto speedOfFall = entity.FindComponent<SpeedOfFall>(); speedOfFall)
+        {
+            target.speedOfFall = *speedOfFall;
+        }
 	}
 }
 
@@ -247,9 +279,18 @@ void TransformFallingIndirectSystem::ProcessMessages(const MessageStreamComponen
 {
     for (auto &entity : stream)
     {
-        if (entity.component.type == Transform::GetTypeId())
+        auto &target = _entities[entity.entityID];
+        if (auto transform = entity.component.TryCast<Transform>(); transform)
         {
-            _entities[entity.entityID] = *(Transform *)entity.component.data;
+            target.transform = *transform;
+        }
+        else if (auto speedOfFall = entity.component.TryCast<SpeedOfFall>(); speedOfFall)
+        {
+            target.speedOfFall = *speedOfFall;
+        }
+        else
+        {
+            SOFTBREAK;
         }
     }
 }
@@ -258,7 +299,19 @@ void TransformFallingIndirectSystem::ProcessMessages(const MessageStreamComponen
 {
 	for (auto &entity : stream)
 	{
-		_entities[entity.entityID] = *(Transform *)entity.component.data;
+        auto &target = _entities[entity.entityID];
+        if (auto transform = entity.component.TryCast<Transform>(); transform)
+        {
+            target.transform = *transform;
+        }
+        else if (auto speedOfFall = entity.component.TryCast<SpeedOfFall>(); speedOfFall)
+        {
+            target.speedOfFall = *speedOfFall;
+        }
+        else
+        {
+            SOFTBREAK;
+        }
 	}
 }
 
@@ -266,7 +319,18 @@ void TransformFallingIndirectSystem::ProcessMessages(const MessageStreamComponen
 {
     for (auto &entity : stream)
     {
-        _entities.erase(entity.entityID);
+        if (stream.Type() == Transform::GetTypeId())
+        {
+            _entities.erase(entity.entityID);
+        }
+        else if (stream.Type() == SpeedOfFall::GetTypeId())
+        {
+            _entities[entity.entityID].speedOfFall = nullopt;
+        }
+        else
+        {
+            SOFTBREAK;
+        }
     }
 }
 
@@ -280,11 +344,17 @@ void TransformFallingIndirectSystem::ProcessMessages(const MessageStreamEntityRe
 
 DIRECT_SYSTEM(TransformFallingDirectSystem)
 {
-	DIRECT_ACCEPT_COMPONENTS(Array<Transform> &transforms)
+	DIRECT_ACCEPT_COMPONENTS(Array<Transform> &transforms, Array<SpeedOfFall> *speeds)
 	{
-		for (auto &t : transforms)
+        for (uiw index = 0; index < transforms.size(); ++index)
 		{
-			t.position.y -= env.timeSinceLastFrame * 50.0f;
+            auto &t = transforms[index];
+            f32 speedOfFall = 50.0f;
+            if (speeds)
+            {
+                speedOfFall = speeds->operator[](index).speed;
+            }
+			t.position.y -= env.timeSinceLastFrame * speedOfFall;
 		}
 	}
 };
@@ -308,19 +378,25 @@ INDIRECT_SYSTEM(AverageHeightAnalyzerSystem)
         AverageHeight h;
         h.height = (f32)sum;
         h.sources = (ui32)_entities.size();
-
-        if (_entityID.IsValid() == false)
-        {
-            _entityID = env.idGenerator.Generate();
-            auto &c = env.messageBuilder.EntityAdded(_entityID);
-            c.AddComponent(h);
-        }
-        else
-        {
-            env.messageBuilder.ComponentChanged(_entityID, h);
-        }
+        env.messageBuilder.ComponentChanged(_entityID, h);
 
         _isChanged = false;
+    }
+
+    virtual void OnCreate(Environment &env) override
+    {
+        ASSUME(_entityID.IsValid() == false);
+        AverageHeight h;
+        h.height = 0;
+        h.sources = 0;
+        _entityID = env.idGenerator.Generate();
+        env.messageBuilder.AddEntity(_entityID).AddComponent(h);
+    }
+
+    virtual void OnDestroy(Environment &env) override
+    {
+        ASSUME(_entityID.IsValid());
+        env.messageBuilder.RemoveEntity(_entityID);
     }
 
 private:
@@ -507,9 +583,7 @@ static void GenerateScene(EntityIDGenerator &idGenerator, SystemsManager &manage
         if (IsPreGenerateTransform)
         {
             Transform t;
-            t.position.x = rand() / (f32)RAND_MAX * 100 - 50;
-            t.position.y = rand() / (f32)RAND_MAX * 100 - 50;
-            t.position.z = rand() / (f32)RAND_MAX * 100 - 50;
+            t.position = GeneratePosition();
             StreamComponent(t, entity);
         }
 

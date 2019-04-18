@@ -507,7 +507,7 @@ void SystemsManagerST::AddEntityToArchetypeGroup(const ArchetypeFull &archetype,
 	optional<std::reference_wrapper<MessageBuilder::ComponentArrayBuilder>> componentBuilder;
 	if (messageBuilder)
 	{
-		componentBuilder = messageBuilder->EntityAdded(entityId);
+		componentBuilder = messageBuilder->AddEntity(entityId);
 	}
 
 	for (uiw index = 0; index < components.size(); ++index)
@@ -824,16 +824,25 @@ void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, System::Environ
                     }
                 }
 
+                bool isFound = index < group.get().uniqueTypedComponentsCount;
+
                 if (arg.requirement == RequirementForComponent::Subtractive)
                 {
-                    ASSUME(index == group.get().uniqueTypedComponentsCount);
+                    ASSUME(isFound == false);
                     continue;
                 }
 
-                ASSUME(group.get().components[index].isUnique); // TODO: support for non-unique components
-
-                _tempArrayArgs.push_back({group.get().components[index].data.get(), group.get().entitiesCount});
-                _tempArgs.push_back(&_tempArrayArgs.back());
+                if (isFound)
+                {
+                    ASSUME(group.get().components[index].isUnique); // TODO: support for non-unique components
+                    _tempArrayArgs.push_back({group.get().components[index].data.get(), group.get().entitiesCount});
+                    _tempArgs.push_back(&_tempArrayArgs.back());
+                }
+                else
+                {
+                    ASSUME(arg.requirement == RequirementForComponent::Optional);
+                    _tempArgs.push_back(nullptr);
+                }
             }
 
             ASSUME(_tempArgs.size());
@@ -850,6 +859,13 @@ void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, System::Environ
 						break;
 					}
 				}
+
+                bool isFound = index < group.get().uniqueTypedComponentsCount;
+                if (isFound == false)
+                {
+                    ASSUME(arg.requirement == RequirementForComponent::Optional);
+                    continue;
+                }
 
 				auto &stored = group.get().components[index];
 				ASSUME(stored.isUnique); // TODO: support for non-unique components
@@ -888,7 +904,7 @@ void SystemsManagerST::UpdateECSFromMessages(MessageBuilder &messageBuilder)
     {
         auto it = _entitiesLocations.find(id);
         ASSUME(it != _entitiesLocations.end());
-        messageBuilder.EntityRemoved(id, it->second.group->archetype.ToShort());
+        messageBuilder.RemoveEntity(id, it->second.group->archetype.ToShort());
     }
 
     auto removeEntity = [this](ArchetypeGroup &group, ui32 index, optional<decltype(_entitiesLocations)::iterator> entityLocation)

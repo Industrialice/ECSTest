@@ -59,7 +59,7 @@ void SystemGameInfo::Update(Environment &env, MessageBuilder &messageBuilder)
     //printf("updating SystemGameInfo on thread %u\n", *(ui32 *)&threadId);
 
     auto id = env.idGenerator.Generate();
-    auto &builder = messageBuilder.EntityAdded(id);
+    auto &builder = messageBuilder.AddEntity(id);
 
     ComponentArtist artist;
     artist.area = ComponentArtist::Areas::Concept;
@@ -68,7 +68,7 @@ void SystemGameInfo::Update(Environment &env, MessageBuilder &messageBuilder)
     StableTypeId types[] = {ComponentArtist::GetTypeId()};
     Archetype archetype = Archetype::Create<StableTypeId>(ToArray(types));
 
-    messageBuilder.EntityRemoved(archetype, id);
+    messageBuilder.RemoveEntity(archetype, id);
 
     for (uiw index = 0; index < 10; ++index)
     {

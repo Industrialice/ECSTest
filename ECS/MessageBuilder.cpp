@@ -137,7 +137,7 @@ const vector<EntityID> &MessageBuilder::EntityRemovedNoArchetype()
     return _entityRemovedNoArchetype;
 }
 
-auto ECSTest::MessageBuilder::EntityAdded(EntityID entityID) -> ComponentArrayBuilder &
+auto ECSTest::MessageBuilder::AddEntity(EntityID entityID) -> ComponentArrayBuilder &
 {
     ASSUME(entityID.IsValid());
     Flush();
@@ -229,13 +229,13 @@ void MessageBuilder::ComponentRemoved(EntityID entityID, StableTypeId type, Comp
     entry->push_back({entityID, componentID});
 }
 
-void MessageBuilder::EntityRemoved(EntityID entityID)
+void MessageBuilder::RemoveEntity(EntityID entityID)
 {
     ASSUME(entityID.IsValid());
     _entityRemovedNoArchetype.push_back(entityID);
 }
 
-void MessageBuilder::EntityRemoved(EntityID entityID, Archetype archetype)
+void MessageBuilder::RemoveEntity(EntityID entityID, Archetype archetype)
 {
 	ASSUME(entityID.IsValid());
     auto &target = _entityRemovedStreams._data[archetype];

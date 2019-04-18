@@ -487,12 +487,12 @@ namespace ECSTest
             ComponentRemoved(entityID, T::GetTypeId(), id);
         }
         
-        ComponentArrayBuilder &EntityAdded(EntityID entityID); // archetype will be computed after all the components were added, you can ignore the returned value if you don't want to add any components
+        ComponentArrayBuilder &AddEntity(EntityID entityID); // archetype will be computed after all the components were added, you can ignore the returned value if you don't want to add any components
         void ComponentAdded(EntityID entityID, const SerializedComponent &sc);
         void ComponentChanged(EntityID entityID, const SerializedComponent &sc);
         void ComponentRemoved(EntityID entityID, StableTypeId type, ComponentID componentID);
-        void EntityRemoved(EntityID entityID);
-        void EntityRemoved(EntityID entityID, Archetype archetype);
+        void RemoveEntity(EntityID entityID);
+        void RemoveEntity(EntityID entityID, Archetype archetype);
     
 	private:
 		ComponentArrayBuilder _cab{};

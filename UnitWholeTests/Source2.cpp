@@ -36,7 +36,7 @@ INDIRECT_SYSTEM(GeneratorSystem)
         {
             GeneratedComponent c;
             c.value = 15;
-            env.messageBuilder.EntityAdded(env.idGenerator.Generate()).AddComponent(c);
+            env.messageBuilder.AddEntity(env.idGenerator.Generate()).AddComponent(c);
             c.value = 25;
             env.messageBuilder.ComponentChanged(env.idGenerator.LastGenerated(), c);
             --_leftToGenerate;
@@ -76,7 +76,7 @@ INDIRECT_SYSTEM(GeneratorSystem)
 
         if (_toEntityRemove.size())
         {
-            env.messageBuilder.EntityRemoved(_toEntityRemove.front());
+            env.messageBuilder.RemoveEntity(_toEntityRemove.front());
             _toEntityRemove.pop();
         }
     }
@@ -151,12 +151,12 @@ INDIRECT_SYSTEM(ConsumerSystem)
     virtual void OnCreate(Environment &env) override 
     {
         _infoID = env.idGenerator.Generate();
-        env.messageBuilder.EntityAdded(_infoID).AddComponent(_info);
+        env.messageBuilder.AddEntity(_infoID).AddComponent(_info);
     }
 
     virtual void OnDestroy(Environment &env) override
     {
-        env.messageBuilder.EntityRemoved(_infoID);
+        env.messageBuilder.RemoveEntity(_infoID);
     }
 
 private:

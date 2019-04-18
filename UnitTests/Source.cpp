@@ -259,7 +259,7 @@ public:
         for (ui32 index = 0; index < 10000; ++index)
         {
             {
-                auto &componentBuilder = builder.EntityAdded(gen.Generate());
+                auto &componentBuilder = builder.AddEntity(gen.Generate());
 
                 ComponentFirstName name = generateName();
                 entityNames[gen.LastGenerated()] = name;
@@ -278,7 +278,7 @@ public:
                     ComponentArtist::GetTypeId()
                 };
                 Archetype arch = Archetype::Create<StableTypeId>(ToArray(types));
-                builder.EntityRemoved(arch, gen.LastGenerated());
+                builder.RemoveEntity(arch, gen.LastGenerated());
                 auto [it, result] = entitiesRemoved.insert(gen.LastGenerated());
                 ASSUME(result);
             }

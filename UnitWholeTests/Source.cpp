@@ -107,7 +107,7 @@ void TestIndirectSystem1::Update(Environment &env, MessageBuilder &messageBuilde
 
     if (_entities.size() > 100)
     {
-        messageBuilder.EntityRemoved(_entities.back().first, _entities.back().second);
+        messageBuilder.RemoveEntity(_entities.back().first, _entities.back().second);
         _entities.pop_back();
     }
 }
@@ -134,7 +134,7 @@ void TestIndirectSystem2::Update(Environment &env, MessageBuilder &messageBuilde
 {
     if (_entitiesToAdd)
     {
-        auto &componentBuilder = messageBuilder.EntityAdded(env.idGenerator.Generate());
+        auto &componentBuilder = messageBuilder.AddEntity(env.idGenerator.Generate());
         TestComponent0 c0;
         c0.value = 10;
         TestComponent1 c1;
