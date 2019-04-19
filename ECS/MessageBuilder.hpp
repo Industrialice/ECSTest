@@ -421,7 +421,7 @@ namespace ECSTest
                 static_assert(false, "Passed value is not a component");
             }
 
-			template <typename T, typename = std::enable_if_t<T::IsUnique() == false>> ComponentArrayBuilder &AddComponent(const T &component, ComponentID id)
+            template <typename T, typename = std::enable_if_t<T::IsUnique() == false>> ComponentArrayBuilder &AddComponent(const T &component, ComponentID id = {})
             {
                 SerializedComponent sc;
                 sc.alignmentOf = alignof(T);
@@ -433,7 +433,7 @@ namespace ECSTest
                 return AddComponent(sc);
             }
 
-            template <typename T, typename = std::enable_if_t<std::is_base_of_v<Component, T> == false>, typename = void> ComponentArrayBuilder &AddComponent(const T &component, ComponentID id)
+            template <typename T, typename = std::enable_if_t<std::is_base_of_v<Component, T> == false>, typename = void> ComponentArrayBuilder &AddComponent(const T &component, ComponentID id = {})
             {
                 static_assert(false, "Passed value is not a component");
             }
@@ -456,7 +456,7 @@ namespace ECSTest
             static_assert(false, "Passed value is not a component");
         }
 
-        template <typename T, typename = std::enable_if_t<T::IsUnique() == false>> void AddComponent(EntityID entityID, const T &component, ComponentID id)
+        template <typename T, typename = std::enable_if_t<T::IsUnique() == false>> void AddComponent(EntityID entityID, const T &component, ComponentID id = {})
         {
             SerializedComponent sc;
             sc.alignmentOf = alignof(T);
@@ -468,7 +468,7 @@ namespace ECSTest
             AddComponent(entityID, sc);
         }
 
-        template <typename T, typename = std::enable_if_t<std::is_base_of_v<Component, T> == false>, typename = void> void AddComponent(EntityID entityID, const T &component, ComponentID id)
+        template <typename T, typename = std::enable_if_t<std::is_base_of_v<Component, T> == false>, typename = void> void AddComponent(EntityID entityID, const T &component, ComponentID id = {})
         {
             static_assert(false, "Passed value is not a component");
         }

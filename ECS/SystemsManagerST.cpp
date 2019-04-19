@@ -311,7 +311,10 @@ static void AssignComponentIDs(Array<SerializedComponent> components, ComponentI
 	{
 		if (!component.isUnique)
 		{
-			component.id = idGenerator.Generate();
+            if (component.id.IsValid() == false)
+            {
+                component.id = idGenerator.Generate();
+            }
 		}
 		else
 		{
