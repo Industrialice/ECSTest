@@ -14,7 +14,7 @@ namespace ECSTest
 
 	public:
         EntityID() = default;
-		EntityID(ui32 id);
+        explicit EntityID(ui32 id);
 		[[nodiscard]] ui32 Hash() const;
 		[[nodiscard]] bool operator == (const EntityID &other) const;
 		[[nodiscard]] bool operator != (const EntityID &other) const;

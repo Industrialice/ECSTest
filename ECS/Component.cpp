@@ -33,14 +33,14 @@ bool ComponentID::operator < (const ComponentID &other) const
 
 ComponentID ComponentIDGenerator::Generate()
 {
-    ComponentID id = _current.load();
+    auto id = ComponentID(_current.load());
     _current.fetch_add(1);
     return id;
 }
 
 ComponentID ComponentIDGenerator::LastGenerated() const
 {
-    return _current.load() - 1;
+    return ComponentID(_current.load() - 1);
 }
 
 ComponentIDGenerator::ComponentIDGenerator(ComponentIDGenerator &&source) : _current(source._current.load())

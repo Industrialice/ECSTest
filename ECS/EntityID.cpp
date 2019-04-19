@@ -34,14 +34,14 @@ bool EntityID::IsValid() const
 
 EntityID EntityIDGenerator::Generate()
 {
-    EntityID id = _current.load();
+    auto id = EntityID(_current.load());
     _current.fetch_add(1);
     return id;
 }
 
 EntityID EntityIDGenerator::LastGenerated() const
 {
-    return _current.load() - 1;
+    return EntityID(_current.load() - 1);
 }
 
 EntityIDGenerator::EntityIDGenerator(EntityIDGenerator &&source) : _current{source._current.load()}

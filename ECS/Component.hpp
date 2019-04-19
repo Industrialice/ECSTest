@@ -29,7 +29,7 @@ namespace ECSTest
 
 	public:
 		ComponentID() = default;
-        ComponentID(ui32 id);
+        explicit ComponentID(ui32 id);
         ui32 ID() const;
         bool IsValid() const;
         bool operator == (const ComponentID &other) const;

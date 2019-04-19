@@ -47,6 +47,7 @@ NONUNIQUE_COMPONENT(TagComponent)
     };
 
     ConnectedTo connectedTo;
+    optional<ComponentID> id;
 };
 
 INDIRECT_SYSTEM(GeneratorSystem)
@@ -64,10 +65,18 @@ INDIRECT_SYSTEM(GeneratorSystem)
                 {
                     TagComponent tag;
                     tag.connectedTo = (TagComponent::ConnectedTo)(rand() % 4);
-                    builder.AddComponent(tag, env.componentIdGenerator.Generate());
-                    ++_info.tagComponentsGenerated;
+                    if (rand() % 2)
+                    {
+                        tag.id = env.componentIdGenerator.Generate();
+                        builder.AddComponent(tag, *tag.id);
+                        _info.tagIDHash ^= Hash::Integer((ui64)tag.id->ID());
+                    }
+                    else
+                    {
+                        builder.AddComponent(tag);
+                    }
                     _info.tagConnectionHash ^= Hash::Integer((ui64)tag.connectedTo);
-                    _info.tagIDHash ^= Hash::Integer((ui64)env.componentIdGenerator.LastGenerated().ID());
+                    ++_info.tagComponentsGenerated;
                 }
                 c.value = 25;
                 env.messageBuilder.ComponentChanged(env.entityIdGenerator.LastGenerated(), c);
@@ -243,7 +252,7 @@ void ConsumerSystem::ProcessMessages(const MessageStreamEntityAdded &stream)
                 auto &t = attached.Cast<TagComponent>();
                 _info.tagConnectionHash ^= Hash::Integer((ui64)t.connectedTo);
 
-                _info.tagIDHash ^= Hash::Integer((ui64)attached.id.ID());
+                _info.tagIDHash ^= Hash::Integer((ui64)t.id.value_or(ComponentID(0)).ID());
             }
             else if (attached.type == GeneratedComponent::GetTypeId())
             {

@@ -49,9 +49,14 @@ void TestIndirectSystem0::ProcessMessages(const MessageStreamEntityAdded &stream
     }
 }
 
+void TestIndirectSystem0::ProcessMessages(const MessageStreamComponentAdded &stream)
+{}
+
 void TestIndirectSystem0::ProcessMessages(const MessageStreamComponentChanged &stream)
-{
-}
+{}
+
+void TestIndirectSystem0::ProcessMessages(const MessageStreamComponentRemoved &stream)
+{}
 
 void TestIndirectSystem0::ProcessMessages(const MessageStreamEntityRemoved &stream)
 {
@@ -61,7 +66,7 @@ void TestIndirectSystem0::ProcessMessages(const MessageStreamEntityRemoved &stre
     }
 }
 
-void TestIndirectSystem0::Update(Environment &env, MessageBuilder &messageBuilder)
+void TestIndirectSystem0::Update(Environment &env)
 {
     if (_entities.empty())
     {
@@ -70,7 +75,7 @@ void TestIndirectSystem0::Update(Environment &env, MessageBuilder &messageBuilde
 
     TestComponent0 c;
     c.value = 1;
-    messageBuilder.ComponentChanged(*_entities.begin(), c);
+    env.messageBuilder.ComponentChanged(*_entities.begin(), c);
     _entities.erase(_entities.begin());
 }
 
@@ -91,13 +96,19 @@ void TestIndirectSystem1::ProcessMessages(const MessageStreamEntityAdded &stream
     }
 }
 
+void TestIndirectSystem1::ProcessMessages(const MessageStreamComponentAdded &stream)
+{}
+
 void TestIndirectSystem1::ProcessMessages(const MessageStreamComponentChanged &stream)
+{}
+
+void TestIndirectSystem1::ProcessMessages(const MessageStreamComponentRemoved &stream)
 {}
 
 void TestIndirectSystem1::ProcessMessages(const MessageStreamEntityRemoved &stream)
 {}
 
-void TestIndirectSystem1::Update(Environment &env, MessageBuilder &messageBuilder)
+void TestIndirectSystem1::Update(Environment &env)
 {
     if (_isFirstUpdate)
     {
@@ -107,7 +118,7 @@ void TestIndirectSystem1::Update(Environment &env, MessageBuilder &messageBuilde
 
     if (_entities.size() > 100)
     {
-        messageBuilder.RemoveEntity(_entities.back().first, _entities.back().second);
+        env.messageBuilder.RemoveEntity(_entities.back().second, _entities.back().first);
         _entities.pop_back();
     }
 }
@@ -124,17 +135,23 @@ private:
 void TestIndirectSystem2::ProcessMessages(const MessageStreamEntityAdded &stream)
 {}
 
+void TestIndirectSystem2::ProcessMessages(const MessageStreamComponentAdded &stream)
+{}
+
 void TestIndirectSystem2::ProcessMessages(const MessageStreamComponentChanged &stream)
+{}
+
+void TestIndirectSystem2::ProcessMessages(const MessageStreamComponentRemoved &stream)
 {}
 
 void TestIndirectSystem2::ProcessMessages(const MessageStreamEntityRemoved &stream)
 {}
 
-void TestIndirectSystem2::Update(Environment &env, MessageBuilder &messageBuilder)
+void TestIndirectSystem2::Update(Environment &env)
 {
     if (_entitiesToAdd)
     {
-        auto &componentBuilder = messageBuilder.AddEntity(env.entityIdGenerator.Generate());
+        auto &componentBuilder = env.messageBuilder.AddEntity(env.entityIdGenerator.Generate());
         TestComponent0 c0;
         c0.value = 10;
         TestComponent1 c1;
@@ -168,6 +185,9 @@ void MonitoringSystem::ProcessMessages(const MessageStreamEntityAdded &stream)
     }
 }
 
+void MonitoringSystem::ProcessMessages(const MessageStreamComponentAdded &stream)
+{}
+
 void MonitoringSystem::ProcessMessages(const MessageStreamComponentChanged &stream)
 {
     for (auto &entry : stream)
@@ -192,6 +212,9 @@ void MonitoringSystem::ProcessMessages(const MessageStreamComponentChanged &stre
     }
 }
 
+void MonitoringSystem::ProcessMessages(const MessageStreamComponentRemoved &stream)
+{}
+
 void MonitoringSystem::ProcessMessages(const MessageStreamEntityRemoved &stream)
 {
     for (auto &entry : stream)
@@ -200,7 +223,7 @@ void MonitoringSystem::ProcessMessages(const MessageStreamEntityRemoved &stream)
     }
 }
 
-void MonitoringSystem::Update(Environment &env, MessageBuilder &messageBuilder)
+void MonitoringSystem::Update(Environment &env)
 {
 }
 
@@ -329,9 +352,9 @@ static void PrintStreamInfo(EntitiesStream &stream, bool isFirstPass)
     ASSUME(test2Count == 25 + 10);
 
     ASSUME(MonitoringStats::receivedEntityAddedCount == 200);
-    ASSUME(MonitoringStats::receivedEntityRemovedCount == 0);
-    ASSUME(MonitoringStats::receivedComponentChangedCount == 75);
-    ASSUME(MonitoringStats::receivedTest0ChangedCount == 75);
+    ASSUME(MonitoringStats::receivedEntityRemovedCount == 50);
+    ASSUME(MonitoringStats::receivedComponentChangedCount == 125);
+    ASSUME(MonitoringStats::receivedTest0ChangedCount == 125);
     ASSUME(MonitoringStats::receivedTest1ChangedCount == 0);
     ASSUME(MonitoringStats::receivedTest2ChangedCount == 0);
 

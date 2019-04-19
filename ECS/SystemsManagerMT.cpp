@@ -344,7 +344,7 @@ static void StreamedToSerialized(Array<const EntitiesStream::ComponentDesc> stre
 
         t.alignmentOf = s.alignmentOf;
         t.data = s.data;
-        t.id = 0;
+        t.id = {};
         t.isUnique = s.isUnique;
         t.sizeOf = s.sizeOf;
         t.type = s.type;
