@@ -37,6 +37,7 @@
   <ItemGroup>
     <ClCompile Include="Archetype.cpp" />
     <ClCompile Include="ArchetypeReflector.cpp" />
+    <ClCompile Include="Component.cpp" />
     <ClCompile Include="EntityID.cpp" />
     <ClCompile Include="MessageBuilder.cpp" />
     <ClCompile Include="PreHeader.cpp">

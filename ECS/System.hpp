@@ -13,7 +13,8 @@ namespace ECSTest
 			const f32 timeSinceLastFrame;
             const ui32 frameNumber;
 			const TimeDifference timeSinceStarted;
-            EntityIDGenerator &idGenerator;
+            EntityIDGenerator &entityIdGenerator;
+            ComponentIDGenerator &componentIdGenerator;
             MessageBuilder messageBuilder;
         };
 

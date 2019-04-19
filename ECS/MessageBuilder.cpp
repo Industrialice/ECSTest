@@ -146,8 +146,10 @@ auto ECSTest::MessageBuilder::AddEntity(EntityID entityID) -> ComponentArrayBuil
     return _cab;
 }
 
-void MessageBuilder::ComponentAdded(EntityID entityID, const SerializedComponent &sc)
+void MessageBuilder::AddComponent(EntityID entityID, const SerializedComponent &sc)
 {
+    ASSUME(sc.isUnique != sc.id.IsValid());
+
     auto &entry = _componentAddedStreams._data[sc.type];
     if (!entry)
     {
@@ -184,6 +186,8 @@ void MessageBuilder::ComponentAdded(EntityID entityID, const SerializedComponent
 
 void MessageBuilder::ComponentChanged(EntityID entityID, const SerializedComponent &sc)
 {
+    ASSUME(sc.isUnique != sc.id.IsValid());
+
     auto &entry = _componentChangedStreams._data[sc.type];
     if (!entry)
     {
@@ -218,7 +222,7 @@ void MessageBuilder::ComponentChanged(EntityID entityID, const SerializedCompone
     added.data = entry->data.get() + copyIndex;
 }
 
-void MessageBuilder::ComponentRemoved(EntityID entityID, StableTypeId type, ComponentID componentID)
+void MessageBuilder::RemoveComponent(EntityID entityID, StableTypeId type, ComponentID componentID)
 {
     auto &entry = _componentRemovedStreams._data[type];
     if (!entry)

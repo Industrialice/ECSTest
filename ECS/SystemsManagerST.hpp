@@ -114,8 +114,6 @@ namespace ECSTest
 		// stores Systems within their pipelines, used by the manager to iterate through the systems
 		vector<Pipeline> _pipelines{};
 
-		ui32 _lastComponentId = {0};
-
 		ArchetypeReflector _archetypeReflector{};
 
 		std::atomic<bool> _isStoppingExecution{false};
@@ -128,7 +126,8 @@ namespace ECSTest
 		std::mutex _schedulerPausedMutex{};
 		std::condition_variable _schedulerPausedNotifier{};
 
-		EntityIDGenerator _idGenerator{};
+		EntityIDGenerator _entityIdGenerator{};
+        ComponentIDGenerator _componentIdGenerator{};
 
         TimeDifference _timeSinceStart{0_ms};
         TimeMoment _currentTime{};

@@ -349,22 +349,22 @@ static ArchetypeFull ComputeArchetype(Array<const SerializedComponent> component
 {
     for (const auto &component : components)
     {
-        ASSUME(component.isUnique || component.id.ID() != 0);
+        ASSUME(component.isUnique || component.id.IsValid());
     }
     return ArchetypeFull::Create<SerializedComponent, &SerializedComponent::type, &SerializedComponent::id>(components);
 }
 
-static void AssignComponentIDs(Array<SerializedComponent> components, std::atomic<ui32> &lastComponentId)
+static void AssignComponentIDs(Array<SerializedComponent> components, ComponentIDGenerator &idGenerator)
 {
     for (auto &component : components)
     {
         if (!component.isUnique)
         {
-            component.id = ++lastComponentId;
+            component.id = idGenerator.Generate();
         }
         else
         {
-            ASSUME(component.id.ID() == 0);
+            ASSUME(component.id.IsValid() == false);
         }
     }
 }
@@ -390,7 +390,7 @@ void SystemsManagerMT::Start(EntityIDGenerator &&idGenerator, vector<WorkerThrea
         }
     }
 
-    _idGenerator = move(idGenerator);
+    _entityIdGenerator = move(idGenerator);
 
     _isStoppingExecution = false;
     _isPausedExecution = false;
@@ -450,7 +450,8 @@ void SystemsManagerMT::Stop(bool isWaitForStop)
     //_archetypeGroupsComponents = {};
     std::exchange(_archetypeGroupsFull, {});
     _archetypeReflector = {};
-    _lastComponentId = 0;
+    _entityIdGenerator = {};
+    _componentIdGenerator = {};
     std::exchange(_workerThreads, {});
 }
 
@@ -644,7 +645,7 @@ void SystemsManagerMT::StartScheduler(vector<unique_ptr<EntitiesStream>> &&strea
         while (auto entity = stream->Next())
         {
             StreamedToSerialized(entity->components, serialized);
-            AssignComponentIDs(ToArray(serialized), _lastComponentId);
+            AssignComponentIDs(ToArray(serialized), _componentIdGenerator);
             ArchetypeFull entityArchetype = ComputeArchetype(ToArray(serialized));
             ArchetypeGroup &archetypeGroup = FindArchetypeGroup(entityArchetype, ToArray(serialized));
             AddEntityToArchetypeGroup(entityArchetype, archetypeGroup, entity->entityId, ToArray(serialized), &messageBulder);
@@ -906,7 +907,9 @@ void SystemsManagerMT::ExecutePipeline(Pipeline &pipeline)
 			0,
             0,
 			0_ms,
-            _idGenerator
+            _entityIdGenerator,
+            _componentIdGenerator,
+            MessageBuilder()
         };
 
         auto messageQueueLock = managed.messageQueueLock.Lock(DIWRSpinLock::LockType::Exclusive);

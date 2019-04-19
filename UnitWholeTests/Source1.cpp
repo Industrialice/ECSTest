@@ -11,7 +11,7 @@ using namespace ECSTest;
 namespace
 {
     constexpr ui32 EntitiesToTest = 100;
-	constexpr bool IsUseDirectForFalling = true;
+	constexpr bool IsUseDirectForFalling = false;
     constexpr bool IsPreGenerateTransform = false;
     constexpr bool IsMultiThreadedECS = false;
 }
@@ -64,12 +64,12 @@ INDIRECT_SYSTEM(TransformGeneratorSystem)
         {
             Transform t;
             t.position = GeneratePosition();
-            env.messageBuilder.ComponentAdded(id, t);
+            env.messageBuilder.AddComponent(id, t);
             if (rand() % 2)
             {
                 SpeedOfFall speed;
                 speed.speed = rand() % 25;
-                env.messageBuilder.ComponentAdded(id, speed);
+                env.messageBuilder.AddComponent(id, speed);
             }
         }
         _entitiesToGenerate.clear();
@@ -122,7 +122,7 @@ INDIRECT_SYSTEM(TransformHeightFixerSystem)
 
                 NegativeHeightCooldown cooldown;
                 cooldown.cooldown = 0.1f;
-                env.messageBuilder.ComponentAdded(it->first, cooldown);
+                env.messageBuilder.AddComponent(it->first, cooldown);
                 _entitiesWithCooldown.insert(it->first);
 
                 it = _entitiesToFix.erase(it);
@@ -139,7 +139,7 @@ INDIRECT_SYSTEM(TransformHeightFixerSystem)
     virtual void OnCreate(Environment &env) override
     {
         ASSUME(_infoId.IsValid() == false);
-        _infoId = env.idGenerator.Generate();
+        _infoId = env.entityIdGenerator.Generate();
         env.messageBuilder.AddEntity(_infoId).AddComponent(_info);
     }
 
@@ -389,7 +389,7 @@ INDIRECT_SYSTEM(AverageHeightAnalyzerSystem)
         AverageHeight h;
         h.height = 0;
         h.sources = 0;
-        _entityID = env.idGenerator.Generate();
+        _entityID = env.entityIdGenerator.Generate();
         env.messageBuilder.AddEntity(_entityID).AddComponent(h);
     }
 
@@ -464,7 +464,7 @@ INDIRECT_SYSTEM(CooldownUpdater)
             component.cooldown -= env.timeSinceLastFrame;
             if (component.cooldown <= 0)
             {
-                env.messageBuilder.ComponentRemoved(id, component);
+                env.messageBuilder.RemoveComponent(id, component);
                 it = _cooldowns.erase(it);
             }
             else
@@ -574,7 +574,7 @@ template <typename T> void StreamComponent(const T &component, TestEntities::Pre
     preStreamed.descs.emplace_back(desc);
 }
 
-static void GenerateScene(EntityIDGenerator &idGenerator, SystemsManager &manager, TestEntities &stream)
+static void GenerateScene(EntityIDGenerator &entityIdGenerator, SystemsManager &manager, TestEntities &stream)
 {
     for (uiw index = 0; index < EntitiesToTest; ++index)
     {
@@ -585,6 +585,12 @@ static void GenerateScene(EntityIDGenerator &idGenerator, SystemsManager &manage
             Transform t;
             t.position = GeneratePosition();
             StreamComponent(t, entity);
+            if (rand() % 2)
+            {
+                SpeedOfFall speed;
+                speed.speed = rand() % 25;
+                StreamComponent(speed, entity);
+            }
         }
 
 		string name = "Entity"s + std::to_string(index);
@@ -592,7 +598,7 @@ static void GenerateScene(EntityIDGenerator &idGenerator, SystemsManager &manage
 		strcpy_s(n.name.data(), n.name.size(), name.c_str());
 		StreamComponent(n, entity);
 
-        stream.AddEntity(idGenerator.Generate(), move(entity));
+        stream.AddEntity(entityIdGenerator.Generate(), move(entity));
     }
 }
 
@@ -654,9 +660,9 @@ int main()
     
     auto stream = make_unique<TestEntities>();
     auto manager = SystemsManager::New(IsMultiThreadedECS);
-    EntityIDGenerator idGenerator;
+    EntityIDGenerator entityIdGenerator;
 
-    GenerateScene(idGenerator, *manager, *stream);
+    GenerateScene(entityIdGenerator, *manager, *stream);
 
     auto testPipelineGroup0 = manager->CreatePipelineGroup(5_ms, false);
     auto testPipelineGroup1 = manager->CreatePipelineGroup(6.5_ms, false);
@@ -682,7 +688,7 @@ int main()
 
     vector<unique_ptr<EntitiesStream>> streams;
     streams.push_back(move(stream));
-    manager->Start(move(idGenerator), move(workers), move(streams));
+    manager->Start(move(entityIdGenerator), move(workers), move(streams));
 
     std::this_thread::sleep_for(2000ms);
 

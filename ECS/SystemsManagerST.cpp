@@ -285,22 +285,22 @@ static ArchetypeFull ComputeArchetype(Array<const SerializedComponent> component
 {
 	for (const auto &component : components)
 	{
-		ASSUME(component.isUnique || component.id.ID() != 0);
+		ASSUME(component.isUnique || component.id.IsValid());
 	}
 	return ArchetypeFull::Create<SerializedComponent, &SerializedComponent::type, &SerializedComponent::id>(components);
 }
 
-static void AssignComponentIDs(Array<SerializedComponent> components, ui32 &lastComponentId)
+static void AssignComponentIDs(Array<SerializedComponent> components, ComponentIDGenerator &idGenerator)
 {
 	for (auto &component : components)
 	{
 		if (!component.isUnique)
 		{
-			component.id = ++lastComponentId;
+			component.id = idGenerator.Generate();
 		}
 		else
 		{
-			ASSUME(component.id.ID() == 0);
+			ASSUME(component.id.IsValid() == false);
 		}
 	}
 }
@@ -315,7 +315,7 @@ void SystemsManagerST::Start(EntityIDGenerator &&idGenerator, vector<WorkerThrea
 		workers.clear();
 	}
 
-	_idGenerator = move(idGenerator);
+	_entityIdGenerator = move(idGenerator);
 
 	_isStoppingExecution = false;
 	_isPausedExecution = false;
@@ -375,7 +375,8 @@ void SystemsManagerST::Stop(bool isWaitForStop)
 	//_archetypeGroupsComponents = {};
 	std::exchange(_archetypeGroupsFull, {});
 	_archetypeReflector = {};
-	_lastComponentId = 0;
+    _entityIdGenerator = {};
+    _componentIdGenerator = {};
 }
 
 bool SystemsManagerST::IsRunning() const
@@ -462,7 +463,7 @@ auto SystemsManagerST::AddNewArchetypeGroup(const ArchetypeFull &archetype, Arra
 		{
 			uiw allocSize = sizeof(ComponentID) * componentArray.stride * group.reservedCount;
 			componentArray.ids.reset((ComponentID *)malloc(allocSize));
-			memset(componentArray.ids.get(), 0x0, allocSize);
+			memset(componentArray.ids.get(), ComponentID::invalidId, allocSize);
 		}
 	}
 
@@ -495,7 +496,7 @@ void SystemsManagerST::AddEntityToArchetypeGroup(const ArchetypeFull &archetype,
 				ComponentID *oldUPtr = componentArray.ids.release();
 				ComponentID *newUPtr = (ComponentID *)realloc(oldUPtr, sizeof(ComponentID) * componentArray.stride * group.reservedCount);
 				componentArray.ids.reset(newUPtr);
-				memset(newUPtr + componentArray.stride * group.entitiesCount, 0x0, (group.reservedCount - group.entitiesCount) * sizeof(ComponentID) * componentArray.stride);
+				memset(newUPtr + componentArray.stride * group.entitiesCount, ComponentID::invalidId, (group.reservedCount - group.entitiesCount) * sizeof(ComponentID) * componentArray.stride);
 			}
 		}
 
@@ -525,6 +526,9 @@ void SystemsManagerST::AddEntityToArchetypeGroup(const ArchetypeFull &archetype,
 		uiw offset = 0;
 		if (!componentArray.isUnique)
 		{
+            ASSUME(component.isUnique == false);
+            ASSUME(component.id.IsValid());
+
 			for (; ; ++offset)
 			{
 				ASSUME(offset < componentArray.stride);
@@ -535,6 +539,11 @@ void SystemsManagerST::AddEntityToArchetypeGroup(const ArchetypeFull &archetype,
 			}
 			componentArray.ids[componentArray.stride * group.entitiesCount + offset] = component.id;
 		}
+        else
+        {
+            ASSUME(component.isUnique == true);
+            ASSUME(component.id.IsValid() == false);
+        }
 
 		memcpy(componentArray.data.get() + componentArray.sizeOf * componentArray.stride * group.entitiesCount + offset * componentArray.sizeOf, component.data, componentArray.sizeOf);
 
@@ -562,7 +571,7 @@ void SystemsManagerST::StartScheduler(vector<unique_ptr<EntitiesStream>> &&strea
 		while (auto entity = stream->Next())
 		{
 			StreamedToSerialized(entity->components, serialized);
-			AssignComponentIDs(ToArray(serialized), _lastComponentId);
+			AssignComponentIDs(ToArray(serialized), _componentIdGenerator);
 			ArchetypeFull entityArchetype = ComputeArchetype(ToArray(serialized));
 			ArchetypeGroup &archetypeGroup = FindArchetypeGroup(entityArchetype, ToArray(serialized));
 			AddEntityToArchetypeGroup(entityArchetype, archetypeGroup, entity->entityId, ToArray(serialized), &messageBulder);
@@ -667,7 +676,8 @@ void SystemsManagerST::SchedulerLoop()
 			timeSinceLastFrame.ToSec(),
 			pipeline.executionFrame,
 			_timeSinceStart,
-			_idGenerator,
+			_entityIdGenerator,
+            _componentIdGenerator,
             MessageBuilder()
 		};
 
@@ -885,6 +895,7 @@ void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, System::Environ
 						if (stored.isUnique == false)
 						{
 							serialized.id = stored.ids[component * stored.stride + stride];
+                            ASSUME(serialized.id.IsValid());
 						}
 
 						env.messageBuilder.ComponentChanged(entityID, serialized);
@@ -953,35 +964,36 @@ void SystemsManagerST::UpdateECSFromMessages(MessageBuilder &messageBuilder)
         }
     };
 
-    auto addOrRemoveComponent = [this, removeEntity](EntityID entityID, StableTypeId typeToIgnore, ComponentID componentIDToIgnore, optional<SerializedComponent> componentToAdd)
+    auto addOrRemoveComponent = [this, removeEntity](EntityID entityID, StableTypeId typeToRemove, ComponentID componentIDToRemove, optional<SerializedComponent> componentToAdd)
     {
         auto entityLocation = _entitiesLocations.find(entityID);
         ASSUME(entityLocation != _entitiesLocations.end());
 
-        auto[group, index] = entityLocation->second;
+        auto[group, indexInGroup] = entityLocation->second;
 
         _tempComponents.clear();
 
         // collect the current components
-        for (ui32 componentIndex = 0; componentIndex < group->uniqueTypedComponentsCount; ++componentIndex)
+        for (ui32 componentTypeIndex = 0; componentTypeIndex < group->uniqueTypedComponentsCount; ++componentTypeIndex)
         {
-            auto &row = group->components[componentIndex];
+            auto &row = group->components[componentTypeIndex];
             for (ui32 nonUniqueIndex = 0; nonUniqueIndex < row.stride; ++nonUniqueIndex)
             {
                 SerializedComponent serialized;
                 if (row.isUnique == false)
                 {
-                    serialized.id = row.ids[componentIndex * row.stride + nonUniqueIndex];
+                    serialized.id = row.ids[indexInGroup * row.stride + nonUniqueIndex];
+                    ASSUME(serialized.id.IsValid());
                 }
                 serialized.type = row.type;
-                if (serialized.id == componentIDToIgnore && serialized.type == typeToIgnore)
+                if (serialized.id == componentIDToRemove && serialized.type == typeToRemove)
                 {
                     continue;
                 }
                 serialized.alignmentOf = row.alignmentOf;
                 serialized.isUnique = row.isUnique;
                 serialized.sizeOf = row.sizeOf;
-                serialized.data = row.data.get() + row.sizeOf * componentIndex * row.stride + row.sizeOf * nonUniqueIndex;
+                serialized.data = row.data.get() + row.sizeOf * indexInGroup * row.stride + row.sizeOf * nonUniqueIndex;
                 _tempComponents.push_back(serialized);
             }
         }
@@ -1006,7 +1018,7 @@ void SystemsManagerST::UpdateECSFromMessages(MessageBuilder &messageBuilder)
 
         AddEntityToArchetypeGroup(archetype, *newGroup, entityID, ToArray(_tempComponents), nullptr);
 
-        removeEntity(*group, index, nullopt);
+        removeEntity(*group, indexInGroup, nullopt);
     };
 
     // update the ECS using the received messages
@@ -1015,7 +1027,7 @@ void SystemsManagerST::UpdateECSFromMessages(MessageBuilder &messageBuilder)
     {
         for (auto &entity : *stream)
         {
-            AssignComponentIDs(ToArray(entity.components), _lastComponentId);
+            AssignComponentIDs(ToArray(entity.components), _componentIdGenerator);
 
             ArchetypeFull archetype = ComputeArchetype(ToArray(entity.components));
 

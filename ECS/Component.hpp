@@ -3,10 +3,10 @@
 #include <TypeIdentifiable.hpp>
 
 #ifdef USE_ID_NAMES
-    #define IDINPUT <bool isUnique, ui64 stableId, ui64 encoded0, ui64 encoded1, ui64 encoded2>
+    #define IDINPUT , ui64 encoded0, ui64 encoded1, ui64 encoded2
     #define IDOUTPUT <stableId, encoded0, encoded1, encoded2>
 #else
-    #define IDINPUT <bool isUnique, ui64 stableId>
+    #define IDINPUT
     #define IDOUTPUT <stableId>
 #endif
 
@@ -21,45 +21,40 @@ namespace ECSTest
 
 	class ComponentID
 	{
-		ui32 _id = 0;
+    public:
+        static constexpr ui32 invalidId = ui32_max;
+
+    private:
+		ui32 _id = invalidId;
 
 	public:
 		ComponentID() = default;
-
-		ComponentID(ui32 id) : _id(id)
-		{}
-		
-		ui32 ID() const
-		{
-			return _id;
-		}
-
-		bool IsValid() const
-		{
-			return _id != 0;
-		}
-
-		bool operator == (const ComponentID &other) const
-		{
-			return _id == other._id;
-		}
-
-		bool operator != (const ComponentID &other) const
-		{
-			return _id != other._id;
-		}
-
-		bool operator < (const ComponentID &other) const
-		{
-			return _id < other._id;
-		}
+        ComponentID(ui32 id);
+        ui32 ID() const;
+        bool IsValid() const;
+        bool operator == (const ComponentID &other) const;
+        bool operator != (const ComponentID &other) const;
+        bool operator < (const ComponentID &other) const;
 	};
+
+    class ComponentIDGenerator
+    {
+    protected:
+        std::atomic<ui32> _current = 0;
+
+    public:
+        ComponentID Generate();
+        ComponentID LastGenerated() const;
+        ComponentIDGenerator() = default;
+        ComponentIDGenerator(ComponentIDGenerator &&source);
+        ComponentIDGenerator &operator = (ComponentIDGenerator &&source);
+    };
 
     class Component
     {
     };
 
-    template IDINPUT class EMPTY_BASES _BaseComponent : public Component, public StableTypeIdentifiable IDOUTPUT
+    template <bool isUnique, ui64 stableId IDINPUT> class EMPTY_BASES _BaseComponent : public Component, public StableTypeIdentifiable IDOUTPUT
     {
     public:
         using StableTypeIdentifiable IDOUTPUT ::GetTypeId;
@@ -90,6 +85,17 @@ namespace ECSTest
 	{
 		using ComponentType = T;
 	};
+}
+
+namespace std
+{
+    template <> struct hash<ECSTest::ComponentID>
+    {
+        [[nodiscard]] size_t operator()(const ECSTest::ComponentID &value) const
+        {
+            return value.ID();
+        }
+    };
 }
 
 #undef IDINPUT

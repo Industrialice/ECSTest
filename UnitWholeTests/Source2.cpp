@@ -28,6 +28,16 @@ COMPONENT(ConsumerInfoComponent)
     ui32 componentRemoved = 0;
 };
 
+NONUNIQUE_COMPONENT(TagComponent)
+{
+    enum class ConnectedTo
+    {
+        Russia, Germany, China, Netherlands
+    };
+
+    ConnectedTo connectedTo;
+};
+
 INDIRECT_SYSTEM(GeneratorSystem)
 {
     INDIRECT_ACCEPT_COMPONENTS(SubtractiveComponent<GeneratedComponent>, SubtractiveComponent<ConsumerInfoComponent>)
@@ -36,11 +46,17 @@ INDIRECT_SYSTEM(GeneratorSystem)
         {
             GeneratedComponent c;
             c.value = 15;
-            env.messageBuilder.AddEntity(env.idGenerator.Generate()).AddComponent(c);
+            auto &builder = env.messageBuilder.AddEntity(env.entityIdGenerator.Generate()).AddComponent(c);
+            for (i32 index = 0, count = rand() % 3; index < count; ++index)
+            {
+                TagComponent tag;
+                tag.connectedTo = (TagComponent::ConnectedTo)(rand() % 4);
+                builder.AddComponent(tag, env.componentIdGenerator.Generate());
+            }
             c.value = 25;
-            env.messageBuilder.ComponentChanged(env.idGenerator.LastGenerated(), c);
+            env.messageBuilder.ComponentChanged(env.entityIdGenerator.LastGenerated(), c);
             --_leftToGenerate;
-            _toComponentChange.push(env.idGenerator.LastGenerated());
+            _toComponentChange.push(env.entityIdGenerator.LastGenerated());
             
             if (!_pipeline.Advance())
             {
@@ -64,7 +80,7 @@ INDIRECT_SYSTEM(GeneratorSystem)
 
         if (_toComponentRemove.size())
         {
-            env.messageBuilder.ComponentRemoved(_toComponentRemove.front(), GeneratedComponent{});
+            env.messageBuilder.RemoveComponent(_toComponentRemove.front(), GeneratedComponent{});
             _toEntityRemove.push(_toComponentRemove.front());
             _toComponentRemove.pop();
 
@@ -139,7 +155,7 @@ void GeneratorSystem::ProcessMessages(const MessageStreamEntityRemoved &stream)
 
 INDIRECT_SYSTEM(ConsumerSystem)
 {
-    INDIRECT_ACCEPT_COMPONENTS(Array<GeneratedComponent> &)
+    INDIRECT_ACCEPT_COMPONENTS(Array<GeneratedComponent> &, Array<TagComponent> *tags)
     {
         if (MemOps::Compare(&_info, &_infoPassed, sizeof(_infoPassed)))
         {
@@ -150,7 +166,7 @@ INDIRECT_SYSTEM(ConsumerSystem)
 
     virtual void OnCreate(Environment &env) override 
     {
-        _infoID = env.idGenerator.Generate();
+        _infoID = env.entityIdGenerator.Generate();
         env.messageBuilder.AddEntity(_infoID).AddComponent(_info);
     }
 
@@ -175,10 +191,23 @@ void ConsumerSystem::ProcessMessages(const MessageStreamEntityAdded &stream)
 {
     for (auto &entity : stream)
     {
-        if (auto c = entity.FindComponent<GeneratedComponent>(); c)
+        auto c = entity.FindComponent<GeneratedComponent>();
+        ASSUME(c);
+        ++_info.entityAdded;
+        ASSUME(c->value == 15);
+
+        for (auto &attached : entity.components)
         {
-            ++_info.entityAdded;
-            ASSUME(c->value == 15);
+            if (attached.type == TagComponent::GetTypeId())
+            {
+                ASSUME(attached.id.IsValid());
+                ASSUME(attached.isUnique == false);
+            }
+            else if (attached.type == GeneratedComponent::GetTypeId())
+            {
+                ASSUME(attached.id.IsValid() == false);
+                ASSUME(attached.isUnique == true);
+            }
         }
     }
 }
@@ -190,7 +219,10 @@ void ConsumerSystem::ProcessMessages(const MessageStreamComponentAdded &stream)
 
 void ConsumerSystem::ProcessMessages(const MessageStreamComponentChanged &stream)
 {
-    ASSUME(stream.Type() == GeneratedComponent::GetTypeId());
+    if (stream.Type() != GeneratedComponent::GetTypeId())
+    {
+        return;
+    }
 
     for (auto &entity : stream)
     {
@@ -215,7 +247,10 @@ void ConsumerSystem::ProcessMessages(const MessageStreamComponentChanged &stream
 
 void ConsumerSystem::ProcessMessages(const MessageStreamComponentRemoved &stream)
 {
-    ASSUME(stream.Type() == GeneratedComponent::GetTypeId());
+    if (stream.Type() != GeneratedComponent::GetTypeId())
+    {
+        return;
+    }
 
     for (auto &entity : stream)
     {
@@ -295,7 +330,7 @@ template <typename T> void StreamComponent(const T &component, TestEntities::Pre
     preStreamed.descs.emplace_back(desc);
 }
 
-static void GenerateScene(EntityIDGenerator &idGenerator, SystemsManager &manager, TestEntities &stream)
+static void GenerateScene(EntityIDGenerator &entityIdGenerator, SystemsManager &manager, TestEntities &stream)
 {
     //for (uiw index = 0; index < EntitiesToTest; ++index)
     //{
@@ -315,7 +350,7 @@ static void GenerateScene(EntityIDGenerator &idGenerator, SystemsManager &manage
     //    strcpy_s(n.name.data(), n.name.size(), name.c_str());
     //    StreamComponent(n, entity);
 
-    //    stream.AddEntity(idGenerator.Generate(), move(entity));
+    //    stream.AddEntity(entityIdGenerator.Generate(), move(entity));
     //}
 }
 
@@ -326,14 +361,10 @@ static void PrintStreamInfo(EntitiesStream &stream, bool isFirstPass)
         printf("\n-------------\n\n");
     }
 
-    std::map<StableTypeId, ui32> componentCounts{};
-
     while (auto entity = stream.Next())
     {
         for (auto &c : entity->components)
         {
-            componentCounts[c.type]++;
-
             if (c.type == ConsumerInfoComponent::GetTypeId())
             {
                 const auto &t = *(ConsumerInfoComponent *)c.data;
@@ -360,9 +391,9 @@ int main()
 
     auto stream = make_unique<TestEntities>();
     auto manager = SystemsManager::New(IsMultiThreadedECS);
-    EntityIDGenerator idGenerator;
+    EntityIDGenerator entityIdGenerator;
 
-    GenerateScene(idGenerator, *manager, *stream);
+    GenerateScene(entityIdGenerator, *manager, *stream);
 
     auto testPipelineGroup0 = manager->CreatePipelineGroup(5_ms, false);
     auto testPipelineGroup1 = manager->CreatePipelineGroup(6.5_ms, false);
@@ -378,7 +409,7 @@ int main()
 
     vector<unique_ptr<EntitiesStream>> streams;
     streams.push_back(move(stream));
-    manager->Start(move(idGenerator), move(workers), move(streams));
+    manager->Start(move(entityIdGenerator), move(workers), move(streams));
 
     std::this_thread::sleep_for(2000ms);
 
@@ -388,15 +419,15 @@ int main()
 
     PrintStreamInfo(*ecsstream, true);
 
-    manager->Resume();
+    //manager->Resume();
 
-    std::this_thread::sleep_for(1500ms);
+    //std::this_thread::sleep_for(1500ms);
 
-    manager->Pause(true);
+    //manager->Pause(true);
 
-    ecsstream = manager->StreamOut();
+    //ecsstream = manager->StreamOut();
 
-    PrintStreamInfo(*ecsstream, false);
+    //PrintStreamInfo(*ecsstream, false);
 
     manager->Stop(true);
 

@@ -157,8 +157,6 @@ namespace ECSTest
         //ui64 _onSystemExecutedCurrentId = 0;
         //shared_ptr<ListenerLocation> _listenerLocation = make_shared<ListenerLocation>(*this);
 
-        std::atomic<ui32> _lastComponentId = {0};
-
         ArchetypeReflector _archetypeReflector{};
 
         std::atomic<bool> _isStoppingExecution{false};
@@ -171,7 +169,8 @@ namespace ECSTest
         std::mutex _schedulerPausedMutex{};
         std::condition_variable _schedulerPausedNotifier{};
 
-        EntityIDGenerator _idGenerator{};
+        EntityIDGenerator _entityIdGenerator{};
+        ComponentIDGenerator _componentIdGenerator{};
 
         class MessageMerger
         {

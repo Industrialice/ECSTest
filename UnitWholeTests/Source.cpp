@@ -134,7 +134,7 @@ void TestIndirectSystem2::Update(Environment &env, MessageBuilder &messageBuilde
 {
     if (_entitiesToAdd)
     {
-        auto &componentBuilder = messageBuilder.AddEntity(env.idGenerator.Generate());
+        auto &componentBuilder = messageBuilder.AddEntity(env.entityIdGenerator.Generate());
         TestComponent0 c0;
         c0.value = 10;
         TestComponent1 c1;
@@ -257,7 +257,7 @@ template <typename T> void StreamComponent(const T &component, TestEntities::Pre
     preStreamed.descs.emplace_back(desc);
 }
 
-static void GenerateScene(EntityIDGenerator &idGenerator, SystemsManager &manager, TestEntities &stream)
+static void GenerateScene(EntityIDGenerator &entityIdGenerator, SystemsManager &manager, TestEntities &stream)
 {
     for (uiw index = 0; index < 100; ++index)
     {
@@ -291,7 +291,7 @@ static void GenerateScene(EntityIDGenerator &idGenerator, SystemsManager &manage
             StreamComponent(c, entity);
         }
 
-        stream.AddEntity(idGenerator.Generate(), move(entity));
+        stream.AddEntity(entityIdGenerator.Generate(), move(entity));
     }
 }
 
@@ -353,9 +353,9 @@ int main()
 
     auto stream = make_unique<TestEntities>();
     auto manager = SystemsManager::New(isMT);
-    EntityIDGenerator idGenerator;
+    EntityIDGenerator entityIdGenerator;
 
-    GenerateScene(idGenerator, *manager, *stream);
+    GenerateScene(entityIdGenerator, *manager, *stream);
 
     auto testPipelineGroup0 = manager->CreatePipelineGroup(1_ms, false);
     auto testPipelineGroup1 = manager->CreatePipelineGroup(1.5_ms, false);
@@ -376,7 +376,7 @@ int main()
 
     vector<unique_ptr<EntitiesStream>> streams;
     streams.push_back(move(stream));
-    manager->Start(move(idGenerator), move(workers), move(streams));
+    manager->Start(move(entityIdGenerator), move(workers), move(streams));
     
     std::this_thread::sleep_for(2000ms);
 
