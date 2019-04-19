@@ -12,11 +12,19 @@ namespace
 {
     constexpr ui32 EntitiesToAdd = 50;
     constexpr bool IsMultiThreadedECS = false;
+    constexpr ui32 WaitForExecutedFrames = 500;
 }
 
 COMPONENT(GeneratedComponent)
 {
     ui32 value;
+};
+
+COMPONENT(GeneratorInfoComponent)
+{
+    ui32 tagComponentsGenerated = 0;
+    ui64 tagConnectionHash = 0;
+    ui64 tagIDHash = 0;
 };
 
 COMPONENT(ConsumerInfoComponent)
@@ -26,6 +34,9 @@ COMPONENT(ConsumerInfoComponent)
     ui32 componentAdded = 0;
     ui32 componentChanged = 0;
     ui32 componentRemoved = 0;
+    ui32 tagComponentsReceived = 0;
+    ui64 tagConnectionHash = 0;
+    ui64 tagIDHash = 0;
 };
 
 NONUNIQUE_COMPONENT(TagComponent)
@@ -42,59 +53,82 @@ INDIRECT_SYSTEM(GeneratorSystem)
 {
     INDIRECT_ACCEPT_COMPONENTS(SubtractiveComponent<GeneratedComponent>, SubtractiveComponent<ConsumerInfoComponent>)
     {
-        if (_leftToGenerate)
+        [this, &env]
         {
-            GeneratedComponent c;
-            c.value = 15;
-            auto &builder = env.messageBuilder.AddEntity(env.entityIdGenerator.Generate()).AddComponent(c);
-            for (i32 index = 0, count = rand() % 3; index < count; ++index)
+            if (_leftToGenerate)
             {
-                TagComponent tag;
-                tag.connectedTo = (TagComponent::ConnectedTo)(rand() % 4);
-                builder.AddComponent(tag, env.componentIdGenerator.Generate());
-            }
-            c.value = 25;
-            env.messageBuilder.ComponentChanged(env.entityIdGenerator.LastGenerated(), c);
-            --_leftToGenerate;
-            _toComponentChange.push(env.entityIdGenerator.LastGenerated());
-            
-            if (!_pipeline.Advance())
-            {
-                return;
-            }
-        }
+                GeneratedComponent c;
+                c.value = 15;
+                auto &builder = env.messageBuilder.AddEntity(env.entityIdGenerator.Generate()).AddComponent(c);
+                for (i32 index = 0, count = rand() % 3; index < count; ++index)
+                {
+                    TagComponent tag;
+                    tag.connectedTo = (TagComponent::ConnectedTo)(rand() % 4);
+                    builder.AddComponent(tag, env.componentIdGenerator.Generate());
+                    ++_info.tagComponentsGenerated;
+                    _info.tagConnectionHash ^= Hash::Integer((ui64)tag.connectedTo);
+                    _info.tagIDHash ^= Hash::Integer((ui64)env.componentIdGenerator.LastGenerated().ID());
+                }
+                c.value = 25;
+                env.messageBuilder.ComponentChanged(env.entityIdGenerator.LastGenerated(), c);
+                --_leftToGenerate;
+                _toComponentChange.push(env.entityIdGenerator.LastGenerated());
 
-        if (_toComponentChange.size())
+                if (!_pipeline.Advance())
+                {
+                    return;
+                }
+            }
+
+            if (_toComponentChange.size())
+            {
+                GeneratedComponent c;
+                c.value = 35;
+                env.messageBuilder.ComponentChanged(_toComponentChange.front(), c);
+                _toComponentRemove.push(_toComponentChange.front());
+                _toComponentChange.pop();
+
+                if (!_pipeline.Advance())
+                {
+                    return;
+                }
+            }
+
+            if (_toComponentRemove.size())
+            {
+                env.messageBuilder.RemoveComponent(_toComponentRemove.front(), GeneratedComponent{});
+                _toEntityRemove.push(_toComponentRemove.front());
+                _toComponentRemove.pop();
+
+                if (!_pipeline.Advance())
+                {
+                    return;
+                }
+            }
+
+            if (_toEntityRemove.size())
+            {
+                env.messageBuilder.RemoveEntity(_toEntityRemove.front());
+                _toEntityRemove.pop();
+            }
+        }();
+
+        if (MemOps::Compare(&_info, &_infoPassed, sizeof(_info)))
         {
-            GeneratedComponent c;
-            c.value = 35;
-            env.messageBuilder.ComponentChanged(_toComponentChange.front(), c);
-            _toComponentRemove.push(_toComponentChange.front());
-            _toComponentChange.pop();
-
-            if (!_pipeline.Advance())
-            {
-                return;
-            }
+            env.messageBuilder.ComponentChanged(_infoID, _info);
+            _infoPassed = _info;
         }
+    }
 
-        if (_toComponentRemove.size())
-        {
-            env.messageBuilder.RemoveComponent(_toComponentRemove.front(), GeneratedComponent{});
-            _toEntityRemove.push(_toComponentRemove.front());
-            _toComponentRemove.pop();
+    virtual void OnCreate(Environment &env) override
+    {
+        _infoID = env.entityIdGenerator.Generate();
+        env.messageBuilder.AddEntity(_infoID).AddComponent(_info);
+    }
 
-            if (!_pipeline.Advance())
-            {
-                return;
-            }
-        }
-
-        if (_toEntityRemove.size())
-        {
-            env.messageBuilder.RemoveEntity(_toEntityRemove.front());
-            _toEntityRemove.pop();
-        }
+    virtual void OnDestroy(Environment &env) override
+    {
+        env.messageBuilder.RemoveEntity(_infoID);
     }
 
 private:
@@ -126,6 +160,8 @@ private:
     std::queue<EntityID> _toComponentRemove{};
     std::queue<EntityID> _toEntityRemove{};
     Pipeline _pipeline{};
+    EntityID _infoID{};
+    GeneratorInfoComponent _info{}, _infoPassed{};
 };
 
 void GeneratorSystem::ProcessMessages(const MessageStreamEntityAdded &stream)
@@ -202,6 +238,12 @@ void ConsumerSystem::ProcessMessages(const MessageStreamEntityAdded &stream)
             {
                 ASSUME(attached.id.IsValid());
                 ASSUME(attached.isUnique == false);
+                ++_info.tagComponentsReceived;
+
+                auto &t = attached.Cast<TagComponent>();
+                _info.tagConnectionHash ^= Hash::Integer((ui64)t.connectedTo);
+
+                _info.tagIDHash ^= Hash::Integer((ui64)attached.id.ID());
             }
             else if (attached.type == GeneratedComponent::GetTypeId())
             {
@@ -361,6 +403,13 @@ static void PrintStreamInfo(EntitiesStream &stream, bool isFirstPass)
         printf("\n-------------\n\n");
     }
 
+    ui32 tagComponentsSent = 0;
+    ui32 tagComponentsReceived = 0;
+    ui64 tagSentConnectionHash = 0;
+    ui64 tagReceivedHash = 0;
+    ui64 tagSentIDHash = 0;
+    ui64 tagReceivedIDHash = 0;
+
     while (auto entity = stream.Next())
     {
         for (auto &c : entity->components)
@@ -380,9 +429,24 @@ static void PrintStreamInfo(EntitiesStream &stream, bool isFirstPass)
                 ASSUME(t.componentRemoved == EntitiesToAdd);
                 ASSUME(t.entityAdded == EntitiesToAdd);
                 ASSUME(t.entityRemoved == EntitiesToAdd);
+
+                tagComponentsReceived = t.tagComponentsReceived;
+                tagReceivedHash = t.tagConnectionHash;
+                tagReceivedIDHash = t.tagIDHash;
+            }
+            else if (c.type == GeneratorInfoComponent::GetTypeId())
+            {
+                const auto &t = *(GeneratorInfoComponent *)c.data;
+                tagComponentsSent = t.tagComponentsGenerated;
+                tagSentConnectionHash = t.tagConnectionHash;
+                tagSentIDHash = t.tagIDHash;
             }
         }
     }
+
+    ASSUME(tagComponentsReceived == tagComponentsSent);
+    ASSUME(tagReceivedHash == tagSentConnectionHash);
+    ASSUME(tagReceivedIDHash == tagSentIDHash);
 }
 
 int main()
@@ -395,11 +459,11 @@ int main()
 
     GenerateScene(entityIdGenerator, *manager, *stream);
 
-    auto testPipelineGroup0 = manager->CreatePipelineGroup(5_ms, false);
-    auto testPipelineGroup1 = manager->CreatePipelineGroup(6.5_ms, false);
+    auto testPipeline0 = manager->CreatePipeline(/*5_ms*/nullopt, false);
+    auto testPipeline1 = manager->CreatePipeline(/*6.5_ms*/nullopt, false);
 
-    manager->Register(make_unique<GeneratorSystem>(), testPipelineGroup0);
-    manager->Register(make_unique<ConsumerSystem>(), testPipelineGroup1);
+    manager->Register(make_unique<GeneratorSystem>(), testPipeline0);
+    manager->Register(make_unique<ConsumerSystem>(), testPipeline1);
 
     vector<WorkerThread> workers;
     if (IsMultiThreadedECS)
@@ -411,7 +475,16 @@ int main()
     streams.push_back(move(stream));
     manager->Start(move(entityIdGenerator), move(workers), move(streams));
 
-    std::this_thread::sleep_for(2000ms);
+    for (;;)
+    {
+        auto info0 = manager->GetPipelineInfo(testPipeline0);
+        auto info1 = manager->GetPipelineInfo(testPipeline1);
+        if (info0.executedTimes > WaitForExecutedFrames && info1.executedTimes > WaitForExecutedFrames)
+        {
+            break;
+        }
+        std::this_thread::yield();
+    }
 
     manager->Pause(true);
 

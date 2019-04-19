@@ -15,8 +15,9 @@ namespace ECSTest
 	public:
 		static shared_ptr<SystemsManagerST> New();
 
-		[[nodiscard]] virtual PipelineGroup CreatePipelineGroup(optional<TimeDifference> executionStep, bool isMergeIfSuchPipelineExists) override;
-		virtual void Register(unique_ptr<System> system, PipelineGroup pipelineGroup) override;
+		[[nodiscard]] virtual Pipeline CreatePipeline(optional<TimeDifference> executionStep, bool isMergeIfSuchPipelineExists) override;
+        [[nodiscard]] virtual PipelineInfo GetPipelineInfo(Pipeline pipeline) const override;
+		virtual void Register(unique_ptr<System> system, Pipeline pipeline) override;
 		virtual void Unregister(StableTypeId systemType) override;
 		virtual void Start(EntityIDGenerator &&idGenerator, vector<WorkerThread> &&workers, vector<unique_ptr<EntitiesStream>> &&streams) override;
 		virtual void Pause(bool isWaitForStop) override; // you can call it multiple times, for example first time as Pause(false), and then as Pause(true) to wait for paused
@@ -57,7 +58,7 @@ namespace ECSTest
 
 		struct ManagedSystem
 		{
-			ui32 executedAt{}; // last executed frame, gets set to Pipeline::executionFrame at first execution attempt on a new frame
+			ui32 executedAt{}; // last executed frame, gets set to PipelineData::executionFrame at first execution attempt on a new frame
             ui32 executedTimes{};
 		};
 
@@ -83,13 +84,12 @@ namespace ECSTest
 			} messageQueue{};
 		};
 
-		struct Pipeline
+		struct PipelineData
 		{
 			// every time the schedule sends a system to be executed by a worker, it increments this value
 			// after the system is done executing, the worker decrements it, and the scheduler must wait for
 			// this value to become 0 before it can start a new frame
-			ui32 systemsAtExecution = 0;
-			ui32 executionFrame = 0;
+			MovableAtomic<ui32> executionFrame = 0;
 			vector<ManagedDirectSystem> directSystems{};
 			vector<ManagedIndirectSystem> indirectSystems{};
 			optional<TimeDifference> executionStep{};
@@ -112,7 +112,7 @@ namespace ECSTest
 		std::unordered_map<Archetype, vector<std::reference_wrapper<ArchetypeGroup>>> _archetypeGroups{};
 
 		// stores Systems within their pipelines, used by the manager to iterate through the systems
-		vector<Pipeline> _pipelines{};
+		vector<PipelineData> _pipelines{};
 
 		ArchetypeReflector _archetypeReflector{};
 
@@ -142,7 +142,7 @@ namespace ECSTest
 		void AddEntityToArchetypeGroup(const ArchetypeFull &archetype, ArchetypeGroup &group, EntityID entityId, Array<const SerializedComponent> components, MessageBuilder *messageBuilder);
 		void StartScheduler(vector<unique_ptr<EntitiesStream>> &&streams);
 		void SchedulerLoop();
-		void ExecutePipeline(Pipeline &pipeline, System::Environment &env);
+		void ExecutePipeline(PipelineData &pipeline, System::Environment &env);
 		static void ProcessMessages(IndirectSystem &system, const ManagedIndirectSystem::MessageQueue &messageQueue);
         void ExecuteIndirectSystem(IndirectSystem &system, ManagedIndirectSystem::MessageQueue &messageQueue, System::Environment &env);
         void ExecuteDirectSystem(DirectSystem &system, System::Environment &env);

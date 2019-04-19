@@ -15,8 +15,9 @@ namespace ECSTest
     public:
         static shared_ptr<SystemsManagerMT> New();
 
-        [[nodiscard]] virtual PipelineGroup CreatePipelineGroup(optional<TimeDifference> executionStep, bool isMergeIfSuchPipelineExists) override;
-        virtual void Register(unique_ptr<System> system, PipelineGroup pipelineGroup) override;
+        [[nodiscard]] virtual Pipeline CreatePipeline(optional<TimeDifference> executionStep, bool isMergeIfSuchPipelineExists) override;
+        [[nodiscard]] virtual PipelineInfo GetPipelineInfo(Pipeline pipeline) const override;
+        virtual void Register(unique_ptr<System> system, Pipeline pipeline) override;
         virtual void Unregister(StableTypeId systemType) override;
         virtual void Start(EntityIDGenerator &&idGenerator, vector<WorkerThread> &&workers, vector<unique_ptr<EntitiesStream>> &&streams) override;
         virtual void Pause(bool isWaitForStop) override; // you can call it multiple times, for example first time as Pause(false), and then as Pause(true) to wait for paused
@@ -89,7 +90,7 @@ namespace ECSTest
                 DIWRSpinLock::Unlocker lock;
             };
 
-            ui32 executedAt{}; // last executed frame, gets set to Pipeline::executionFrame at first execution attempt on a new frame
+            ui32 executedAt{}; // last executed frame, gets set to PipelineData::executionFrame at first execution attempt on a new frame
             vector<std::reference_wrapper<ArchetypeGroup>> groupsToExecute{}; // group still left to be executed for the current frame
             vector<shared_ptr<GroupLock>> groupLocks{}; // all currently held archetype group locks by the system
             vector<shared_ptr<ComponentLock>> componentLocks{}; // all currently held component locks by the system
@@ -116,7 +117,7 @@ namespace ECSTest
             DIWRSpinLock messageQueueLock{}; // you must acquire it before you can access messageQueue
         };
 
-        struct Pipeline
+        struct PipelineData
         {
             // every time the schedule sends a system to be executed by a worker, it increments this value
             // after the system is done executing, the worker decrements it, and the scheduler must wait for
@@ -148,7 +149,7 @@ namespace ECSTest
         DIWRSpinLock _archetypeGroupsLock{};
 
         // stores Systems within their pipelines, used by the manager to iterate through the systems
-        vector<Pipeline> _pipelines{};
+        vector<PipelineData> _pipelines{};
 
         vector<WorkerThread> _workerThreads{};
         shared_ptr<pair<std::mutex, std::condition_variable>> _workerFinishedWorkNotifier = make_shared<pair<std::mutex, std::condition_variable>>();
@@ -188,7 +189,7 @@ namespace ECSTest
         void AddEntityToArchetypeGroup(const ArchetypeFull &archetype, ArchetypeGroup &group, EntityID entityId, Array<const SerializedComponent> components, MessageBuilder *messageBuilder);
         void StartScheduler(vector<unique_ptr<EntitiesStream>> &&streams);
         void SchedulerLoop();
-        void ExecutePipeline(Pipeline &pipeline);
+        void ExecutePipeline(PipelineData &pipeline);
         void CalculateGroupsToExectute(const System *system, vector<std::reference_wrapper<ArchetypeGroup>> &groups);
         [[nodiscard]] WorkerThread &FindBestWorker();
 

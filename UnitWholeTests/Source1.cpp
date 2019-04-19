@@ -664,21 +664,21 @@ int main()
 
     GenerateScene(entityIdGenerator, *manager, *stream);
 
-    auto testPipelineGroup0 = manager->CreatePipelineGroup(5_ms, false);
-    auto testPipelineGroup1 = manager->CreatePipelineGroup(6.5_ms, false);
+    auto testPipeline0 = manager->CreatePipeline(5_ms, false);
+    auto testPipeline1 = manager->CreatePipeline(6.5_ms, false);
 
-    manager->Register(make_unique<TransformGeneratorSystem>(), testPipelineGroup0);
-    manager->Register(make_unique<TransformHeightFixerSystem>(), testPipelineGroup0);
+    manager->Register(make_unique<TransformGeneratorSystem>(), testPipeline0);
+    manager->Register(make_unique<TransformHeightFixerSystem>(), testPipeline0);
 	if (IsUseDirectForFalling)
 	{
-		manager->Register(make_unique<TransformFallingDirectSystem>(), testPipelineGroup0);
+		manager->Register(make_unique<TransformFallingDirectSystem>(), testPipeline0);
 	}
 	else
 	{
-		manager->Register(make_unique<TransformFallingIndirectSystem>(), testPipelineGroup0);
+		manager->Register(make_unique<TransformFallingIndirectSystem>(), testPipeline0);
 	}
-	manager->Register(make_unique<AverageHeightAnalyzerSystem>(), testPipelineGroup1);
-    manager->Register(make_unique<CooldownUpdater>(), testPipelineGroup1);
+	manager->Register(make_unique<AverageHeightAnalyzerSystem>(), testPipeline1);
+    manager->Register(make_unique<CooldownUpdater>(), testPipeline1);
 
     vector<WorkerThread> workers;
     if (IsMultiThreadedECS)

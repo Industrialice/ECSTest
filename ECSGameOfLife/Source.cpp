@@ -339,7 +339,7 @@ int main()
 
 	GenerateScene(idGenerator, *manager, *stream);
 
-	auto gameInfoPipelineGroup = manager->CreatePipelineGroup(1000'0000, true);
+	auto gameInfoPipelineGroup = manager->CreatePipeline(1000'0000, true);
 	manager->Register(make_unique<SystemGameInfo>(), gameInfoPipelineGroup);
     manager->Register(make_unique<SystemTest>(), gameInfoPipelineGroup);
 

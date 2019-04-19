@@ -357,16 +357,16 @@ int main()
 
     GenerateScene(entityIdGenerator, *manager, *stream);
 
-    auto testPipelineGroup0 = manager->CreatePipelineGroup(1_ms, false);
-    auto testPipelineGroup1 = manager->CreatePipelineGroup(1.5_ms, false);
+    auto testPipeline0 = manager->CreatePipeline(1_ms, false);
+    auto testPipeline1 = manager->CreatePipeline(1.5_ms, false);
 
-    manager->Register(make_unique<TestIndirectSystem0>(), testPipelineGroup0);
+    manager->Register(make_unique<TestIndirectSystem0>(), testPipeline0);
 
-    manager->Register(make_unique<TestIndirectSystem1>(), testPipelineGroup0);
+    manager->Register(make_unique<TestIndirectSystem1>(), testPipeline0);
 
-    manager->Register(make_unique<TestIndirectSystem2>(), testPipelineGroup0);
+    manager->Register(make_unique<TestIndirectSystem2>(), testPipeline0);
 
-    manager->Register(make_unique<MonitoringSystem>(), testPipelineGroup1);
+    manager->Register(make_unique<MonitoringSystem>(), testPipeline1);
 
     vector<WorkerThread> workers;
     if (isMT)

@@ -137,7 +137,7 @@ shared_ptr<SystemsManagerMT> SystemsManagerMT::New()
     return make_shared<Inherited>();
 }
 
-auto SystemsManagerMT::CreatePipelineGroup(optional<TimeDifference> executionStep, bool isMergeIfSuchPipelineExists) -> PipelineGroup
+auto SystemsManagerMT::CreatePipeline(optional<TimeDifference> executionStep, bool isMergeIfSuchPipelineExists) -> Pipeline
 {
     if (executionStep && executionStep->ToMSec() < 0)
     {
@@ -145,7 +145,7 @@ auto SystemsManagerMT::CreatePipelineGroup(optional<TimeDifference> executionSte
         executionStep = {};
     }
 
-    PipelineGroup group;
+    Pipeline group;
     if (isMergeIfSuchPipelineExists)
     {
         for (ui32 index = 0; index < (ui32)_pipelines.size(); ++index)
@@ -163,7 +163,13 @@ auto SystemsManagerMT::CreatePipelineGroup(optional<TimeDifference> executionSte
     return group;
 }
 
-void SystemsManagerMT::Register(unique_ptr<System> system, PipelineGroup pipelineGroup)
+auto SystemsManagerMT::GetPipelineInfo(Pipeline pipeline) const -> PipelineInfo
+{
+    NOIMPL;
+    return {};
+}
+
+void SystemsManagerMT::Register(unique_ptr<System> system, Pipeline pipeline)
 {
     ASSUME(system);
 
@@ -173,7 +179,7 @@ void SystemsManagerMT::Register(unique_ptr<System> system, PipelineGroup pipelin
         return;
     }
 
-    ASSUME(pipelineGroup.index < _pipelines.size());
+    ASSUME(pipeline.index < _pipelines.size());
 
     bool isDirectSystem = system->AsDirectSystem() != nullptr;
     auto requestedComponents = system->RequestedComponents();
@@ -190,11 +196,11 @@ void SystemsManagerMT::Register(unique_ptr<System> system, PipelineGroup pipelin
         }
     }
 
-    for (auto &pipeline : _pipelines)
+    for (auto &pipelineData : _pipelines)
     {
         if (isDirectSystem)
         {
-            for (const auto &existingSystem : pipeline.directSystems)
+            for (const auto &existingSystem : pipelineData.directSystems)
             {
                 if (existingSystem.system->Type() == system->Type())
                 {
@@ -205,7 +211,7 @@ void SystemsManagerMT::Register(unique_ptr<System> system, PipelineGroup pipelin
         }
         else
         {
-            for (const auto &existingSystem : pipeline.indirectSystems)
+            for (const auto &existingSystem : pipelineData.indirectSystems)
             {
                 if (existingSystem.system->Type() == system->Type())
                 {
@@ -216,11 +222,11 @@ void SystemsManagerMT::Register(unique_ptr<System> system, PipelineGroup pipelin
         }
     }
 
-    auto &pipeline = _pipelines[pipelineGroup.index];
+    auto &pipelineData = _pipelines[pipeline.index];
 
     for (auto &otherPipeline : _pipelines)
     {
-        if (&otherPipeline == &pipeline)
+        if (&otherPipeline == &pipelineData)
         {
             continue;
         }
@@ -237,9 +243,9 @@ void SystemsManagerMT::Register(unique_ptr<System> system, PipelineGroup pipelin
 
     for (auto req : requestedComponents.writeAccess)
     {
-        if (std::find(pipeline.writeComponents.begin(), pipeline.writeComponents.end(), req.type) == pipeline.writeComponents.end())
+        if (std::find(pipelineData.writeComponents.begin(), pipelineData.writeComponents.end(), req.type) == pipelineData.writeComponents.end())
         {
-            pipeline.writeComponents.push_back(req.type);
+            pipelineData.writeComponents.push_back(req.type);
         }
     }
 
@@ -248,16 +254,16 @@ void SystemsManagerMT::Register(unique_ptr<System> system, PipelineGroup pipelin
     if (isDirectSystem)
     {
         ManagedDirectSystem direct;
-        direct.executedAt = pipeline.executionFrame - 1;
+        direct.executedAt = pipelineData.executionFrame - 1;
         direct.system.reset(system.release()->AsDirectSystem());
-        pipeline.directSystems.emplace_back(move(direct));
+        pipelineData.directSystems.emplace_back(move(direct));
     }
     else
     {
         ManagedIndirectSystem indirect;
-        indirect.executedAt = pipeline.executionFrame - 1;
+        indirect.executedAt = pipelineData.executionFrame - 1;
         indirect.system.reset(system.release()->AsIndirectSystem());
-        pipeline.indirectSystems.emplace_back(move(indirect));
+        pipelineData.indirectSystems.emplace_back(move(indirect));
     }
 }
 
@@ -269,7 +275,7 @@ void SystemsManagerMT::Unregister(StableTypeId systemType)
         return;
     }
 
-    auto recomputeWriteComponents = [](Pipeline &pipeline)
+    auto recomputeWriteComponents = [](PipelineData &pipeline)
     {
         pipeline.writeComponents.clear();
 
@@ -746,7 +752,7 @@ void SystemsManagerMT::SchedulerLoop()
     }
 }
 
-void SystemsManagerMT::ExecutePipeline(Pipeline &pipeline)
+void SystemsManagerMT::ExecutePipeline(PipelineData &pipeline)
 {
     if (*pipeline.systemsAtExecution) // previously submitted work is not completed yet
     {
