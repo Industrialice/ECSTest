@@ -35,8 +35,11 @@ namespace ECSTest
     template <auto Method, typename types = typename FunctionInfo::Info<decltype(Method)>::args, uiw count = std::tuple_size_v<types>> struct _AcceptCaller
     {
         // converts void * into a properly typed T argument - a pointer or a reference
-        template <typename T> static FORCEINLINE auto Convert(void *arg) -> decltype(auto)
+        template <typename types, uiw index> static FORCEINLINE auto Convert(void **args) -> decltype(auto)
         {
+            using T = std::tuple_element_t<index, types>;
+            void *arg = args[index];
+
 			using pureType = std::remove_cv_t<std::remove_pointer_t<std::remove_reference_t<T>>>;
 
 			static constexpr bool isRefOrPtr = std::is_reference_v<T> || std::is_pointer_v<T>;
@@ -68,77 +71,10 @@ namespace ECSTest
 			}
         }
 
-		template <typename T> static FORCEINLINE void Call(T *object, System::Environment &env, void **array, std::integral_constant<uiw, 1>)
-		{
-			using t0 = std::tuple_element_t<0, types>;
-			decltype(auto) a0 = Convert<t0>(array[0]);
-			(object->*Method)(env, a0);
-		}
-
-		template <typename T> static FORCEINLINE void Call(T *object, System::Environment &env, void **array, std::integral_constant<uiw, 2>)
-		{
-			using t0 = std::tuple_element_t<0, types>;
-			using t1 = std::tuple_element_t<1, types>;
-			decltype(auto) a0 = Convert<t0>(array[0]);
-			decltype(auto) a1 = Convert<t1>(array[1]);
-			(object->*Method)(env, a0, a1);
-		}
-
-		template <typename T> static FORCEINLINE void Call(T *object, System::Environment &env, void **array, std::integral_constant<uiw, 3>)
-		{
-			using t0 = std::tuple_element_t<0, types>;
-			using t1 = std::tuple_element_t<1, types>;
-			using t2 = std::tuple_element_t<2, types>;
-			decltype(auto) a0 = Convert<t0>(array[0]);
-			decltype(auto) a1 = Convert<t1>(array[1]);
-			decltype(auto) a2 = Convert<t2>(array[2]);
-			(object->*Method)(env, a0, a1, a2);
-		}
-
-		template <typename T> static FORCEINLINE void Call(T *object, System::Environment &env, void **array, std::integral_constant<uiw, 4>)
-		{
-			using t0 = std::tuple_element_t<0, types>;
-			using t1 = std::tuple_element_t<1, types>;
-			using t2 = std::tuple_element_t<2, types>;
-			using t3 = std::tuple_element_t<3, types>;
-			decltype(auto) a0 = Convert<t0>(array[0]);
-			decltype(auto) a1 = Convert<t1>(array[1]);
-			decltype(auto) a2 = Convert<t2>(array[2]);
-			decltype(auto) a3 = Convert<t3>(array[3]);
-			(object->*Method)(env, a0, a1, a2, a3);
-		}
-
-		template <typename T> static FORCEINLINE void Call(T *object, System::Environment &env, void **array, std::integral_constant<uiw, 5>)
-		{
-			using t0 = std::tuple_element_t<0, types>;
-			using t1 = std::tuple_element_t<1, types>;
-			using t2 = std::tuple_element_t<2, types>;
-			using t3 = std::tuple_element_t<3, types>;
-			using t4 = std::tuple_element_t<4, types>;
-			decltype(auto) a0 = Convert<t0>(array[0]);
-			decltype(auto) a1 = Convert<t1>(array[1]);
-			decltype(auto) a2 = Convert<t2>(array[2]);
-			decltype(auto) a3 = Convert<t3>(array[3]);
-			decltype(auto) a4 = Convert<t4>(array[4]);
-			(object->*Method)(env, a0, a1, a2, a3, a4);
-		}
-
-		template <typename T> static FORCEINLINE void Call(T *object, System::Environment &env, void **array, std::integral_constant<uiw, 6>)
-		{
-			using t0 = std::tuple_element_t<0, types>;
-			using t1 = std::tuple_element_t<1, types>;
-			using t2 = std::tuple_element_t<2, types>;
-			using t3 = std::tuple_element_t<3, types>;
-			using t4 = std::tuple_element_t<4, types>;
-			using t5 = std::tuple_element_t<5, types>;
-			decltype(auto) a0 = Convert<t0>(array[0]);
-			decltype(auto) a1 = Convert<t1>(array[1]);
-			decltype(auto) a2 = Convert<t2>(array[2]);
-			decltype(auto) a3 = Convert<t3>(array[3]);
-			decltype(auto) a4 = Convert<t4>(array[4]);
-			decltype(auto) a5 = Convert<t5>(array[5]);
-			(object->*Method)(env, a0, a1, a2, a3, a4, a5);
-		}
+        template <typename T, uiw... Indexes> static FORCEINLINE void Call(T *object, System::Environment &env, void **array, std::index_sequence<Indexes...>)
+        {
+        	(object->*Method)(env, Convert<types, Indexes>(array)...);
+        }
     };
 
     // converts argument type (like Array<Component> &) into System::RequestedComponent
@@ -242,7 +178,7 @@ namespace ECSTest
 		struct Local { static void Temp(__VA_ARGS__); }; \
 		using types = typename FunctionInfo::Info<decltype(Local::Temp)>::args; \
 		static constexpr uiw count = std::tuple_size_v<types>; \
-        _AcceptCaller<&thisType::Update, types>::Call(this, env, array, std::integral_constant<uiw, count>()); \
+        _AcceptCaller<&thisType::Update, types>::Call(this, env, array, std::make_index_sequence<count>()); \
     } \
     void Update(Environment &env, __VA_ARGS__)
 
