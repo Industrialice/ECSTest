@@ -34,9 +34,10 @@ namespace ECSTest
             Array<const pair<StableTypeId, RequirementForComponent>> archetypeDefining; // contains only required and subtractive components
             Array<const RequestedComponent> all; // contains all reqested components
             Array<const RequestedComponent> allOriginalOrder; // contains all reqested components in the order they are declared
+            std::optional<ui32> idsArgumentNumber; // direct systems only; indicates whether EntityID array was also requested and if it was, contains its argument index
         };
 
-		[[nodiscard]] virtual Requests RequestedComponents() const = 0;
+		[[nodiscard]] virtual const Requests &RequestedComponents() const = 0;
 		[[nodiscard]] virtual StableTypeId Type() const = 0;
 		[[nodiscard]] virtual struct IndirectSystem *AsIndirectSystem();
 		[[nodiscard]] virtual const struct IndirectSystem *AsIndirectSystem() const;

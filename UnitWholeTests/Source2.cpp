@@ -198,7 +198,7 @@ void GeneratorSystem::ProcessMessages(const MessageStreamEntityRemoved &stream)
     SOFTBREAK;
 }
 
-INDIRECT_SYSTEM(ConsumerSystem)
+INDIRECT_SYSTEM(ConsumerIndirectSystem)
 {
     INDIRECT_ACCEPT_COMPONENTS(Array<GeneratedComponent> &, Array<TagComponent> *tags)
     {
@@ -232,7 +232,7 @@ private:
     std::map<EntityID, EntityInfo> _entityInfos{};
 };
 
-void ConsumerSystem::ProcessMessages(const MessageStreamEntityAdded &stream)
+void ConsumerIndirectSystem::ProcessMessages(const MessageStreamEntityAdded &stream)
 {
     for (auto &entity : stream)
     {
@@ -263,12 +263,12 @@ void ConsumerSystem::ProcessMessages(const MessageStreamEntityAdded &stream)
     }
 }
 
-void ConsumerSystem::ProcessMessages(const MessageStreamComponentAdded &stream)
+void ConsumerIndirectSystem::ProcessMessages(const MessageStreamComponentAdded &stream)
 {
     SOFTBREAK;
 }
 
-void ConsumerSystem::ProcessMessages(const MessageStreamComponentChanged &stream)
+void ConsumerIndirectSystem::ProcessMessages(const MessageStreamComponentChanged &stream)
 {
     if (stream.Type() != GeneratedComponent::GetTypeId())
     {
@@ -296,7 +296,7 @@ void ConsumerSystem::ProcessMessages(const MessageStreamComponentChanged &stream
     }
 }
 
-void ConsumerSystem::ProcessMessages(const MessageStreamComponentRemoved &stream)
+void ConsumerIndirectSystem::ProcessMessages(const MessageStreamComponentRemoved &stream)
 {
     if (stream.Type() != GeneratedComponent::GetTypeId())
     {
@@ -315,7 +315,7 @@ void ConsumerSystem::ProcessMessages(const MessageStreamComponentRemoved &stream
     }
 }
 
-void ConsumerSystem::ProcessMessages(const MessageStreamEntityRemoved &stream)
+void ConsumerIndirectSystem::ProcessMessages(const MessageStreamEntityRemoved &stream)
 {
     for (auto &entity : stream)
     {
@@ -327,6 +327,13 @@ void ConsumerSystem::ProcessMessages(const MessageStreamEntityRemoved &stream)
         ++_info.entityRemoved;
     }
 }
+
+DIRECT_SYSTEM(ConsumerDirectSystem)
+{
+    DIRECT_ACCEPT_COMPONENTS(Array<GeneratedComponent> &/*, Array<TagComponent> *tags*/)
+    {
+    }
+};
 
 using namespace ECSTest;
 
@@ -472,7 +479,7 @@ int main()
     auto testPipeline1 = manager->CreatePipeline(/*6.5_ms*/nullopt, false);
 
     manager->Register(make_unique<GeneratorSystem>(), testPipeline0);
-    manager->Register(make_unique<ConsumerSystem>(), testPipeline1);
+    manager->Register(make_unique<ConsumerIndirectSystem>(), testPipeline1);
 
     vector<WorkerThread> workers;
     if (IsMultiThreadedECS)

@@ -31,8 +31,10 @@ namespace ECSTest
 	template <typename T> constexpr bool _IsArray(Array<T>) { return true; }
 	template <typename T> constexpr bool _IsArray(T) { return false; }
 
+    // used by direct systems to convert void **array into proper function argument types
     template <auto Method, typename types = typename FunctionInfo::Info<decltype(Method)>::args, uiw count = std::tuple_size_v<types>> struct _AcceptCaller
     {
+        // converts void * into a properly typed T argument - a pointer or a reference
         template <typename T> static FORCEINLINE auto Convert(void *arg) -> decltype(auto)
         {
 			using pureType = std::remove_cv_t<std::remove_pointer_t<std::remove_reference_t<T>>>;
@@ -62,7 +64,7 @@ namespace ECSTest
 			else
 			{
 				ASSUME(arg == nullptr);
-				return T();
+				return nullptr;
 			}
         }
 
@@ -139,6 +141,7 @@ namespace ECSTest
 		}
     };
 
+    // converts argument type (like Array<Component> &) into System::RequestedComponent
     template <typename T> constexpr System::RequestedComponent _ArgumentToComponent()
     {
         using TPure = std::remove_pointer_t<std::remove_reference_t<T>>;
@@ -155,96 +158,10 @@ namespace ECSTest
 		return {componentType::GetTypeId(), !std::is_const_v<TPure>, availability};
     }
 
-    template <typename T, uiw size = std::tuple_size_v<T>> struct _TupleToComponents;
-
-	template <typename T> struct _TupleToComponents<T, 0>
-	{
-		static constexpr std::array<System::RequestedComponent, 0> Convert()
-		{
-			return {};
-		}
-	};
-
-    template <typename T> struct _TupleToComponents<T, 1>
+    template <typename T, uiw... Indexes> constexpr std::array<System::RequestedComponent, sizeof...(Indexes)> _TupleToComponentsArray(std::index_sequence<Indexes...>)
     {
-        static constexpr std::array<System::RequestedComponent, 1> Convert()
-        {
-            return
-            {
-                _ArgumentToComponent<std::tuple_element_t<0, T>>(),
-            };
-        }
-    };
-
-    template <typename T> struct _TupleToComponents<T, 2>
-    {
-        static constexpr std::array<System::RequestedComponent, 2> Convert()
-        {
-            return
-            {
-                _ArgumentToComponent<std::tuple_element_t<0, T>>(),
-                _ArgumentToComponent<std::tuple_element_t<1, T>>(),
-            };
-        }
-    };
-
-    template <typename T> struct _TupleToComponents<T, 3>
-    {
-        static constexpr std::array<System::RequestedComponent, 3> Convert()
-        {
-            return
-            {
-                _ArgumentToComponent<std::tuple_element_t<0, T>>(),
-                _ArgumentToComponent<std::tuple_element_t<1, T>>(),
-                _ArgumentToComponent<std::tuple_element_t<2, T>>(),
-            };
-        }
-    };
-
-    template <typename T> struct _TupleToComponents<T, 4>
-    {
-        static constexpr std::array<System::RequestedComponent, 4> Convert()
-        {
-            return
-            {
-                _ArgumentToComponent<std::tuple_element_t<0, T>>(),
-                _ArgumentToComponent<std::tuple_element_t<1, T>>(),
-                _ArgumentToComponent<std::tuple_element_t<2, T>>(),
-                _ArgumentToComponent<std::tuple_element_t<3, T>>(),
-            };
-        }
-    };
-
-    template <typename T> struct _TupleToComponents<T, 5>
-    {
-        static constexpr std::array<System::RequestedComponent, 5> Convert()
-        {
-            return
-            {
-                _ArgumentToComponent<std::tuple_element_t<0, T>>(),
-                _ArgumentToComponent<std::tuple_element_t<1, T>>(),
-                _ArgumentToComponent<std::tuple_element_t<2, T>>(),
-                _ArgumentToComponent<std::tuple_element_t<3, T>>(),
-                _ArgumentToComponent<std::tuple_element_t<4, T>>(),
-            };
-        }
-    };
-
-    template <typename T> struct _TupleToComponents<T, 6>
-    {
-        static constexpr std::array<System::RequestedComponent, 6> Convert()
-        {
-            return
-            {
-                _ArgumentToComponent<std::tuple_element_t<0, T>>(),
-                _ArgumentToComponent<std::tuple_element_t<1, T>>(),
-                _ArgumentToComponent<std::tuple_element_t<2, T>>(),
-                _ArgumentToComponent<std::tuple_element_t<3, T>>(),
-                _ArgumentToComponent<std::tuple_element_t<4, T>>(),
-                _ArgumentToComponent<std::tuple_element_t<5, T>>(),
-            };
-        }
-    };
+        return {_ArgumentToComponent<std::tuple_element_t<Indexes, T>>()...};
+    }
 
     template <uiw size> [[nodiscard]] constexpr pair<std::array<System::RequestedComponent, size>, uiw> _FindMatchingComponents(const std::array<System::RequestedComponent, size> &arr, RequirementForComponent requirement)
     {
@@ -294,12 +211,12 @@ namespace ECSTest
 // TODO: optimize it so std::arrays use only as much space as they actually need
 
 #define DIRECT_ACCEPT_COMPONENTS(...) \
-    virtual Requests RequestedComponents() const override \
+    virtual const Requests &RequestedComponents() const override \
     { \
         using thisType = std::remove_reference_t<std::remove_cv_t<decltype(*this)>>; \
 		struct Local { static void Temp(__VA_ARGS__); }; \
 		using types = typename FunctionInfo::Info<decltype(Local::Temp)>::args; \
-        static constexpr auto arr = _TupleToComponents<types>::Convert(); \
+        static constexpr auto arr = _TupleToComponentsArray<types>(std::make_index_sequence<std::tuple_size_v<types>>()); \
         static constexpr auto arrSorted = Funcs::SortCompileTime(arr); \
         static constexpr auto required = _FindMatchingComponents(arrSorted, RequirementForComponent::Required); \
         static constexpr auto opt = _FindMatchingComponents(arrSorted, RequirementForComponent::Optional); \
@@ -330,12 +247,12 @@ namespace ECSTest
     void Update(Environment &env, __VA_ARGS__)
 
 #define INDIRECT_ACCEPT_COMPONENTS(...) \
-    virtual Requests RequestedComponents() const override \
+    virtual const Requests &RequestedComponents() const override \
     { \
         using thisType = std::remove_reference_t<std::remove_cv_t<decltype(*this)>>; \
 		struct Local { static void Temp(__VA_ARGS__); }; \
 		using types = typename FunctionInfo::Info<decltype(Local::Temp)>::args; \
-        static constexpr auto arr = _TupleToComponents<types>::Convert(); \
+        static constexpr auto arr = _TupleToComponentsArray<types>(std::make_index_sequence<std::tuple_size_v<types>>()); \
         static constexpr auto arrSorted = Funcs::SortCompileTime(arr); \
         static constexpr auto required = _FindMatchingComponents(arrSorted, RequirementForComponent::Required); \
         static constexpr auto opt = _FindMatchingComponents(arrSorted, RequirementForComponent::Optional); \
@@ -350,7 +267,8 @@ namespace ECSTest
             ToArray(writeAccess.first.data(), writeAccess.second), \
             ToArray(archetypeDefining.first.data(), archetypeDefining.second), \
             ToArray(arrSorted), \
-            ToArray(arr) \
+            ToArray(arr), \
+            nullopt \
         }; \
         return requests; \
     } \
