@@ -76,6 +76,65 @@ namespace ECSTest
             (object->*Method)(env, ConvertArgument<types, Indexes>(array)...);
         }
 
+        // make sure the argument type is correct
+        template <typename T> static constexpr void CheckArgumentType()
+        {
+            using TPure = std::remove_pointer_t<std::remove_reference_t<T>>;
+            using componentType = typename GetComponentType<std::remove_cv_t<TPure>>::type;
+            constexpr auto isSubstractive = std::is_base_of_v<_SubtractiveComponentBase, componentType>;
+            constexpr auto isComponent = std::is_base_of_v<Component, componentType>;
+            constexpr auto isEntityID = std::is_same_v<EntityID, componentType>;
+            static_assert(isSubstractive || isComponent || isEntityID, "Invalid argument type, must be either Component, SubtractiveComponent, or EntityID");
+        }
+
+        template <typename T> static constexpr StableTypeId ArgumentToTypeId()
+        {
+            using TPure = std::remove_pointer_t<std::remove_reference_t<T>>;
+            using componentType = typename GetComponentType<std::remove_cv_t<TPure>>::type;
+            if constexpr (std::is_base_of_v<_SubtractiveComponentBase, componentType>)
+            {
+                return componentType::ComponentType::GetTypeId();
+            }
+            else if constexpr (std::is_base_of_v<Component, componentType>)
+            {
+                return componentType::GetTypeId();
+            }
+            else if constexpr (std::is_same_v<EntityID, componentType>)
+            {
+                return NAME_TO_STABLE_ID("EntityID");
+            }
+            else
+            {
+                static_assert(false, "Failed to convert argument type to id");
+                return {};
+            }
+        }
+
+        // makes sure the argument type appears only once
+        template <typename T, uiw... Indexes> static constexpr void CheckArgumentAliases()
+        {
+            constexpr uiw count = sizeof...(Indexes);
+            if constexpr (count > 0)
+            {
+                constexpr StableTypeId const types[] = {ArgumentToTypeId<std::tuple_element_t<Indexes, T>>()...};
+                auto isValid = [](const StableTypeId *types, uiw count) constexpr
+                {
+                    for (uiw i = 0; i < count - 1; ++i)
+                    {
+                        for (uiw j = i + 1; j < count; ++j)
+                        {
+                            if (types[i] == types[j])
+                            {
+                                return false;
+                            }
+                        }
+                    }
+                    return true;
+                };
+                static_assert(isValid(types, count), "Requested type appears more than once");
+            }
+        }
+
         // converts argument type (like Array<Component> &) into System::RequestedComponent
         template <typename T> static constexpr System::RequestedComponent ArgumentToComponent()
         {
@@ -96,6 +155,8 @@ namespace ECSTest
         // TODO: check for types that appear more than once (which is an error)
         template <typename T, uiw... Indexes> static constexpr std::array<System::RequestedComponent, sizeof...(Indexes)> TupleToComponentsArray(std::index_sequence<Indexes...>)
         {
+            (CheckArgumentType<std::tuple_element_t<Indexes, T>>(), ...);
+            CheckArgumentAliases<T, Indexes...>();
             return {ArgumentToComponent<std::tuple_element_t<Indexes, T>>()...};
         }
 
