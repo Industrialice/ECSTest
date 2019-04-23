@@ -330,8 +330,19 @@ void ConsumerIndirectSystem::ProcessMessages(const MessageStreamEntityRemoved &s
 
 DIRECT_SYSTEM(ConsumerDirectSystem)
 {
-    DIRECT_ACCEPT_COMPONENTS(Array<GeneratedComponent> &generatedComponents, Array<EntityID> &ids/*, Array<TagComponent> *tags*/)
+    DIRECT_ACCEPT_COMPONENTS(const Array<GeneratedComponent> &generatedComponents, Array<EntityID> &ids/*, Array<TagComponent> *tags*/)
     {
+        ASSUME(ids.size() > 0);
+        ASSUME(ids.size() <= EntitiesToAdd);
+        ASSUME(generatedComponents.size() == ids.size());
+        for (auto &c : generatedComponents)
+        {
+            ASSUME(c.value == 25 || c.value == 35);
+        }
+        for (auto &id : ids)
+        {
+            ASSUME(id.Hash() <= env.entityIdGenerator.LastGenerated().Hash());
+        }
     }
 };
 
@@ -343,7 +354,7 @@ DIRECT_SYSTEM(EmptyDirectReadSystem)
 
 DIRECT_SYSTEM(EmptyDirectWriteSystem)
 {
-    DIRECT_ACCEPT_COMPONENTS(Array<GeneratedComponent> &generatedComponents, Array<EntityID> &ids)
+    DIRECT_ACCEPT_COMPONENTS(const Array<GeneratedComponent> &generatedComponents, Array<EntityID> &ids)
     {}
 };
 

@@ -831,9 +831,6 @@ void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, System::Environ
         auto it = _archetypeGroups.find(archetype);
         ASSUME(it != _archetypeGroups.end());
 
-        _tempArrayArgs.clear();
-        _tempArgs.clear();
-
         ASSUME(_tempArgs.capacity() >= maxArgs && _tempArrayArgs.capacity() >= maxArgs); // any unexpected reallocation will break the program
 
         for (const auto &group : it->second)
@@ -843,14 +840,11 @@ void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, System::Environ
                 continue;
             }
 
+            _tempArrayArgs.clear();
+            _tempArgs.clear();
+
             for (const System::RequestedComponent &arg : reqested.allOriginalOrder)
             {
-                if (_tempArrayArgs.size() == reqested.idsArgumentNumber)
-                {
-                    _tempArrayArgs.push_back({(ui8 *)group.get().entities.get(), group.get().entitiesCount});
-                    _tempArgs.push_back(&_tempArrayArgs.back());
-                }
-
                 ui32 index = 0;
                 for (; index < group.get().uniqueTypedComponentsCount; ++index)
                 {
@@ -881,10 +875,10 @@ void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, System::Environ
                 }
             }
 
-            if (_tempArrayArgs.size() == reqested.idsArgumentNumber)
+            if (reqested.idsArgumentNumber)
             {
-                _tempArrayArgs.push_back({(ui8 *)group.get().entities.get(), group.get().entitiesCount});
-                _tempArgs.push_back(&_tempArrayArgs.back());
+                _tempArrayArgs.insert(_tempArrayArgs.begin() + *reqested.idsArgumentNumber, {(ui8 *)group.get().entities.get(), group.get().entitiesCount});
+                _tempArgs.insert(_tempArgs.begin() + *reqested.idsArgumentNumber, &_tempArrayArgs.back());
             }
 
             ASSUME(_tempArgs.size());
