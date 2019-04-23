@@ -12,26 +12,30 @@ namespace ECSTest
         template <typename T> struct GetComponentType
         {
             using type = T;
+            static constexpr bool isSubtractive = false;
+            static constexpr bool isArray = false;
         };
 
         template <typename T> struct GetComponentType<SubtractiveComponent<T>>
         {
             using type = T;
+            static constexpr bool isSubtractive = true;
+            static constexpr bool isArray = false;
         };
 
         template <typename T> struct GetComponentType<Array<T>>
         {
             using type = T;
+            static constexpr bool isSubtractive = false;
+            static constexpr bool isArray = true;
         };
 
         template <typename T> struct GetComponentType<Array<SubtractiveComponent<T>>>
         {
-            //static_assert(false, "Subtractive component cannot be inside an array");
             using type = T;
+            static constexpr bool isSubtractive = true;
+            static constexpr bool isArray = true;
         };
-
-        template <typename T> static constexpr bool IsArray(Array<T>) { return true; }
-        template <typename T> static constexpr bool IsArray(T) { return false; }
 
         // converts void * into a properly typed T argument - a pointer or a reference
         template <typename types, uiw index> static FORCEINLINE auto ConvertArgument(void **args) -> decltype(auto)
@@ -40,16 +44,15 @@ namespace ECSTest
             void *arg = args[index];
 
             using pureType = std::remove_cv_t<std::remove_pointer_t<std::remove_reference_t<T>>>;
+            using componentType = typename GetComponentType<pureType>::type;
+            constexpr bool isSubtractive = GetComponentType<pureType>::isSubtractive;
+            constexpr bool isArray = GetComponentType<pureType>::isArray;
 
-            static constexpr bool isRefOrPtr = std::is_reference_v<T> || std::is_pointer_v<T>;
-            static constexpr bool isSubtractive = std::is_base_of_v<_SubtractiveComponentBase, pureType>;
-            static constexpr bool isArray = IsArray(pureType());
+            constexpr bool isRefOrPtr = std::is_reference_v<T> || std::is_pointer_v<T>;
             static_assert(isSubtractive || isRefOrPtr, "Type must be either reference or pointer");
             static_assert(!isSubtractive || !isRefOrPtr, "Subtractive component cannot be passed by reference or pointer");
             static_assert(isSubtractive || isArray, "Non-subtractive components must be passed using Array<T>");
             static_assert(!isSubtractive || !isArray, "Subtractive component cannot be inside an array");
-
-            using componentType = typename GetComponentType<pureType>::type;
 
             if constexpr (std::is_reference_v<T>)
             {
@@ -79,12 +82,15 @@ namespace ECSTest
         // make sure the argument type is correct
         template <typename T> static constexpr void CheckArgumentType()
         {
-            using TPure = std::remove_pointer_t<std::remove_reference_t<T>>;
-            using componentType = typename GetComponentType<std::remove_cv_t<TPure>>::type;
-            constexpr auto isSubstractive = std::is_base_of_v<_SubtractiveComponentBase, componentType>;
+            using pureType = std::remove_cv_t<std::remove_pointer_t<std::remove_reference_t<T>>>;
+            using componentType = typename GetComponentType<pureType>::type;
+            constexpr bool isSubtractive = GetComponentType<pureType>::isSubtractive;
+            constexpr bool isArray = GetComponentType<pureType>::isArray;
             constexpr auto isComponent = std::is_base_of_v<Component, componentType>;
             constexpr auto isEntityID = std::is_same_v<EntityID, componentType>;
-            static_assert(isSubstractive || isComponent || isEntityID, "Invalid argument type, must be either Component, SubtractiveComponent, or EntityID");
+            static_assert(isSubtractive != isArray, "SubtractiveComponent can't be inside an Array");
+            static_assert(isComponent || (isSubtractive == false), "SubtractiveComponent used with a non-component type");
+            static_assert(isSubtractive || isComponent || isEntityID, "Invalid argument type, must be either Component, SubtractiveComponent, or EntityID");
         }
 
         template <typename T> static constexpr StableTypeId ArgumentToTypeId()
@@ -101,7 +107,7 @@ namespace ECSTest
             }
             else if constexpr (std::is_same_v<EntityID, componentType>)
             {
-                return NAME_TO_STABLE_ID("EntityID");
+                return NAME_TO_STABLE_ID("EntityID")::GetTypeId();
             }
             else
             {
@@ -110,29 +116,25 @@ namespace ECSTest
             }
         }
 
-        // makes sure the argument type appears only once
-        template <typename T, uiw... Indexes> static constexpr void CheckArgumentAliases()
+        template <typename T, uiw... Indexes> static constexpr std::array<StableTypeId, sizeof...(Indexes)> ArgumentsToTypeIds()
         {
-            constexpr uiw count = sizeof...(Indexes);
-            if constexpr (count > 0)
+            return {ArgumentToTypeId<std::tuple_element_t<Indexes, T>>()...};
+        }
+
+        // makes sure the argument type appears only once
+        template <iw size> static constexpr bool IsTypesAliased(const std::array<StableTypeId, size> &types)
+        {
+            for (iw i = 0; i < size - 1; ++i)
             {
-                constexpr StableTypeId const types[] = {ArgumentToTypeId<std::tuple_element_t<Indexes, T>>()...};
-                auto isValid = [](const StableTypeId *types, uiw count) constexpr
+                for (iw j = i + 1; j < size; ++j)
                 {
-                    for (uiw i = 0; i < count - 1; ++i)
+                    if (types[i] == types[j])
                     {
-                        for (uiw j = i + 1; j < count; ++j)
-                        {
-                            if (types[i] == types[j])
-                            {
-                                return false;
-                            }
-                        }
+                        return true;
                     }
-                    return true;
-                };
-                static_assert(isValid(types, count), "Requested type appears more than once");
+                }
             }
+            return false;
         }
 
         // converts argument type (like Array<Component> &) into System::RequestedComponent
@@ -140,24 +142,67 @@ namespace ECSTest
         {
             using TPure = std::remove_pointer_t<std::remove_reference_t<T>>;
             using componentType = typename GetComponentType<std::remove_cv_t<TPure>>::type;
-            constexpr RequirementForComponent availability =
-                std::is_reference_v<T> ?
-                RequirementForComponent::Required :
-                (std::is_pointer_v<T> ?
-                    RequirementForComponent::Optional :
-                    (std::is_base_of_v<_SubtractiveComponentBase, T> ?
-                        RequirementForComponent::Subtractive :
-                        (RequirementForComponent)i8_max));
-            static_assert((i32)availability != i8_max);
-            return {componentType::GetTypeId(), !std::is_const_v<TPure>, availability};
+            if constexpr (std::is_same_v<EntityID, componentType>)
+            {
+                return {{}, false, (RequirementForComponent)i8_max};
+            }
+            else
+            {
+                constexpr RequirementForComponent availability =
+                    std::is_reference_v<T> ?
+                    RequirementForComponent::Required :
+                    (std::is_pointer_v<T> ?
+                        RequirementForComponent::Optional :
+                        (std::is_base_of_v<_SubtractiveComponentBase, T> ?
+                            RequirementForComponent::Subtractive :
+                            (RequirementForComponent)i8_max));
+                static_assert(availability != (RequirementForComponent)i8_max, "Invalid type");
+                return {componentType::GetTypeId(), !std::is_const_v<TPure>, availability};
+            }
         }
 
-        // TODO: check for types that appear more than once (which is an error)
-        template <typename T, uiw... Indexes> static constexpr std::array<System::RequestedComponent, sizeof...(Indexes)> TupleToComponentsArray(std::index_sequence<Indexes...>)
+        template <uiw size> static constexpr optional<ui32> FindEntityIDIndex(const std::array<StableTypeId, size> &types)
+        {
+            for (uiw index = 0; index < size; ++index)
+            {
+                if (types[index] == NAME_TO_STABLE_ID("EntityID")::GetTypeId())
+                {
+                    return index;
+                }
+            }
+            return nullopt;
+        }
+
+        template <typename T, bool IsEntityIDIndexValid, uiw... Indexes> static constexpr auto ConvertToComponents()
+        {
+            constexpr uiw count = sizeof...(Indexes);
+            std::array<System::RequestedComponent, count> converted = {ArgumentToComponent<std::tuple_element_t<Indexes, T>>()...};
+            if constexpr (IsEntityIDIndexValid)
+            {
+                std::array<System::RequestedComponent, count - 1> arr{};
+                for (uiw src = 0, dst = 0; src < count; ++src)
+                {
+                    if (converted[src].requirement != (RequirementForComponent)i8_max)
+                    {
+                        arr[dst++] = converted[src];
+                    }
+                }
+                return arr;
+            }
+            else
+            {
+                return converted;
+            }
+        }
+
+        template <typename T, uiw... Indexes> static constexpr auto TupleToComponentsArray(std::index_sequence<Indexes...>)
         {
             (CheckArgumentType<std::tuple_element_t<Indexes, T>>(), ...);
-            CheckArgumentAliases<T, Indexes...>();
-            return {ArgumentToComponent<std::tuple_element_t<Indexes, T>>()...};
+            constexpr auto typeIds = ArgumentsToTypeIds<T, Indexes...>();
+            constexpr bool isAliased = IsTypesAliased(typeIds);
+            static_assert(isAliased == false, "Requested type appears more than once");
+            constexpr auto entityIDIndex = FindEntityIDIndex(typeIds);
+            return std::pair{ConvertToComponents<T, entityIDIndex != nullopt, Indexes...>(), entityIDIndex};
         }
 
         template <uiw size>[[nodiscard]] static constexpr pair<std::array<System::RequestedComponent, size>, uiw> FindMatchingComponents(const std::array<System::RequestedComponent, size> &arr, RequirementForComponent requirement)
@@ -214,7 +259,8 @@ namespace ECSTest
         using thisType = std::remove_reference_t<std::remove_cv_t<decltype(*this)>>; \
 		struct Local { static void Temp(__VA_ARGS__); }; \
 		using types = typename FunctionInfo::Info<decltype(Local::Temp)>::args; \
-        static constexpr auto arr = _SystemHelperFuncs::TupleToComponentsArray<types>(std::make_index_sequence<std::tuple_size_v<types>>()); \
+        static constexpr auto converted = _SystemHelperFuncs::TupleToComponentsArray<types>(std::make_index_sequence<std::tuple_size_v<types>>()); \
+        static constexpr auto arr = converted.first; \
         static constexpr auto arrSorted = Funcs::SortCompileTime(arr); \
         static constexpr auto required = _SystemHelperFuncs::FindMatchingComponents(arrSorted, RequirementForComponent::Required); \
         static constexpr auto opt = _SystemHelperFuncs::FindMatchingComponents(arrSorted, RequirementForComponent::Optional); \
@@ -230,7 +276,7 @@ namespace ECSTest
             ToArray(archetypeDefining.first.data(), archetypeDefining.second), \
             ToArray(arrSorted), \
             ToArray(arr), \
-            nullopt \
+            converted.second \
         }; \
         return requests; \
     } \
@@ -251,7 +297,9 @@ namespace ECSTest
         using thisType = std::remove_reference_t<std::remove_cv_t<decltype(*this)>>; \
 		struct Local { static void Temp(__VA_ARGS__); }; \
 		using types = typename FunctionInfo::Info<decltype(Local::Temp)>::args; \
-        static constexpr auto arr = _SystemHelperFuncs::TupleToComponentsArray<types>(std::make_index_sequence<std::tuple_size_v<types>>()); \
+        static constexpr auto converted = _SystemHelperFuncs::TupleToComponentsArray<types>(std::make_index_sequence<std::tuple_size_v<types>>()); \
+        static_assert(converted.second == nullopt, "Indirect systems can't request EntityID"); \
+        static constexpr auto arr = converted.first; \
         static constexpr auto arrSorted = Funcs::SortCompileTime(arr); \
         static constexpr auto required = _SystemHelperFuncs::FindMatchingComponents(arrSorted, RequirementForComponent::Required); \
         static constexpr auto opt = _SystemHelperFuncs::FindMatchingComponents(arrSorted, RequirementForComponent::Optional); \

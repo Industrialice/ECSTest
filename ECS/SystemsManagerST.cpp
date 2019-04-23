@@ -817,7 +817,9 @@ void SystemsManagerST::ExecuteIndirectSystem(IndirectSystem &system, ManagedIndi
 
 void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, System::Environment &env)
 {
-    uiw maxArgs = system.RequestedComponents().required.size() + system.RequestedComponents().optional.size();
+    auto &reqested = system.RequestedComponents();
+
+    uiw maxArgs = reqested.required.size() + reqested.optional.size() + (reqested.idsArgumentNumber != nullopt);
 
     _tempArrayArgs.reserve(maxArgs);
     _tempArgs.reserve(maxArgs);
@@ -841,8 +843,14 @@ void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, System::Environ
                 continue;
             }
 
-            for (const System::RequestedComponent &arg : system.RequestedComponents().allOriginalOrder)
+            for (const System::RequestedComponent &arg : reqested.allOriginalOrder)
             {
+                if (_tempArrayArgs.size() == reqested.idsArgumentNumber)
+                {
+                    _tempArrayArgs.push_back({(ui8 *)group.get().entities.get(), group.get().entitiesCount});
+                    _tempArgs.push_back(&_tempArrayArgs.back());
+                }
+
                 ui32 index = 0;
                 for (; index < group.get().uniqueTypedComponentsCount; ++index)
                 {
@@ -871,6 +879,12 @@ void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, System::Environ
                     ASSUME(arg.requirement == RequirementForComponent::Optional);
                     _tempArgs.push_back(nullptr);
                 }
+            }
+
+            if (_tempArrayArgs.size() == reqested.idsArgumentNumber)
+            {
+                _tempArrayArgs.push_back({(ui8 *)group.get().entities.get(), group.get().entitiesCount});
+                _tempArgs.push_back(&_tempArrayArgs.back());
             }
 
             ASSUME(_tempArgs.size());

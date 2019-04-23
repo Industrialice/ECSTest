@@ -330,9 +330,21 @@ void ConsumerIndirectSystem::ProcessMessages(const MessageStreamEntityRemoved &s
 
 DIRECT_SYSTEM(ConsumerDirectSystem)
 {
-    DIRECT_ACCEPT_COMPONENTS(Array<GeneratedComponent> &/*, Array<TagComponent> *tags*/)
+    DIRECT_ACCEPT_COMPONENTS(Array<GeneratedComponent> &generatedComponents, Array<EntityID> &ids/*, Array<TagComponent> *tags*/)
     {
     }
+};
+
+DIRECT_SYSTEM(EmptyDirectReadSystem)
+{
+    DIRECT_ACCEPT_COMPONENTS(const Array<GeneratedComponent> &generatedComponents, Array<EntityID> &ids)
+    {}
+};
+
+DIRECT_SYSTEM(EmptyDirectWriteSystem)
+{
+    DIRECT_ACCEPT_COMPONENTS(Array<GeneratedComponent> &generatedComponents, Array<EntityID> &ids)
+    {}
 };
 
 using namespace ECSTest;
@@ -479,7 +491,10 @@ int main()
     auto testPipeline1 = manager->CreatePipeline(/*6.5_ms*/nullopt, false);
 
     manager->Register(make_unique<GeneratorSystem>(), testPipeline0);
+    manager->Register(make_unique<EmptyDirectReadSystem>(), testPipeline0);
     manager->Register(make_unique<ConsumerIndirectSystem>(), testPipeline1);
+    manager->Register(make_unique<ConsumerDirectSystem>(), testPipeline1);
+    manager->Register(make_unique<EmptyDirectWriteSystem>(), testPipeline1);
 
     vector<WorkerThread> workers;
     if (IsMultiThreadedECS)
