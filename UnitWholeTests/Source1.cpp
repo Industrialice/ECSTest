@@ -160,7 +160,7 @@ void TransformHeightFixerSystem::ProcessMessages(const MessageStreamEntityAdded 
 {
     for (auto &entity : stream)
     {
-        auto t = *entity.FindComponent<Transform>();
+        auto t = entity.GetComponent<Transform>();
         if (t.position.y < 0)
         {
             auto cooldown = entity.FindComponent<NegativeHeightCooldown>();
@@ -267,7 +267,7 @@ void TransformFallingIndirectSystem::ProcessMessages(const MessageStreamEntityAd
 	for (auto &entity : stream)
 	{
         auto &target = _entities[entity.entityID];
-        target.transform = *entity.FindComponent<Transform>();
+        target.transform = entity.GetComponent<Transform>();
         if (auto speedOfFall = entity.FindComponent<SpeedOfFall>(); speedOfFall)
         {
             target.speedOfFall = *speedOfFall;
@@ -483,7 +483,7 @@ void CooldownUpdater::ProcessMessages(const MessageStreamEntityAdded &stream)
 {
     for (auto &entity : stream)
     {
-        _cooldowns[entity.entityID] = *entity.FindComponent<NegativeHeightCooldown>();
+        _cooldowns[entity.entityID] = entity.GetComponent<NegativeHeightCooldown>();
     }
 }
 

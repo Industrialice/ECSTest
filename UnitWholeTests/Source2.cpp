@@ -15,6 +15,29 @@ namespace
     constexpr ui32 WaitForExecutedFrames = 500;
 }
 
+class Pipeline
+{
+    static constexpr ui32 _advanceLatency = 10;
+    ui32 _advancePassed = 0;
+    ui32 _phase = 0;
+
+public:
+    bool Advance()
+    {
+        if (_phase != 3)
+        {
+            ++_advancePassed;
+            if (_advancePassed < _advanceLatency)
+            {
+                return false;
+            }
+            _advancePassed = 0;
+            ++_phase;
+        }
+        return true;
+    }
+};
+
 COMPONENT(GeneratedComponent)
 {
     ui32 value;
@@ -39,6 +62,11 @@ COMPONENT(ConsumerInfoComponent)
     ui64 tagIDHash = 0;
 };
 
+COMPONENT(OtherComponent)
+{
+    ui64 value;
+};
+
 NONUNIQUE_COMPONENT(TagComponent)
 {
     enum class ConnectedTo
@@ -52,7 +80,7 @@ NONUNIQUE_COMPONENT(TagComponent)
 
 INDIRECT_SYSTEM(GeneratorSystem)
 {
-    INDIRECT_ACCEPT_COMPONENTS(SubtractiveComponent<GeneratedComponent>, SubtractiveComponent<ConsumerInfoComponent>)
+    INDIRECT_ACCEPT_COMPONENTS(SubtractiveComponent<GeneratedComponent>, SubtractiveComponent<ConsumerInfoComponent>, SubtractiveComponent<OtherComponent>)
     {
         [this, &env]
         {
@@ -141,29 +169,6 @@ INDIRECT_SYSTEM(GeneratorSystem)
     }
 
 private:
-    class Pipeline
-    {
-        static constexpr ui32 _advanceLatency = 10;
-        ui32 _advancePassed = 0;
-        ui32 _phase = 0;
-
-    public:
-        bool Advance()
-        {
-            if (_phase != 3)
-            {
-                ++_advancePassed;
-                if (_advancePassed < _advanceLatency)
-                {
-                    return false;
-                }
-                _advancePassed = 0;
-                ++_phase;
-            }
-            return true;
-        }
-    };
-
     ui32 _leftToGenerate = EntitiesToAdd;
     std::queue<EntityID> _toComponentChange{};
     std::queue<EntityID> _toComponentRemove{};
@@ -346,16 +351,107 @@ DIRECT_SYSTEM(ConsumerDirectSystem)
     }
 };
 
+namespace
+{
+    std::map<EntityID, OtherComponent> CurrentData{};
+    ui64 ValueGenerator{};
+}
+
+INDIRECT_SYSTEM(OtherIndirectSystem)
+{
+    INDIRECT_ACCEPT_COMPONENTS(Array<OtherComponent> &)
+    {
+        if (_leftToGenerate)
+        {
+            OtherComponent component;
+            component.value = ValueGenerator++;
+            env.messageBuilder.AddEntity(env.entityIdGenerator.Generate()).AddComponent(component);
+            CurrentData[env.entityIdGenerator.LastGenerated()] = component;
+            _localData[env.entityIdGenerator.LastGenerated()] = component;
+        }
+
+        ASSUME(CurrentData.size() == _localData.size());
+
+        for (auto &[key, value] : CurrentData)
+        {
+            ASSUME(_localData[key].value == value.value);
+        }
+    }
+
+    virtual void OnCreate(Environment &env) override
+    {
+    }
+
+    virtual void OnDestroy(Environment &env) override
+    {
+    }
+
+private:
+    ui32 _leftToGenerate = EntitiesToAdd;
+    std::map<EntityID, OtherComponent> _localData{};
+};
+
+void OtherIndirectSystem::ProcessMessages(const MessageStreamEntityAdded &stream)
+{
+    for (auto &entry : stream)
+    {
+        CurrentData[entry.entityID] = entry.GetComponent<OtherComponent>();
+        _localData[entry.entityID] = entry.GetComponent<OtherComponent>();
+    }
+}
+
+void OtherIndirectSystem::ProcessMessages(const MessageStreamComponentAdded &stream)
+{
+    for (auto &entry : stream)
+    {
+        CurrentData[entry.entityID] = entry.component.Cast<OtherComponent>();
+        _localData[entry.entityID] = entry.component.Cast<OtherComponent>();
+    }
+}
+
+void OtherIndirectSystem::ProcessMessages(const MessageStreamComponentChanged &stream)
+{
+    for (auto &entry : stream)
+    {
+        CurrentData[entry.entityID] = entry.component.Cast<OtherComponent>();
+        _localData[entry.entityID] = entry.component.Cast<OtherComponent>();
+    }
+}
+
+void OtherIndirectSystem::ProcessMessages(const MessageStreamComponentRemoved &stream)
+{
+}
+
+void OtherIndirectSystem::ProcessMessages(const MessageStreamEntityRemoved &stream)
+{
+}
+
 DIRECT_SYSTEM(EmptyDirectReadSystem)
 {
-    DIRECT_ACCEPT_COMPONENTS(const Array<GeneratedComponent> &generatedComponents, Array<EntityID> &ids)
-    {}
+    DIRECT_ACCEPT_COMPONENTS(const Array<OtherComponent> &components, Array<EntityID> &ids)
+    {
+        for (uiw index = 0; index < components.size(); ++index)
+        {
+            auto &component = components[index];
+            EntityID id = ids[index];
+            ASSUME(CurrentData[id].value == component.value);
+        }
+    }
 };
 
 DIRECT_SYSTEM(EmptyDirectWriteSystem)
 {
-    DIRECT_ACCEPT_COMPONENTS(const Array<GeneratedComponent> &generatedComponents, Array<EntityID> &ids)
-    {}
+    DIRECT_ACCEPT_COMPONENTS(Array<OtherComponent> &components, Array<EntityID> &ids)
+    {
+        for (uiw index = 0; index < components.size(); ++index)
+        {
+            auto &component = components[index];
+            EntityID id = ids[index];
+            ASSUME(CurrentData[id].value == component.value);
+            component.value = ValueGenerator++;
+            CurrentData[id] = component;
+        }
+    }
 };
 
 using namespace ECSTest;
@@ -412,28 +508,7 @@ template <typename T> void StreamComponent(const T &component, TestEntities::Pre
 }
 
 static void GenerateScene(EntityIDGenerator &entityIdGenerator, SystemsManager &manager, TestEntities &stream)
-{
-    //for (uiw index = 0; index < EntitiesToTest; ++index)
-    //{
-    //    TestEntities::PreStreamedEntity entity;
-
-    //    if (IsPreGenerateTransform)
-    //    {
-    //        Transform t;
-    //        t.position.x = rand() / (f32)RAND_MAX * 100 - 50;
-    //        t.position.y = rand() / (f32)RAND_MAX * 100 - 50;
-    //        t.position.z = rand() / (f32)RAND_MAX * 100 - 50;
-    //        StreamComponent(t, entity);
-    //    }
-
-    //    string name = "Entity"s + std::to_string(index);
-    //    Name n;
-    //    strcpy_s(n.name.data(), n.name.size(), name.c_str());
-    //    StreamComponent(n, entity);
-
-    //    stream.AddEntity(entityIdGenerator.Generate(), move(entity));
-    //}
-}
+{}
 
 static void PrintStreamInfo(EntitiesStream &stream, bool isFirstPass)
 {
@@ -506,6 +581,7 @@ int main()
     manager->Register(make_unique<ConsumerIndirectSystem>(), testPipeline1);
     manager->Register(make_unique<ConsumerDirectSystem>(), testPipeline1);
     manager->Register(make_unique<EmptyDirectWriteSystem>(), testPipeline1);
+    manager->Register(make_unique<OtherIndirectSystem>(), testPipeline1);
 
     vector<WorkerThread> workers;
     if (IsMultiThreadedECS)

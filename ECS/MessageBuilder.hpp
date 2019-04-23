@@ -72,6 +72,13 @@ namespace ECSTest
                 return nullptr;
             }
 
+            template <typename T> const T &GetComponent() const
+            {
+                auto *c = FindComponent<T>();
+                ASSUME(c);
+                return *c;
+            }
+
         private:
             vector<ui8> componentsData;
         };
