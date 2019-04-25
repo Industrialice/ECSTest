@@ -28,10 +28,10 @@ static void ArchetypeTests()
     ASSUME(shor == shor2);
 
     using typeId = pair<StableTypeId, ComponentID>;
-    typeId types2[] = {{ComponentArtist::GetTypeId(), 0}, {ComponentArtist::GetTypeId(), 1}};
+    typeId types2[] = {{ComponentArtist::GetTypeId(), ComponentID(0)}, {ComponentArtist::GetTypeId(), ComponentID(1)}};
     auto arc = ArchetypeFull::Create<typeId, &typeId::first, &typeId::second>(ToArray(types2));
 
-    typeId types3[] = {{ComponentArtist::GetTypeId(), 0}, {ComponentArtist::GetTypeId(), 1}, {ComponentArtist::GetTypeId(), 2}};
+    typeId types3[] = {{ComponentArtist::GetTypeId(), ComponentID(0)}, {ComponentArtist::GetTypeId(), ComponentID(1)}, {ComponentArtist::GetTypeId(), ComponentID(2)}};
     auto arc2 = ArchetypeFull::Create<typeId, &typeId::first, &typeId::second>(ToArray(types3));
     ASSUME(arc != arc2);
 
@@ -278,7 +278,7 @@ public:
                     ComponentArtist::GetTypeId()
                 };
                 Archetype arch = Archetype::Create<StableTypeId>(ToArray(types));
-                builder.RemoveEntity(arch, gen.LastGenerated());
+                builder.RemoveEntity(gen.LastGenerated(), arch);
                 auto [it, result] = entitiesRemoved.insert(gen.LastGenerated());
                 ASSUME(result);
             }
@@ -296,7 +296,7 @@ public:
         ui32 checked = 0;
         for (const auto &streamSource : builder.EntityAddedStreams()._data)
         {
-            MessageStreamEntityAdded addedStream(streamSource.first, streamSource.second);
+            MessageStreamEntityAdded addedStream(streamSource.first, streamSource.second, "MessageBuilderTests");
 
             for (const auto &entity : addedStream)
             {
@@ -337,7 +337,7 @@ public:
         checked = 0;
         for (const auto &streamSource : builder.EntityRemovedStreams()._data)
         {
-            MessageStreamEntityRemoved removedStream(streamSource.first, streamSource.second);
+            MessageStreamEntityRemoved removedStream(streamSource.first, streamSource.second, "MessageBuilderTests");
 
             for (const auto &id : removedStream)
             {
@@ -350,7 +350,7 @@ public:
         checked = 0;
         for (const auto &streamSource : builder.ComponentChangedStreams()._data)
         {
-            MessageStreamComponentChanged changed(streamSource.first, streamSource.second);
+            MessageStreamComponentChanged changed(streamSource.first, streamSource.second, "MessageBuilderTests");
 
             for (const auto &component : changed)
             {

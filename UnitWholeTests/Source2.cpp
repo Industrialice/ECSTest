@@ -335,7 +335,7 @@ void ConsumerIndirectSystem::ProcessMessages(const MessageStreamEntityRemoved &s
 
 DIRECT_SYSTEM(ConsumerDirectSystem)
 {
-    DIRECT_ACCEPT_COMPONENTS(const Array<GeneratedComponent> &generatedComponents, Array<EntityID> &ids/*, Array<TagComponent> *tags*/)
+    DIRECT_ACCEPT_COMPONENTS(const Array<GeneratedComponent> &generatedComponents, const Array<EntityID> &ids, Array<TagComponent> *tags)
     {
         ASSUME(ids.size() > 0);
         ASSUME(ids.size() <= EntitiesToAdd);
@@ -420,15 +420,17 @@ void OtherIndirectSystem::ProcessMessages(const MessageStreamComponentChanged &s
 
 void OtherIndirectSystem::ProcessMessages(const MessageStreamComponentRemoved &stream)
 {
+    SOFTBREAK;
 }
 
 void OtherIndirectSystem::ProcessMessages(const MessageStreamEntityRemoved &stream)
 {
+    SOFTBREAK;
 }
 
 DIRECT_SYSTEM(EmptyDirectReadSystem)
 {
-    DIRECT_ACCEPT_COMPONENTS(const Array<OtherComponent> &components, Array<EntityID> &ids)
+    DIRECT_ACCEPT_COMPONENTS(const Array<OtherComponent> &components, const Array<EntityID> &ids)
     {
         for (uiw index = 0; index < components.size(); ++index)
         {
@@ -441,7 +443,7 @@ DIRECT_SYSTEM(EmptyDirectReadSystem)
 
 DIRECT_SYSTEM(EmptyDirectWriteSystem)
 {
-    DIRECT_ACCEPT_COMPONENTS(Array<OtherComponent> &components, Array<EntityID> &ids)
+    DIRECT_ACCEPT_COMPONENTS(Array<OtherComponent> &components, const Array<EntityID> &ids)
     {
         for (uiw index = 0; index < components.size(); ++index)
         {

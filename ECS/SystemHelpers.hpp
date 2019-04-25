@@ -107,6 +107,7 @@ namespace ECSTest
             }
             else if constexpr (std::is_same_v<EntityID, componentType>)
             {
+                static_assert(std::is_const_v<TPure>, "EntityID array must be read-only");
                 return NAME_TO_STABLE_ID("EntityID")::GetTypeId();
             }
             else

@@ -881,7 +881,7 @@ void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, System::Environ
                 _tempArgs.insert(_tempArgs.begin() + *reqested.idsArgumentNumber, &_tempArrayArgs.back());
             }
 
-            ASSUME(_tempArgs.size());
+            ASSUME(_tempArgs.size() <= maxArgs);
 
             system.Accept(env, _tempArgs.data());
 

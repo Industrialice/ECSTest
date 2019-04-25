@@ -54,8 +54,12 @@ Pipelines: each pipeline has its own scheduler. Pipelines can be either continio
   
   
 Component requirement types:
-  Required: an entity must contain every required component from the list.
+  RequiredWithData: an entity must contain every required component from the list.
+    The system will be accessing component data.
+  Required: an entity must contain every required component from the list. Component
+    data will not be fetched.
   Subtractive: an entity cannot contain any subtractive component from the list.
+    Component data will not be fetched.
   Optional: doesn't affect archetype selection, after all the archetypes that contain
     all the required component types and don't contain any subtractive types were 
 	selected, their required components are passed into the system. If these entities
