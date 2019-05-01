@@ -134,6 +134,7 @@ namespace ECSTest
 
         vector<SerializedComponent> _tempComponents{};
         vector<Array<ui8>> _tempArrayArgs{};
+		vector<NonUnique<ui8>> _tempNonUniqueArgs{};
         vector<void *> _tempArgs{};
 
 	private:

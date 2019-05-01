@@ -51,8 +51,7 @@ namespace ECSTest
     };
 
     class Component
-    {
-    };
+    {};
 
     template <bool isUnique, ui64 stableId IDINPUT> class EMPTY_BASES _BaseComponent : public Component, public StableTypeIdentifiable IDOUTPUT
     {
@@ -81,9 +80,22 @@ namespace ECSTest
 	struct _SubtractiveComponentBase
 	{};
 
-	template <typename T> struct SubtractiveComponent : _SubtractiveComponentBase
+	template <typename T> struct EMPTY_BASES SubtractiveComponent : _SubtractiveComponentBase
 	{
 		using ComponentType = T;
+	};
+
+	struct _NonUniqueBase
+	{};
+
+	template <typename T> struct EMPTY_BASES NonUnique : _NonUniqueBase
+	{
+		Array<T> components{};
+		const Array<ComponentID> ids{};
+		const ui32 stride{};
+
+		NonUnique(Array<T> components, Array<ComponentID> ids, ui32 stride) : components(components), ids(ids), stride(stride)
+		{}
 	};
 }
 

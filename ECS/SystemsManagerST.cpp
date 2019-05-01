@@ -752,6 +752,7 @@ void SystemsManagerST::ExecutePipeline(PipelineData &pipeline, System::Environme
             managed.system->OnCreate(env);
             UpdateECSFromMessages(env.messageBuilder);
             PassMessagesToIndirectSystems(env.messageBuilder, nullptr);
+			env.messageBuilder.SourceName(managed.system->Type().Name()); // the builder was reset, set the name again
         }
 
         ExecuteDirectSystem(*managed.system, env);
@@ -770,6 +771,7 @@ void SystemsManagerST::ExecutePipeline(PipelineData &pipeline, System::Environme
             managed.system->OnCreate(env);
             UpdateECSFromMessages(env.messageBuilder);
             PassMessagesToIndirectSystems(env.messageBuilder, managed.system.get());
+			env.messageBuilder.SourceName(managed.system->Type().Name()); // the builder was reset, set the name again
         }
 
         ExecuteIndirectSystem(*managed.system, managed.messageQueue, env);
@@ -821,6 +823,7 @@ void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, System::Environ
 
     uiw maxArgs = reqested.required.size() + reqested.optional.size() + (reqested.idsArgumentNumber != nullopt);
 
+	_tempNonUniqueArgs.reserve(maxArgs);
     _tempArrayArgs.reserve(maxArgs);
     _tempArgs.reserve(maxArgs);
 
@@ -831,7 +834,7 @@ void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, System::Environ
         auto it = _archetypeGroups.find(archetype);
         ASSUME(it != _archetypeGroups.end());
 
-        ASSUME(_tempArgs.capacity() >= maxArgs && _tempArrayArgs.capacity() >= maxArgs); // any unexpected reallocation will break the program
+        ASSUME(_tempNonUniqueArgs.capacity() >= maxArgs && _tempArgs.capacity() >= maxArgs && _tempArrayArgs.capacity() >= maxArgs); // any unexpected reallocation will break the program
 
         for (const auto &group : it->second)
         {
@@ -840,6 +843,7 @@ void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, System::Environ
                 continue;
             }
 
+			_tempNonUniqueArgs.clear();
             _tempArrayArgs.clear();
             _tempArgs.clear();
 
@@ -864,9 +868,22 @@ void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, System::Environ
 
                 if (isFound)
                 {
-                    ASSUME(group.get().components[index].isUnique); // TODO: support for non-unique components
-                    _tempArrayArgs.push_back({group.get().components[index].data.get(), group.get().entitiesCount});
-                    _tempArgs.push_back(&_tempArrayArgs.back());
+					if (group.get().components[index].isUnique)
+					{
+						_tempArrayArgs.push_back({group.get().components[index].data.get(), group.get().entitiesCount});
+						_tempArgs.push_back(&_tempArrayArgs.back());
+					}
+					else
+					{
+						NonUnique<ui8> desc = 
+						{
+							{group.get().components[index].data.get(), group.get().entitiesCount * group.get().components[index].stride},
+							{group.get().components[index].ids.get(), group.get().entitiesCount * group.get().components[index].stride},
+							group.get().components[index].stride
+						};
+						_tempNonUniqueArgs.push_back(desc);
+						_tempArgs.push_back(&_tempNonUniqueArgs.back());
+					}
                 }
                 else
                 {
@@ -904,7 +921,6 @@ void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, System::Environ
                 }
 
 				auto &stored = group.get().components[index];
-				ASSUME(stored.isUnique); // TODO: support for non-unique components
 
 				SerializedComponent serialized;
 				serialized.alignmentOf = stored.alignmentOf;

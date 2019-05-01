@@ -14,6 +14,7 @@ namespace ECSTest
             using type = T;
             static constexpr bool isSubtractive = false;
             static constexpr bool isArray = false;
+			static constexpr bool isNonUnique = false;
         };
 
         template <typename T> struct GetComponentType<SubtractiveComponent<T>>
@@ -21,13 +22,23 @@ namespace ECSTest
             using type = T;
             static constexpr bool isSubtractive = true;
             static constexpr bool isArray = false;
+			static constexpr bool isNonUnique = false;
         };
+
+		template <typename T> struct GetComponentType<NonUnique<T>>
+		{
+			using type = T;
+			static constexpr bool isSubtractive = false;
+			static constexpr bool isArray = false;
+			static constexpr bool isNonUnique = true;
+		};
 
         template <typename T> struct GetComponentType<Array<T>>
         {
             using type = T;
             static constexpr bool isSubtractive = false;
             static constexpr bool isArray = true;
+			static constexpr bool isNonUnique = false;
         };
 
         template <typename T> struct GetComponentType<Array<SubtractiveComponent<T>>>
@@ -35,7 +46,16 @@ namespace ECSTest
             using type = T;
             static constexpr bool isSubtractive = true;
             static constexpr bool isArray = true;
+			static constexpr bool isNonUnique = false;
         };
+
+		template <typename T> struct GetComponentType<Array<NonUnique<T>>>
+		{
+			using type = T;
+			static constexpr bool isSubtractive = false;
+			static constexpr bool isArray = true;
+			static constexpr bool isNonUnique = true;
+		};
 
         // converts void * into a properly typed T argument - a pointer or a reference
         template <typename types, uiw index> static FORCEINLINE auto ConvertArgument(void **args) -> decltype(auto)
@@ -47,12 +67,11 @@ namespace ECSTest
             using componentType = typename GetComponentType<pureType>::type;
             constexpr bool isSubtractive = GetComponentType<pureType>::isSubtractive;
             constexpr bool isArray = GetComponentType<pureType>::isArray;
+			constexpr bool isNonUnique = GetComponentType<pureType>::isNonUnique;
 
             constexpr bool isRefOrPtr = std::is_reference_v<T> || std::is_pointer_v<T>;
             static_assert(isSubtractive || isRefOrPtr, "Type must be either reference or pointer");
-            static_assert(!isSubtractive || !isRefOrPtr, "Subtractive component cannot be passed by reference or pointer");
-            static_assert(isSubtractive || isArray, "Non-subtractive components must be passed using Array<T>");
-            static_assert(!isSubtractive || !isArray, "Subtractive component cannot be inside an array");
+			static_assert(!isRefOrPtr || !isSubtractive, "Subtractive component cannot be passed by reference or pointer");
 
             if constexpr (std::is_reference_v<T>)
             {
@@ -85,12 +104,18 @@ namespace ECSTest
             using pureType = std::remove_cv_t<std::remove_pointer_t<std::remove_reference_t<T>>>;
             using componentType = typename GetComponentType<pureType>::type;
             constexpr bool isSubtractive = GetComponentType<pureType>::isSubtractive;
+			constexpr bool isNonUnique = GetComponentType<pureType>::isNonUnique;
             constexpr bool isArray = GetComponentType<pureType>::isArray;
             constexpr auto isComponent = std::is_base_of_v<Component, componentType>;
             constexpr auto isEntityID = std::is_same_v<EntityID, componentType>;
-            static_assert(isSubtractive != isArray, "SubtractiveComponent can't be inside an Array");
+			if constexpr (std::is_base_of_v<Component, componentType>)
+			{
+				static_assert((componentType::IsUnique() != isNonUnique) || isSubtractive, "NonUnique objects must be used for non unique components");
+			}
+			static_assert(!(isSubtractive && isArray), "SubtractiveComponent can't be inside an Array");
+			static_assert(!(isNonUnique && isArray), "NonUnique can't be inside an Array");
             static_assert(isComponent || (isSubtractive == false), "SubtractiveComponent used with a non-component type");
-            static_assert(isSubtractive || isComponent || isEntityID, "Invalid argument type, must be either Component, SubtractiveComponent, or EntityID");
+            static_assert(isSubtractive || isNonUnique || isComponent || isEntityID, "Invalid argument type, must be either Component, SubtractiveComponent, or EntityID");
         }
 
         template <typename T> static constexpr StableTypeId ArgumentToTypeId()
@@ -101,6 +126,10 @@ namespace ECSTest
             {
                 return componentType::ComponentType::GetTypeId();
             }
+			if constexpr (std::is_base_of_v<_NonUniqueBase, componentType>)
+			{
+				return componentType::ComponentType::GetTypeId();
+			}
             else if constexpr (std::is_base_of_v<Component, componentType>)
             {
                 return componentType::GetTypeId();

@@ -80,7 +80,7 @@ NONUNIQUE_COMPONENT(TagComponent)
 
 INDIRECT_SYSTEM(GeneratorSystem)
 {
-    INDIRECT_ACCEPT_COMPONENTS(SubtractiveComponent<GeneratedComponent>, SubtractiveComponent<ConsumerInfoComponent>, SubtractiveComponent<OtherComponent>)
+    INDIRECT_ACCEPT_COMPONENTS(SubtractiveComponent<GeneratedComponent>, SubtractiveComponent<ConsumerInfoComponent>, SubtractiveComponent<OtherComponent>, SubtractiveComponent<TagComponent>)
     {
         [this, &env]
         {
@@ -205,7 +205,7 @@ void GeneratorSystem::ProcessMessages(const MessageStreamEntityRemoved &stream)
 
 INDIRECT_SYSTEM(ConsumerIndirectSystem)
 {
-    INDIRECT_ACCEPT_COMPONENTS(Array<GeneratedComponent> &, Array<TagComponent> *tags)
+    INDIRECT_ACCEPT_COMPONENTS(Array<GeneratedComponent> &, NonUnique<TagComponent> *tags)
     {
         if (MemOps::Compare(&_info, &_infoPassed, sizeof(_infoPassed)))
         {
@@ -335,11 +335,17 @@ void ConsumerIndirectSystem::ProcessMessages(const MessageStreamEntityRemoved &s
 
 DIRECT_SYSTEM(ConsumerDirectSystem)
 {
-    DIRECT_ACCEPT_COMPONENTS(const Array<GeneratedComponent> &generatedComponents, const Array<EntityID> &ids, Array<TagComponent> *tags)
+    DIRECT_ACCEPT_COMPONENTS(const Array<GeneratedComponent> &generatedComponents, const Array<EntityID> &ids, NonUnique<TagComponent> *tags)
     {
         ASSUME(ids.size() > 0);
         ASSUME(ids.size() <= EntitiesToAdd);
         ASSUME(generatedComponents.size() == ids.size());
+		if (tags)
+		{
+			ASSUME(tags->components.size() == tags->ids.size());
+			ASSUME(tags->stride > 0);
+			ASSUME(tags->components.size() / tags->stride == ids.size());
+		}
         for (auto &c : generatedComponents)
         {
             ASSUME(c.value == 25 || c.value == 35);
