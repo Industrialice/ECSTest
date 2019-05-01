@@ -116,7 +116,7 @@ namespace ECSTest
             return std::find_if(begin(), end(), predicate);
         }
 
-        template <typename Predicate> const T *find(Predicate &&predicate) const
+        template <typename Predicate> const T *find_if(Predicate &&predicate) const
         {
             return std::find_if(begin(), end(), predicate);
         }

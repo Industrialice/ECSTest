@@ -108,7 +108,7 @@ void TransformGeneratorSystem::ProcessMessages(const MessageStreamEntityRemoved 
 
 INDIRECT_SYSTEM(TransformHeightFixerSystem)
 {
-    INDIRECT_ACCEPT_COMPONENTS(Array<Transform> &, Array<NegativeHeightCooldown> *cooldowns)
+    INDIRECT_ACCEPT_COMPONENTS(Array<Transform> &, const Array<NegativeHeightCooldown> *, Array<HeightFixerInfo> *)
     {
         ++_info.runTimes;
 
@@ -361,7 +361,7 @@ DIRECT_SYSTEM(TransformFallingDirectSystem)
 
 INDIRECT_SYSTEM(AverageHeightAnalyzerSystem)
 {
-    INDIRECT_ACCEPT_COMPONENTS(const Array<Transform> &)
+    INDIRECT_ACCEPT_COMPONENTS(const Array<Transform> &, Array<AverageHeight> *)
     {
         if (!_isChanged)
         {
@@ -455,7 +455,7 @@ void AverageHeightAnalyzerSystem::ProcessMessages(const MessageStreamEntityRemov
 
 INDIRECT_SYSTEM(CooldownUpdater)
 {
-    INDIRECT_ACCEPT_COMPONENTS(const Array<NegativeHeightCooldown> &)
+    INDIRECT_ACCEPT_COMPONENTS(Array<NegativeHeightCooldown> &)
     {
         for (auto it = _cooldowns.begin(); it != _cooldowns.end(); )
         {

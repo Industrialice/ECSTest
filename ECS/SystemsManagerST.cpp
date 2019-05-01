@@ -813,6 +813,17 @@ void SystemsManagerST::ExecuteIndirectSystem(IndirectSystem &system, ManagedIndi
 
     system.Update(env);
 
+    auto requested = system.RequestedComponents().writeAccess;
+
+    for (const auto &[componentType, stream] : env.messageBuilder.ComponentChangedStreams()._data)
+    {
+        for (const auto &info : stream->infos)
+        {
+            auto it = requested.find_if([info](const System::RequestedComponent &r) { return r.type == info.component.type; });
+            ASSUME(it != requested.end()); // system changed component without requesting write access
+        }
+    }
+
     UpdateECSFromMessages(env.messageBuilder);
     PassMessagesToIndirectSystems(env.messageBuilder, &system);
 }
@@ -1193,14 +1204,14 @@ void SystemsManagerST::PassMessagesToIndirectSystems(MessageBuilder &messageBuil
                     auto requested = managed.system->RequestedComponents();
                     auto searchPredicate = [componentType](const System::RequestedComponent &stored) { return componentType == stored.type; };
 
-                    if (requested.subtractive.find(searchPredicate) != requested.subtractive.end())
+                    if (requested.subtractive.find_if(searchPredicate) != requested.subtractive.end())
                     {
                         continue;
                     }
 
                     if (requested.required.empty() ||
-                        requested.required.find(searchPredicate) != requested.required.end() ||
-                        requested.optional.find(searchPredicate) != requested.optional.end())
+                        requested.required.find_if(searchPredicate) != requested.required.end() ||
+                        requested.optional.find_if(searchPredicate) != requested.optional.end())
                     {
                         managed.messageQueue.componentAddedStreams.emplace_back(stream);
                     }
@@ -1222,14 +1233,14 @@ void SystemsManagerST::PassMessagesToIndirectSystems(MessageBuilder &messageBuil
                     auto requested = managed.system->RequestedComponents();
                     auto searchPredicate = [componentType](const System::RequestedComponent &stored) { return componentType == stored.type; };
 
-                    if (requested.subtractive.find(searchPredicate) != requested.subtractive.end())
+                    if (requested.subtractive.find_if(searchPredicate) != requested.subtractive.end())
                     {
                         continue;
                     }
 
                     if (requested.required.empty() ||
-                        requested.required.find(searchPredicate) != requested.required.end() ||
-                        requested.optional.find(searchPredicate) != requested.optional.end())
+                        requested.required.find_if(searchPredicate) != requested.required.end() ||
+                        requested.optional.find_if(searchPredicate) != requested.optional.end())
                     {
                         managed.messageQueue.componentChangedStreams.emplace_back(stream);
                     }
@@ -1251,14 +1262,14 @@ void SystemsManagerST::PassMessagesToIndirectSystems(MessageBuilder &messageBuil
                     auto requested = managed.system->RequestedComponents();
                     auto searchPredicate = [componentType](const System::RequestedComponent &stored) { return componentType == stored.type; };
 
-                    if (requested.subtractive.find(searchPredicate) != requested.subtractive.end())
+                    if (requested.subtractive.find_if(searchPredicate) != requested.subtractive.end())
                     {
                         continue;
                     }
 
                     if (requested.required.empty() ||
-                        requested.required.find(searchPredicate) != requested.required.end() ||
-                        requested.optional.find(searchPredicate) != requested.optional.end())
+                        requested.required.find_if(searchPredicate) != requested.required.end() ||
+                        requested.optional.find_if(searchPredicate) != requested.optional.end())
                     {
                         managed.messageQueue.componentRemovedStreams.emplace_back(stream);
                     }

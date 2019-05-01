@@ -41,6 +41,7 @@ public:
 COMPONENT(GeneratedComponent)
 {
     ui32 value;
+    ui32 tagsCount;
 };
 
 COMPONENT(GeneratorInfoComponent)
@@ -80,7 +81,7 @@ NONUNIQUE_COMPONENT(TagComponent)
 
 INDIRECT_SYSTEM(GeneratorSystem)
 {
-    INDIRECT_ACCEPT_COMPONENTS(SubtractiveComponent<GeneratedComponent>, SubtractiveComponent<ConsumerInfoComponent>, SubtractiveComponent<OtherComponent>, SubtractiveComponent<TagComponent>)
+    INDIRECT_ACCEPT_COMPONENTS(Array<GeneratedComponent> *, SubtractiveComponent<ConsumerInfoComponent>, SubtractiveComponent<OtherComponent>, SubtractiveComponent<TagComponent>, Array<GeneratorInfoComponent> *)
     {
         [this, &env]
         {
@@ -88,9 +89,11 @@ INDIRECT_SYSTEM(GeneratorSystem)
             {
                 GeneratedComponent c;
                 c.value = 15;
+                c.tagsCount = 0;
                 auto &builder = env.messageBuilder.AddEntity(env.entityIdGenerator.Generate()).AddComponent(c);
-                for (i32 index = 0, count = rand() % 3; index < count; ++index)
+                for (i32 index = 0, count = rand() % 4; index < count; ++index)
                 {
+                    ++c.tagsCount;
                     TagComponent tag;
                     tag.connectedTo = (TagComponent::ConnectedTo)(rand() % 4);
                     if (rand() % 2)
@@ -109,7 +112,7 @@ INDIRECT_SYSTEM(GeneratorSystem)
                 c.value = 25;
                 env.messageBuilder.ComponentChanged(env.entityIdGenerator.LastGenerated(), c);
                 --_leftToGenerate;
-                _toComponentChange.push(env.entityIdGenerator.LastGenerated());
+                _toComponentChange.push({env.entityIdGenerator.LastGenerated(), c.tagsCount});
 
                 if (!_pipeline.Advance())
                 {
@@ -121,8 +124,9 @@ INDIRECT_SYSTEM(GeneratorSystem)
             {
                 GeneratedComponent c;
                 c.value = 35;
-                env.messageBuilder.ComponentChanged(_toComponentChange.front(), c);
-                _toComponentRemove.push(_toComponentChange.front());
+                c.tagsCount = _toComponentChange.front().second;
+                env.messageBuilder.ComponentChanged(_toComponentChange.front().first, c);
+                _toComponentRemove.push(_toComponentChange.front().first);
                 _toComponentChange.pop();
 
                 if (!_pipeline.Advance())
@@ -170,7 +174,7 @@ INDIRECT_SYSTEM(GeneratorSystem)
 
 private:
     ui32 _leftToGenerate = EntitiesToAdd;
-    std::queue<EntityID> _toComponentChange{};
+    std::queue<pair<EntityID, ui32>> _toComponentChange{};
     std::queue<EntityID> _toComponentRemove{};
     std::queue<EntityID> _toEntityRemove{};
     Pipeline _pipeline{};
@@ -205,7 +209,7 @@ void GeneratorSystem::ProcessMessages(const MessageStreamEntityRemoved &stream)
 
 INDIRECT_SYSTEM(ConsumerIndirectSystem)
 {
-    INDIRECT_ACCEPT_COMPONENTS(Array<GeneratedComponent> &, NonUnique<TagComponent> *tags)
+    INDIRECT_ACCEPT_COMPONENTS(const Array<GeneratedComponent> &, const NonUnique<TagComponent> *, Array<ConsumerInfoComponent> *)
     {
         if (MemOps::Compare(&_info, &_infoPassed, sizeof(_infoPassed)))
         {
@@ -277,6 +281,7 @@ void ConsumerIndirectSystem::ProcessMessages(const MessageStreamComponentChanged
 {
     if (stream.Type() != GeneratedComponent::GetTypeId())
     {
+        SOFTBREAK;
         return;
     }
 
@@ -305,6 +310,7 @@ void ConsumerIndirectSystem::ProcessMessages(const MessageStreamComponentRemoved
 {
     if (stream.Type() != GeneratedComponent::GetTypeId())
     {
+        SOFTBREAK;
         return;
     }
 
@@ -335,7 +341,7 @@ void ConsumerIndirectSystem::ProcessMessages(const MessageStreamEntityRemoved &s
 
 DIRECT_SYSTEM(ConsumerDirectSystem)
 {
-    DIRECT_ACCEPT_COMPONENTS(const Array<GeneratedComponent> &generatedComponents, const Array<EntityID> &ids, NonUnique<TagComponent> *tags)
+    DIRECT_ACCEPT_COMPONENTS(const Array<GeneratedComponent> &generatedComponents, const Array<EntityID> &ids, const NonUnique<TagComponent> *tags)
     {
         ASSUME(ids.size() > 0);
         ASSUME(ids.size() <= EntitiesToAdd);
@@ -345,10 +351,17 @@ DIRECT_SYSTEM(ConsumerDirectSystem)
 			ASSUME(tags->components.size() == tags->ids.size());
 			ASSUME(tags->stride > 0);
 			ASSUME(tags->components.size() / tags->stride == ids.size());
+
+            for (uiw index = 0; index < tags->components.size(); ++index)
+            {
+                ASSUME(!tags->components[index].id || tags->components[index].id == tags->ids[index]);
+            }
 		}
         for (auto &c : generatedComponents)
         {
             ASSUME(c.value == 25 || c.value == 35);
+            ui32 stride = tags ? tags->stride : 0;
+            ASSUME(stride == c.tagsCount);
         }
         for (auto &id : ids)
         {
