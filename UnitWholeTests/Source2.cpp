@@ -55,10 +55,12 @@ COMPONENT(ConsumerInfoComponent)
 {
     ui32 entityAdded = 0;
     ui32 entityRemoved = 0;
-    ui32 componentAdded = 0;
-    ui32 componentChanged = 0;
-    ui32 componentRemoved = 0;
+    ui32 generatedComponentAdded = 0;
+    ui32 generatedComponentChanged = 0;
+    ui32 generatedComponentRemoved = 0;
+    ui32 tagComponentChanged = 0;
     ui32 tagComponentsReceived = 0;
+    ui32 tagComponentsWithIdReceived = 0;
     ui64 tagConnectionHash = 0;
     ui64 tagIDHash = 0;
 };
@@ -81,7 +83,7 @@ NONUNIQUE_COMPONENT(TagComponent)
 
 INDIRECT_SYSTEM(GeneratorSystem)
 {
-    INDIRECT_ACCEPT_COMPONENTS(Array<GeneratedComponent> *, SubtractiveComponent<ConsumerInfoComponent>, SubtractiveComponent<OtherComponent>, SubtractiveComponent<TagComponent>, Array<GeneratorInfoComponent> *)
+    INDIRECT_ACCEPT_COMPONENTS(Array<GeneratedComponent> *, SubtractiveComponent<ConsumerInfoComponent>, SubtractiveComponent<OtherComponent>, NonUnique<TagComponent> *, Array<GeneratorInfoComponent> *)
     {
         [this, &env]
         {
@@ -95,12 +97,13 @@ INDIRECT_SYSTEM(GeneratorSystem)
                 {
                     ++c.tagsCount;
                     TagComponent tag;
-                    tag.connectedTo = (TagComponent::ConnectedTo)(rand() % 4);
+                    tag.connectedTo = TagComponent::ConnectedTo::Germany;
                     if (rand() % 2)
                     {
                         tag.id = env.componentIdGenerator.Generate();
                         builder.AddComponent(tag, *tag.id);
                         _info.tagIDHash ^= Hash::Integer((ui64)tag.id->ID());
+                        _toTagChange.push({env.entityIdGenerator.LastGenerated(), tag});
                     }
                     else
                     {
@@ -118,6 +121,15 @@ INDIRECT_SYSTEM(GeneratorSystem)
                 {
                     return;
                 }
+            }
+
+            if (_toTagChange.size())
+            {
+                TagComponent tag = _toTagChange.front().second;
+                ASSUME(tag.connectedTo == TagComponent::ConnectedTo::Germany);
+                tag.connectedTo = TagComponent::ConnectedTo::China;
+                env.messageBuilder.ComponentChanged(_toTagChange.front().first, tag, _toTagChange.front().second.id.value());
+                _toTagChange.pop();
             }
 
             if (_toComponentChange.size())
@@ -175,6 +187,7 @@ INDIRECT_SYSTEM(GeneratorSystem)
 private:
     ui32 _leftToGenerate = EntitiesToAdd;
     std::queue<pair<EntityID, ui32>> _toComponentChange{};
+    std::queue<pair<EntityID, TagComponent>> _toTagChange{};
     std::queue<EntityID> _toComponentRemove{};
     std::queue<EntityID> _toEntityRemove{};
     Pipeline _pipeline{};
@@ -262,6 +275,11 @@ void ConsumerIndirectSystem::ProcessMessages(const MessageStreamEntityAdded &str
                 _info.tagConnectionHash ^= Hash::Integer((ui64)t.connectedTo);
 
                 _info.tagIDHash ^= Hash::Integer((ui64)t.id.value_or(ComponentID(0)).ID());
+
+                if (t.id)
+                {
+                    ++_info.tagComponentsWithIdReceived;
+                }
             }
             else if (attached.type == GeneratedComponent::GetTypeId())
             {
@@ -279,30 +297,41 @@ void ConsumerIndirectSystem::ProcessMessages(const MessageStreamComponentAdded &
 
 void ConsumerIndirectSystem::ProcessMessages(const MessageStreamComponentChanged &stream)
 {
-    if (stream.Type() != GeneratedComponent::GetTypeId())
+    if (stream.Type() == GeneratedComponent::GetTypeId())
+    {
+        for (auto &entity : stream)
+        {
+            const auto &c = entity.component.Cast<GeneratedComponent>();
+            auto it = _entityInfos.find(entity.entityID);
+            if (it == _entityInfos.end())
+            {
+                ASSUME(c.value == 25);
+                _entityInfos[entity.entityID] = {c};
+            }
+            else
+            {
+                ASSUME(it->second.component != nullopt);
+                ASSUME(it->second.component->value == 25);
+                ASSUME(it->second.isEntityRemoved == false);
+                ASSUME(c.value == 35);
+                it->second.component = c;
+            }
+            ++_info.generatedComponentChanged;
+        }
+    }
+    else if (stream.Type() == TagComponent::GetTypeId())
+    {
+        for (auto &entity : stream)
+        {
+            const auto &c = entity.component.Cast<TagComponent>();
+            ASSUME(c.connectedTo == TagComponent::ConnectedTo::Germany || c.connectedTo == TagComponent::ConnectedTo::China);
+            ASSUME(!c.id || c.id.value() == entity.component.id);
+            ++_info.tagComponentChanged;
+        }
+    }
+    else
     {
         SOFTBREAK;
-        return;
-    }
-
-    for (auto &entity : stream)
-    {
-        const auto &c = entity.component.Cast<GeneratedComponent>();
-        auto it = _entityInfos.find(entity.entityID);
-        if (it == _entityInfos.end())
-        {
-            ASSUME(c.value == 25);
-            _entityInfos[entity.entityID] = {c};
-        }
-        else
-        {
-            ASSUME(it->second.component != nullopt);
-            ASSUME(it->second.component->value == 25);
-            ASSUME(it->second.isEntityRemoved == false);
-            ASSUME(c.value == 35);
-            it->second.component = c;
-        }
-        ++_info.componentChanged;
     }
 }
 
@@ -322,7 +351,7 @@ void ConsumerIndirectSystem::ProcessMessages(const MessageStreamComponentRemoved
         ASSUME(it->second.component->value == 35);
         ASSUME(it->second.isEntityRemoved == false);
         it->second.component = nullopt;
-        ++_info.componentRemoved;
+        ++_info.generatedComponentRemoved;
     }
 }
 
@@ -553,15 +582,16 @@ static void PrintStreamInfo(EntitiesStream &stream, bool isFirstPass)
             {
                 const auto &t = *(ConsumerInfoComponent *)c.data;
                 printf("consumer stats:\n");
-                printf("  componentAdded %u\n", t.componentAdded);
-                printf("  componentChanged %u", t.componentChanged);
-                printf("  componentRemoved %u", t.componentRemoved);
+                printf("  componentAdded %u\n", t.generatedComponentAdded);
+                printf("  componentChanged %u", t.generatedComponentChanged);
+                printf("  componentRemoved %u", t.generatedComponentRemoved);
                 printf("  entityAdded %u\n", t.entityAdded);
                 printf("  entityRemoved %u\n", t.entityRemoved);
 
-                ASSUME(t.componentAdded == 0);
-                ASSUME(t.componentChanged == EntitiesToAdd * 2);
-                ASSUME(t.componentRemoved == EntitiesToAdd);
+                ASSUME(t.generatedComponentAdded == 0);
+                ASSUME(t.generatedComponentChanged == EntitiesToAdd * 2);
+                ASSUME(t.generatedComponentRemoved == EntitiesToAdd);
+                ASSUME(t.tagComponentChanged == t.tagComponentsWithIdReceived);
                 ASSUME(t.entityAdded == EntitiesToAdd);
                 ASSUME(t.entityRemoved == EntitiesToAdd);
 
