@@ -81,7 +81,7 @@ void TestIndirectSystem0::Update(Environment &env)
 
 INDIRECT_SYSTEM(TestIndirectSystem1)
 {
-    INDIRECT_ACCEPT_COMPONENTS(const Array<TestComponent0> &, const Array<TestComponent1> &, const Array<TestComponent2> *);
+    INDIRECT_ACCEPT_COMPONENTS(const Array<TestComponent0> &, const Array<TestComponent1> &, const NonUnique<TestComponent2> *);
 
 private:
     vector<pair<Archetype, EntityID>> _entities{};

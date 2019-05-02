@@ -13,21 +13,22 @@ namespace ECSTest
 		ui16 alignmentOf{};
 		const ui8 *data{}; // aigned by alignmentOf
 		bool isUnique{};
+        bool isTag{};
 		ComponentID id{};
 
-        template <typename T> T &Cast()
+        template <typename T, typename = std::enable_if_t<T::IsTag() == false>> T &Cast()
         {
             ASSUME(T::GetTypeId() == type);
             return *(T *)data;
         }
 
-        template <typename T> const T &Cast() const
+        template <typename T, typename = std::enable_if_t<T::IsTag() == false>> const T &Cast() const
         {
             ASSUME(T::GetTypeId() == type);
             return *(T *)data;
         }
 
-        template <typename T> T *TryCast()
+        template <typename T, typename = std::enable_if_t<T::IsTag() == false>> T *TryCast()
         {
             if (T::GetTypeId() == type)
             {
@@ -36,13 +37,22 @@ namespace ECSTest
             return nullptr;
         }
 
-        template <typename T> const T *TryCast() const
+        template <typename T, typename = std::enable_if_t<T::IsTag() == false>> const T *TryCast() const
         {
             if (T::GetTypeId() == type)
             {
                 return (T *)data;
             }
             return nullptr;
+        }
+
+        template <typename T, typename = std::enable_if_t<T::IsTag()>> bool TryCast() const
+        {
+            if (T::GetTypeId() == type)
+            {
+                return true;
+            }
+            return false;
         }
 	};
 
@@ -62,6 +72,8 @@ namespace ECSTest
 
             template <typename T> const T *FindComponent() const
             {
+                static_assert(T::IsTag() == false, "Passed component type is a tag component, use FindTag() instead");
+
                 for (auto &c : components)
                 {
                     if (c.type == T::GetTypeId())
@@ -77,6 +89,20 @@ namespace ECSTest
                 auto *c = FindComponent<T>();
                 ASSUME(c);
                 return *c;
+            }
+
+            template <typename T> bool FindTag() const
+            {
+                static_assert(T::IsTag(), "Passed component type is not a tag component");
+
+                for (auto &c : components)
+                {
+                    if (c.type == T::GetTypeId())
+                    {
+                        return true;
+                    }
+                }
+                return false;
             }
 
         private:
@@ -414,122 +440,133 @@ namespace ECSTest
             template <typename T, typename = std::enable_if_t<T::IsUnique()>> ComponentArrayBuilder &AddComponent(const T &component)
             {
                 SerializedComponent sc;
-                sc.alignmentOf = alignof(T);
-                sc.sizeOf = sizeof(T);
-                sc.isUnique = T::IsUnique();
+                sc.isUnique = true;
+                sc.isTag = T::IsTag();
                 sc.type = T::GetTypeId();
-                sc.data = (ui8 *)&component;
-                sc.id = {};
+                if constexpr (T::IsTag() == false)
+                {
+                    sc.alignmentOf = alignof(T);
+                    sc.sizeOf = sizeof(T);
+                    sc.data = (ui8 *)&component;
+                }
                 return AddComponent(sc);
             }
 
-            template <typename T, typename = std::enable_if_t<std::is_base_of_v<Component, T> == false>, typename = void> ComponentArrayBuilder &AddComponent(const T &component)
+            template <typename T, typename = std::enable_if_t<std::is_base_of_v<Component, T> == false>, typename = void> ComponentArrayBuilder &AddComponent(const T &)
             {
                 static_assert(false, "Passed value is not a component");
             }
 
-            template <typename T, typename = std::enable_if_t<T::IsUnique() == false>> ComponentArrayBuilder &AddComponent(const T &component, ComponentID id = {})
+            template <typename T, typename = std::enable_if_t<T::IsUnique() == false && T::IsTag() == false>> ComponentArrayBuilder &AddComponent(const T &component, ComponentID id = {})
             {
                 SerializedComponent sc;
                 sc.alignmentOf = alignof(T);
                 sc.sizeOf = sizeof(T);
-                sc.isUnique = T::IsUnique();
+                sc.isUnique = false;
+                sc.isTag = false;
                 sc.type = T::GetTypeId();
                 sc.data = (ui8 *)&component;
                 sc.id = id;
                 return AddComponent(sc);
             }
 
-            template <typename T, typename = std::enable_if_t<std::is_base_of_v<Component, T> == false>, typename = void> ComponentArrayBuilder &AddComponent(const T &component, ComponentID id = {})
+            template <typename T, typename = std::enable_if_t<std::is_base_of_v<Component, T> == false>, typename = void> ComponentArrayBuilder &AddComponent(const T &, ComponentID = {})
             {
                 static_assert(false, "Passed value is not a component");
             }
         };
 
-        template <typename T, typename = std::enable_if_t<T::IsUnique()>> void AddComponent(EntityID entityID, const T &component)
+        template <typename T, typename = std::enable_if_t<T::IsUnique() && T::IsTag() == false>> void AddComponent(EntityID entityID, const T &component)
         {
             SerializedComponent sc;
-            sc.alignmentOf = alignof(T);
-            sc.sizeOf = sizeof(T);
-            sc.isUnique = T::IsUnique();
+            sc.isUnique = true;
+            sc.isTag = T::IsTag();
             sc.type = T::GetTypeId();
-            sc.data = (ui8 *)&component;
-            sc.id = {};
+            if constexpr (T::IsTag() == false)
+            {
+                sc.alignmentOf = alignof(T);
+                sc.sizeOf = sizeof(T);
+                sc.data = (ui8 *)&component;
+            }
             AddComponent(entityID, sc);
         }
 
-        template <typename T, typename = std::enable_if_t<std::is_base_of_v<Component, T> == false>, typename = void> void AddComponent(EntityID entityID, const T &component)
+        template <typename T, typename = std::enable_if_t<std::is_base_of_v<Component, T> == false>, typename = void> void AddComponent(EntityID, const T &)
         {
             static_assert(false, "Passed value is not a component");
         }
 
-        template <typename T, typename = std::enable_if_t<T::IsUnique() == false>> void AddComponent(EntityID entityID, const T &component, ComponentID id = {})
+        template <typename T, typename = std::enable_if_t<T::IsUnique() == false && T::IsTag() == false>> void AddComponent(EntityID entityID, const T &component, ComponentID id = {})
         {
             SerializedComponent sc;
             sc.alignmentOf = alignof(T);
             sc.sizeOf = sizeof(T);
-            sc.isUnique = T::IsUnique();
+            sc.isUnique = false;
+            sc.isTag = false;
             sc.type = T::GetTypeId();
             sc.data = (ui8 *)&component;
             sc.id = id;
             AddComponent(entityID, sc);
         }
 
-        template <typename T, typename = std::enable_if_t<std::is_base_of_v<Component, T> == false>, typename = void> void AddComponent(EntityID entityID, const T &component, ComponentID id = {})
+        template <typename T, typename = std::enable_if_t<std::is_base_of_v<Component, T> == false>, typename = void> void AddComponent(EntityID, const T &, ComponentID = {})
         {
             static_assert(false, "Passed value is not a component");
         }
 
-		template <typename T, typename = std::enable_if_t<T::IsUnique()>> void ComponentChanged(EntityID entityID, const T &component)
+		template <typename T, typename = std::enable_if_t<T::IsUnique() && T::IsTag() == false>> void ComponentChanged(EntityID entityID, const T &component)
 		{
+            static_assert(T::IsTag() == false, "Tag components cannot be changed");
+
 			SerializedComponent sc;
 			sc.alignmentOf = alignof(T);
 			sc.sizeOf = sizeof(T);
-			sc.isUnique = T::IsUnique();
+			sc.isUnique = true;
+            sc.isTag = false;
 			sc.type = T::GetTypeId();
 			sc.data = (ui8 *)&component;
-			sc.id = {};
 			ComponentChanged(entityID, sc);
 		}
 
-        template <typename T, typename = std::enable_if_t<std::is_base_of_v<Component, T> == false>, typename = void> void ComponentChanged(EntityID entityID, const T &component)
+        template <typename T, typename = std::enable_if_t<std::is_base_of_v<Component, T> == false>, typename = void> void ComponentChanged(EntityID, const T &)
         {
             static_assert(false, "Passed value is not a component");
         }
 
-        template <typename T, typename = std::enable_if_t<T::IsUnique() == false>> void ComponentChanged(EntityID entityID, const T &component, ComponentID id)
+        template <typename T, typename = std::enable_if_t<T::IsUnique() == false && T::IsTag() == false>> void ComponentChanged(EntityID entityID, const T &component, ComponentID id)
         {
             SerializedComponent sc;
             sc.alignmentOf = alignof(T);
             sc.sizeOf = sizeof(T);
-            sc.isUnique = T::IsUnique();
+            sc.isUnique = false;
+            sc.isTag = false;
             sc.type = T::GetTypeId();
             sc.data = (ui8 *)&component;
             sc.id = id;
             ComponentChanged(entityID, sc);
         }
 
-        template <typename T, typename = std::enable_if_t<std::is_base_of_v<Component, T> == false>, typename = void> void ComponentChanged(EntityID entityID, const T &component, ComponentID id)
+        template <typename T, typename = std::enable_if_t<std::is_base_of_v<Component, T> == false>, typename = void> void ComponentChanged(EntityID, const T &, ComponentID)
         {
             static_assert(false, "Passed value is not a component");
         }
 
-        template <typename T, typename = std::enable_if_t<T::IsUnique()>> void RemoveComponent(EntityID entityID, const T &)
+        template <typename T, typename = std::enable_if_t<T::IsUnique()>> void RemoveComponent(EntityID entityID, const T &) // both for regular unique and tag components
         {
             RemoveComponent(entityID, T::GetTypeId(), {});
         }
 
-        template <typename T, typename = std::enable_if_t<std::is_base_of_v<Component, T> == false>, typename = void> void RemoveComponent(EntityID entityID, const T &)
+        template <typename T, typename = std::enable_if_t<std::is_base_of_v<Component, T> == false>, typename = void> void RemoveComponent(EntityID, const T &)
         {
             static_assert(false, "Passed value is not a component");
         }
 
-        template <typename T, typename = std::enable_if_t<T::IsUnique() == false>> void RemoveComponent(EntityID entityID, const T &, ComponentID id)
+        template <typename T, typename = std::enable_if_t<T::IsUnique() == false && T::IsTag() == false>> void RemoveComponent(EntityID entityID, const T &, ComponentID id)
         {
             RemoveComponent(entityID, T::GetTypeId(), id);
         }
 
-        template <typename T, typename = std::enable_if_t<std::is_base_of_v<Component, T> == false>, typename = void> void RemoveComponent(EntityID entityID, const T &, ComponentID id)
+        template <typename T, typename = std::enable_if_t<std::is_base_of_v<Component, T> == false>, typename = void> void RemoveComponent(EntityID, const T &, ComponentID)
         {
             static_assert(false, "Passed value is not a component");
         }

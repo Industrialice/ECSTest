@@ -15,6 +15,7 @@ namespace ECSTest
     enum RequirementForComponent
     {
         Required,
+        RequiredWithData,
         Optional,
         Subtractive
     };
@@ -53,7 +54,7 @@ namespace ECSTest
     class Component
     {};
 
-    template <bool isUnique, ui64 stableId IDINPUT> class EMPTY_BASES _BaseComponent : public Component, public StableTypeIdentifiable IDOUTPUT
+    template <bool isUnique, bool isTag, ui64 stableId IDINPUT> class EMPTY_BASES _BaseComponent : public Component, public StableTypeIdentifiable IDOUTPUT
     {
     public:
         using StableTypeIdentifiable IDOUTPUT ::GetTypeId;
@@ -62,10 +63,15 @@ namespace ECSTest
         {
             return isUnique;
         }
+
+        [[nodiscard]] static constexpr bool IsTag()
+        {
+            return isTag;
+        }
     };
 
 #ifdef USE_ID_NAMES
-    #define _CREATE_COMPONENT(name, isUnique) struct name final : public _BaseComponent<isUnique, Hash::FNVHashCT<Hash::Precision::P64, char, CountOf(TOSTR(name)), true>(TOSTR(name)), \
+    #define _CREATE_COMPONENT(name, isUnique, isTag) struct name final : public _BaseComponent<isUnique, isTag, Hash::FNVHashCT<Hash::Precision::P64, char, CountOf(TOSTR(name)), true>(TOSTR(name)), \
         CompileTimeStrings::EncodeASCII(TOSTR(name), CountOf(TOSTR(name)), CompileTimeStrings::CharsPerNumber * 0), \
         CompileTimeStrings::EncodeASCII(TOSTR(name), CountOf(TOSTR(name)), CompileTimeStrings::CharsPerNumber * 1), \
         CompileTimeStrings::EncodeASCII(TOSTR(name), CountOf(TOSTR(name)), CompileTimeStrings::CharsPerNumber * 2)>
@@ -73,9 +79,10 @@ namespace ECSTest
     #define _CREATE_COMPONENT(name, isUnique) struct name final : public _BaseComponent<isUnique, Hash::FNVHashCT<Hash::Precision::P64, char, CountOf(TOSTR(name)), true>(TOSTR(name))>
 #endif
 
-    // TODO: replace it with a single COMPONENT macro that optionally accepts uniqueness
-    #define COMPONENT(name) _CREATE_COMPONENT(name, true)
-    #define NONUNIQUE_COMPONENT(name) _CREATE_COMPONENT(name, false)
+    // TODO: replace it with a single COMPONENT macro that optionally accepts properties?
+    #define COMPONENT(name) _CREATE_COMPONENT(name, true, false)
+    #define NONUNIQUE_COMPONENT(name) _CREATE_COMPONENT(name, false, false)
+    #define TAG_COMPONENT(name) _CREATE_COMPONENT(name, true, true) {}
 
 	struct _SubtractiveComponentBase
 	{};
@@ -84,6 +91,14 @@ namespace ECSTest
 	{
 		using ComponentType = T;
 	};
+
+    struct _RequiredComponentBase
+    {};
+
+    template <typename T> struct EMPTY_BASES RequiredComponent : _RequiredComponentBase
+    {
+        using ComponentType = T;
+    };
 
 	struct _NonUniqueBase
 	{};

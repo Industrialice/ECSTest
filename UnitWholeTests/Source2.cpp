@@ -81,6 +81,8 @@ NONUNIQUE_COMPONENT(TagComponent)
     optional<ComponentID> id;
 };
 
+TAG_COMPONENT(FilterTag);
+
 INDIRECT_SYSTEM(GeneratorSystem)
 {
     INDIRECT_ACCEPT_COMPONENTS(Array<GeneratedComponent> *, SubtractiveComponent<ConsumerInfoComponent>, SubtractiveComponent<OtherComponent>, NonUnique<TagComponent> *, Array<GeneratorInfoComponent> *)
@@ -92,7 +94,7 @@ INDIRECT_SYSTEM(GeneratorSystem)
                 GeneratedComponent c;
                 c.value = 15;
                 c.tagsCount = 0;
-                auto &builder = env.messageBuilder.AddEntity(env.entityIdGenerator.Generate()).AddComponent(c);
+                auto &builder = env.messageBuilder.AddEntity(env.entityIdGenerator.Generate()).AddComponent(c).AddComponent(FilterTag{});
                 for (i32 index = 0, count = rand() % 4; index < count; ++index)
                 {
                     ++c.tagsCount;
@@ -222,7 +224,7 @@ void GeneratorSystem::ProcessMessages(const MessageStreamEntityRemoved &stream)
 
 INDIRECT_SYSTEM(ConsumerIndirectSystem)
 {
-    INDIRECT_ACCEPT_COMPONENTS(const Array<GeneratedComponent> &, const NonUnique<TagComponent> *, Array<ConsumerInfoComponent> *)
+    INDIRECT_ACCEPT_COMPONENTS(const Array<GeneratedComponent> &, const NonUnique<TagComponent> *, Array<ConsumerInfoComponent> *, RequiredComponent<FilterTag>)
     {
         if (MemOps::Compare(&_info, &_infoPassed, sizeof(_infoPassed)))
         {

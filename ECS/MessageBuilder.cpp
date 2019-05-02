@@ -16,6 +16,7 @@ auto MessageBuilder::ComponentArrayBuilder::AddComponent(const EntitiesStream::C
     serialized.data = desc.data;
     serialized.id = id;
     serialized.isUnique = desc.isUnique;
+    serialized.isTag = desc.isTag;
     serialized.sizeOf = desc.sizeOf;
     serialized.type = desc.type;
     return AddComponent(serialized);
@@ -23,30 +24,47 @@ auto MessageBuilder::ComponentArrayBuilder::AddComponent(const EntitiesStream::C
 
 auto MessageBuilder::ComponentArrayBuilder::AddComponent(const SerializedComponent &sc) -> ComponentArrayBuilder &
 {
-	ui8 *oldPtr = _data.data();
-	_data.resize(_data.size() + _data.size() % sc.alignmentOf);
-	uiw copyIndex = _data.size();
-	_data.resize(_data.size() + sc.sizeOf);
-	ui8 *newPtr = _data.data();
-	if (oldPtr != newPtr)
-	{
-		for (auto &stored : _components)
-		{
-			if (newPtr > oldPtr)
-			{
-				stored.data += newPtr - oldPtr;
-			}
-			else
-			{
-				stored.data -= oldPtr - newPtr;
-			}
-		}
-	}
-	_components.push_back(sc);
-	SerializedComponent &added = _components.back();
-	std::copy(sc.data, sc.data + sc.sizeOf, _data.begin() + copyIndex);
+    uiw copyIndex;
 
-    added.data = _data.data() + copyIndex;
+    if (sc.isTag == false)
+    {
+        ui8 *oldPtr = _data.data();
+        _data.resize(_data.size() + _data.size() % sc.alignmentOf);
+        copyIndex = _data.size();
+        _data.resize(_data.size() + sc.sizeOf);
+        ui8 *newPtr = _data.data();
+        if (oldPtr != newPtr)
+        {
+            for (auto &stored : _components)
+            {
+                if (stored.data)
+                {
+                    if (newPtr > oldPtr)
+                    {
+                        stored.data += newPtr - oldPtr;
+                    }
+                    else
+                    {
+                        stored.data -= oldPtr - newPtr;
+                    }
+                }
+            }
+        }
+    }
+    else
+    {
+        ASSUME(sc.data == nullptr);
+    }
+
+	_components.push_back(sc);
+
+    if (sc.isTag == false)
+    {
+        SerializedComponent &added = _components.back();
+        std::copy(sc.data, sc.data + sc.sizeOf, _data.begin() + copyIndex);
+
+        added.data = _data.data() + copyIndex;
+    }
 
 	return *this;
 }
@@ -156,37 +174,54 @@ void MessageBuilder::AddComponent(EntityID entityID, const SerializedComponent &
         entry = make_shared<MessageStreamComponentAdded::InfoWithData>();
     }
 
-    uiw copyIndex = sc.sizeOf * entry->infos.size();
+    uiw copyIndex;
 
-    ui8 *oldPtr = entry->data.release();
-    ui8 *newPtr = (ui8 *)_aligned_realloc(oldPtr, copyIndex + sc.sizeOf, sc.alignmentOf);
-    entry->data.reset(newPtr);
-
-    if (oldPtr != newPtr)
+    if (sc.isTag == false)
     {
-        for (auto &stored : entry->infos)
+        copyIndex = sc.sizeOf * entry->infos.size();
+
+        ui8 *oldPtr = entry->data.release();
+        ui8 *newPtr = (ui8 *)_aligned_realloc(oldPtr, copyIndex + sc.sizeOf, sc.alignmentOf);
+        entry->data.reset(newPtr);
+
+        if (oldPtr != newPtr)
         {
-            if (newPtr > oldPtr)
+            for (auto &stored : entry->infos)
             {
-                stored.component.data += newPtr - oldPtr;
-            }
-            else
-            {
-                stored.component.data -= oldPtr - newPtr;
+                if (stored.component.data)
+                {
+                    if (newPtr > oldPtr)
+                    {
+                        stored.component.data += newPtr - oldPtr;
+                    }
+                    else
+                    {
+                        stored.component.data -= oldPtr - newPtr;
+                    }
+                }
             }
         }
     }
+    else
+    {
+        ASSUME(sc.data == nullptr);
+    }
 
     entry->infos.push_back({entityID, sc});
-    SerializedComponent &added = entry->infos.back().component;
-    std::copy(sc.data, sc.data + sc.sizeOf, entry->data.get() + copyIndex);
 
-    added.data = entry->data.get() + copyIndex;
+    if (sc.isTag == false)
+    {
+        SerializedComponent &added = entry->infos.back().component;
+        std::copy(sc.data, sc.data + sc.sizeOf, entry->data.get() + copyIndex);
+
+        added.data = entry->data.get() + copyIndex;
+    }
 }
 
 void MessageBuilder::ComponentChanged(EntityID entityID, const SerializedComponent &sc)
 {
     ASSUME(sc.isUnique != sc.id.IsValid());
+    ASSUME(sc.isTag == false);
 
     auto &entry = _componentChangedStreams._data[sc.type];
     if (!entry)
@@ -204,13 +239,16 @@ void MessageBuilder::ComponentChanged(EntityID entityID, const SerializedCompone
     {
         for (auto &stored : entry->infos)
         {
-            if (newPtr > oldPtr)
+            if (stored.component.data)
             {
-                stored.component.data += newPtr - oldPtr;
-            }
-            else
-            {
-                stored.component.data -= oldPtr - newPtr;
+                if (newPtr > oldPtr)
+                {
+                    stored.component.data += newPtr - oldPtr;
+                }
+                else
+                {
+                    stored.component.data -= oldPtr - newPtr;
+                }
             }
         }
     }

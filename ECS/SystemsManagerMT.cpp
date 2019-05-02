@@ -796,10 +796,10 @@ void SystemsManagerMT::ExecutePipeline(PipelineData &pipeline)
                         return false;
                     }
 
-                    if (requested.required.size())
+                    if (requested.requiredWithData.size())
                     {
                         // locate and add all required components
-                        for (System::RequestedComponent request : requested.required)
+                        for (System::RequestedComponent request : requested.requiredWithData)
                         {
                             for (uiw index = 0; ; ++index)
                             {

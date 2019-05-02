@@ -28,10 +28,11 @@ namespace ECSTest
         struct Requests
         {
             Array<const RequestedComponent> required; // contains only required components
+            Array<const RequestedComponent> requiredWithData; // contains only required with data components
             Array<const RequestedComponent> optional; // contains only optional components
             Array<const RequestedComponent> subtractive; // contains only subtractive components
             Array<const RequestedComponent> writeAccess; // contains only components with write access (write access is ignored for subtractive components)
-            Array<const pair<StableTypeId, RequirementForComponent>> archetypeDefining; // contains only required and subtractive components
+            Array<const pair<StableTypeId, RequirementForComponent>> archetypeDefining; // contains only required, required with data and subtractive components
             Array<const RequestedComponent> all; // contains all reqested components
             Array<const RequestedComponent> allOriginalOrder; // contains all reqested components in the order they are declared
             std::optional<ui32> idsArgumentNumber; // direct systems only; indicates whether EntityID array was also requested and if it was, contains its argument index

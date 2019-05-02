@@ -44,6 +44,8 @@ namespace ECSTest
 
 			unique_ptr<ComponentArray[]> components{}; // essentially a 2D array where rows count = uniqueTypedComponentsCount, columns count is computed per row as entitiesCount * stride
 			unique_ptr<EntityID[]> entities{};
+            unique_ptr<StableTypeId[]> tags{}; // tag components of this archetype group
+            ui16 tagsCount{};
 			ui16 uniqueTypedComponentsCount{};
 			ui16 reservedCount{}; // final reserved count is computed as reservedCount * stride
 			ui32 entitiesCount{};

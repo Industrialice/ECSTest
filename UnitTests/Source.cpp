@@ -3,19 +3,92 @@
 #include <System.hpp>
 #include <MessageBuilder.hpp>
 
-#include <ComponentArtist.hpp>
-#include <ComponentCompany.hpp>
-#include <ComponentDateOfBirth.hpp>
-#include <ComponentDesigner.hpp>
-#include <ComponentEmployee.hpp>
-#include <ComponentFirstName.hpp>
-#include <ComponentGender.hpp>
-#include <ComponentLastName.hpp>
-#include <ComponentParents.hpp>
-#include <ComponentProgrammer.hpp>
-#include <ComponentSpouse.hpp>
-
 using namespace ECSTest;
+
+NONUNIQUE_COMPONENT(ComponentArtist)
+{
+    enum class Areas : ui8
+    {
+        Undefined,
+        TwoD,
+        ThreeD,
+        Concept
+    };
+
+    Areas area;
+};
+
+COMPONENT(ComponentFirstName)
+{
+    array<char, 32> name;
+};
+
+COMPONENT(ComponentLastName)
+{
+    array<char, 32> name;
+};
+
+COMPONENT(ComponentDateOfBirth)
+{
+    ui32 dateOfBirth; // days since 01/01/2000
+};
+
+COMPONENT(ComponentSpouse)
+{
+    EntityID spouse;
+    ui32 dateOfMarriage; // days since 01/01/2000
+};
+
+COMPONENT(ComponentCompany)
+{
+    array<char, 32> name;
+};
+
+NONUNIQUE_COMPONENT(ComponentProgrammer)
+{
+    enum class Languages : ui8
+    {
+        Undefined,
+        CPP,
+        CS,
+        C,
+        PHP,
+        JS,
+        Java,
+        Python
+    } language;
+
+    enum class SkillLevel : ui8
+    {
+        Junior, Middle, Senior
+    } skillLevel;
+};
+
+COMPONENT(ComponentEmployee)
+{
+    EntityID employer;
+};
+
+NONUNIQUE_COMPONENT(ComponentDesigner)
+{
+    enum class Areas : ui8
+    {
+        Undefined,
+        Level,
+        UXUI
+    };
+
+    Areas area;
+};
+
+COMPONENT(ComponentGender)
+{
+    bool isMale;
+};
+
+TAG_COMPONENT(TagTest0);
+TAG_COMPONENT(TagTest1);
+TAG_COMPONENT(TagTest2);
 
 static void ArchetypeTests()
 {
@@ -157,7 +230,7 @@ static void ReflectorTests()
     array<System::RequestedComponent, 3> req1 =
     {
         System::RequestedComponent{ComponentProgrammer::GetTypeId(), false, RequirementForComponent::Required},
-        System::RequestedComponent{ComponentDateOfBirth::GetTypeId(), false, RequirementForComponent::Required},
+        System::RequestedComponent{ComponentDateOfBirth::GetTypeId(), false, RequirementForComponent::RequiredWithData},
         System::RequestedComponent{ComponentFirstName::GetTypeId(), false, RequirementForComponent::Required},
     };
     req1 = Funcs::SortCompileTime(req1);
@@ -167,7 +240,7 @@ static void ReflectorTests()
     {
         System::RequestedComponent{ComponentCompany::GetTypeId(), false, RequirementForComponent::Subtractive},
         System::RequestedComponent{ComponentDesigner::GetTypeId(), false, RequirementForComponent::Required},
-        System::RequestedComponent{ComponentSpouse::GetTypeId(), false, RequirementForComponent::Required},
+        System::RequestedComponent{ComponentSpouse::GetTypeId(), false, RequirementForComponent::RequiredWithData},
     };
     req2 = Funcs::SortCompileTime(req2);
 
@@ -267,7 +340,7 @@ public:
                 ComponentArtist artist;
                 artist.area = ComponentArtist::Areas::Concept;
 
-                componentBuilder.AddComponent(name).AddComponent(artist, {});
+                componentBuilder.AddComponent(name).AddComponent(artist).AddComponent(TagTest0{}).AddComponent(TagTest1{}).AddComponent(TagTest2{});
             }
 
             if (rand() % 10 == 0)
@@ -300,12 +373,21 @@ public:
 
             for (const auto &entity : addedStream)
             {
-                ASSUME(entity.components.size() == 2);
+                ASSUME(entity.components.size() == 5);
 
                 ++checked;
 
                 const auto &c0 = entity.components[0];
                 const auto &c1 = entity.components[1];
+
+                for (uiw index = 2; index < 5; ++index)
+                {
+                    const auto &c = entity.components[index];
+                    ASSUME(c.type == TagTest0::GetTypeId() || c.type == TagTest1::GetTypeId() || c.type == TagTest2::GetTypeId());
+                    ASSUME(c.isTag == true);
+                    ASSUME(c.isUnique == true);
+                    ASSUME(c.data == nullptr);
+                }
 
                 ComponentFirstName refName = entityNames[entity.entityID];
 

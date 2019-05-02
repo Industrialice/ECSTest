@@ -15,6 +15,7 @@ namespace ECSTest
             ui16 alignmentOf{};
 			const ui8 *data{};
             bool isUnique{};
+            bool isTag{};
         };
 
         struct StreamedEntity

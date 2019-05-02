@@ -134,7 +134,7 @@ bool ArchetypeReflector::Satisfies(Array<const StableTypeId> value, Array<const 
     {
         bool isFound = value.find(type) != value.end();
 
-        if (requirement == RequirementForComponent::Required)
+        if (requirement == RequirementForComponent::Required || requirement == RequirementForComponent::RequiredWithData)
         {
             if (!isFound)
             {
