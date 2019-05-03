@@ -361,7 +361,7 @@ void SystemsManagerST::Start(EntityIDGenerator &&idGenerator, vector<WorkerThrea
 	_isPausedExecution = false;
 	_isSchedulerPaused = false;
 
-	_schedulerThread = std::thread([this, streams = move(streams)]() mutable { StartScheduler(move(streams)); });
+	_schedulerThread = std::thread([this, streams = move(streams)]() mutable { StartScheduler(streams); });
 }
 
 void SystemsManagerST::Pause(bool isWaitForStop)
@@ -636,7 +636,7 @@ void SystemsManagerST::AddEntityToArchetypeGroup(const ArchetypeFull &archetype,
 	++group.entitiesCount;
 }
 
-void SystemsManagerST::StartScheduler(vector<unique_ptr<EntitiesStream>> &&streams)
+void SystemsManagerST::StartScheduler(vector<unique_ptr<EntitiesStream>> &streams)
 {
 	MessageBuilder messageBulder;
     messageBulder.SourceName("Initial Streaming");
@@ -888,7 +888,7 @@ void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, System::Environ
 {
     auto &reqested = system.RequestedComponents();
 
-    uiw maxArgs = reqested.requiredWithData.size() + reqested.optional.size() + (reqested.idsArgumentNumber != nullopt);
+    uiw maxArgs = reqested.requiredWithData.size() + reqested.optional.size() + (reqested.idsArgumentNumber != nullopt) + reqested.required.size();
 
 	_tempNonUniqueArgs.reserve(maxArgs);
     _tempArrayArgs.reserve(maxArgs);
@@ -990,6 +990,30 @@ void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, System::Environ
                 if (isFound == false)
                 {
                     ASSUME(arg.requirement == RequirementForComponent::Optional);
+                    continue;
+                }
+
+                // check if there're indirect systems that require this component
+                auto isRequestedByIndirect = [this](StableTypeId type)
+                {
+                    for (auto &pipeline : _pipelines)
+                    {
+                        for (auto &managed : pipeline.indirectSystems)
+                        {
+                            auto otherReq = managed.system->RequestedComponents().withData;
+                            for (auto &c : otherReq)
+                            {
+                                if (c.type == type)
+                                {
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                    return false;
+                };
+                if (isRequestedByIndirect(arg.type) == false)
+                {
                     continue;
                 }
 

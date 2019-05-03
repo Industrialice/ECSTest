@@ -288,15 +288,18 @@ namespace ECSTest
             return {components, target};
         }
 
-        template <uiw size>[[nodiscard]] static constexpr pair<std::array<System::RequestedComponent, size>, uiw> FindComponentsWithWriteAccess(const std::array<System::RequestedComponent, size> &arr)
+        template <bool IsRequireWriteAccess, uiw size>[[nodiscard]] static constexpr pair<std::array<System::RequestedComponent, size>, uiw> FindComponentsWithData(const std::array<System::RequestedComponent, size> &arr)
         {
             std::array<System::RequestedComponent, size> components{};
             uiw target = 0;
             for (uiw source = 0; source < arr.size(); ++source)
             {
-                if ((arr[source].requirement == RequirementForComponent::RequiredWithData || arr[source].requirement == RequirementForComponent::Optional) && arr[source].isWriteAccess)
+                if (arr[source].requirement == RequirementForComponent::RequiredWithData || arr[source].requirement == RequirementForComponent::Optional)
                 {
-                    components[target++] = arr[source];
+                    if (IsRequireWriteAccess == false || arr[source].isWriteAccess)
+                    {
+                        components[target++] = arr[source];
+                    }
                 }
             }
             return {components, target};
@@ -333,14 +336,16 @@ namespace ECSTest
         static constexpr auto arrSorted = Funcs::SortCompileTime(arr); \
         static constexpr auto required = _SystemHelperFuncs::FindMatchingComponents(arrSorted, RequirementForComponent::Required); \
         static constexpr auto requiredWithData = _SystemHelperFuncs::FindMatchingComponents(arrSorted, RequirementForComponent::RequiredWithData); \
+        static constexpr auto withData = _SystemHelperFuncs::FindComponentsWithData<false>(arrSorted); \
         static constexpr auto opt = _SystemHelperFuncs::FindMatchingComponents(arrSorted, RequirementForComponent::Optional); \
         static constexpr auto subtractive = _SystemHelperFuncs::FindMatchingComponents(arrSorted, RequirementForComponent::Subtractive); \
-        static constexpr auto writeAccess = _SystemHelperFuncs::FindComponentsWithWriteAccess(arrSorted); \
+        static constexpr auto writeAccess = _SystemHelperFuncs::FindComponentsWithData<true>(arrSorted); \
         static constexpr auto archetypeDefining = _SystemHelperFuncs::FindArchetypeDefiningComponents(arrSorted); \
         static constexpr Requests requests = \
         { \
             ToArray(required.first.data(), required.second), \
             ToArray(requiredWithData.first.data(), requiredWithData.second), \
+            ToArray(withData.first.data(), withData.second), \
             ToArray(opt.first.data(), opt.second), \
             ToArray(subtractive.first.data(), subtractive.second), \
             ToArray(writeAccess.first.data(), writeAccess.second), \
@@ -374,14 +379,16 @@ namespace ECSTest
         static constexpr auto arrSorted = Funcs::SortCompileTime(arr); \
         static constexpr auto required = _SystemHelperFuncs::FindMatchingComponents(arrSorted, RequirementForComponent::Required); \
         static constexpr auto requiredWithData = _SystemHelperFuncs::FindMatchingComponents(arrSorted, RequirementForComponent::RequiredWithData); \
+        static constexpr auto withData = _SystemHelperFuncs::FindComponentsWithData<false>(arrSorted); \
         static constexpr auto opt = _SystemHelperFuncs::FindMatchingComponents(arrSorted, RequirementForComponent::Optional); \
         static constexpr auto subtractive = _SystemHelperFuncs::FindMatchingComponents(arrSorted, RequirementForComponent::Subtractive); \
-        static constexpr auto writeAccess = _SystemHelperFuncs::FindComponentsWithWriteAccess(arrSorted); \
+        static constexpr auto writeAccess = _SystemHelperFuncs::FindComponentsWithData<true>(arrSorted); \
         static constexpr auto archetypeDefining = _SystemHelperFuncs::FindArchetypeDefiningComponents(arrSorted); \
         static constexpr Requests requests = \
         { \
             ToArray(required.first.data(), required.second), \
             ToArray(requiredWithData.first.data(), requiredWithData.second), \
+            ToArray(withData.first.data(), withData.second), \
             ToArray(opt.first.data(), opt.second), \
             ToArray(subtractive.first.data(), subtractive.second), \
             ToArray(writeAccess.first.data(), writeAccess.second), \

@@ -145,7 +145,7 @@ namespace ECSTest
 		[[nodiscard]] ArchetypeGroup &FindArchetypeGroup(const ArchetypeFull &archetype, Array<const SerializedComponent> components);
 		ArchetypeGroup &AddNewArchetypeGroup(const ArchetypeFull &archetype, Array<const SerializedComponent> components);
 		void AddEntityToArchetypeGroup(const ArchetypeFull &archetype, ArchetypeGroup &group, EntityID entityId, Array<const SerializedComponent> components, MessageBuilder *messageBuilder);
-		void StartScheduler(vector<unique_ptr<EntitiesStream>> &&streams);
+		void StartScheduler(vector<unique_ptr<EntitiesStream>> &streams);
 		void SchedulerLoop();
 		void ExecutePipeline(PipelineData &pipeline, System::Environment &env);
 		static void ProcessMessages(IndirectSystem &system, const ManagedIndirectSystem::MessageQueue &messageQueue);

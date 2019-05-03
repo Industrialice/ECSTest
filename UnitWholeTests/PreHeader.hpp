@@ -38,6 +38,7 @@ namespace ECSTest
         {
             _entities.emplace_back(move(entity));
             _entities.back().streamed.entityId = id;
+            _entities.back().streamed.components = ToArray(_entities.back().descs);
         }
     };
 
