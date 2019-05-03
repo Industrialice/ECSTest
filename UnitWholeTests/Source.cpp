@@ -1,6 +1,4 @@
 #include "PreHeader.hpp"
-#include <EntitiesStream.hpp>
-#include <SystemsManager.hpp>
 #include <stdio.h>
 #include <tuple>
 #include <set>
@@ -229,57 +227,6 @@ void MonitoringSystem::Update(Environment &env)
 
 using namespace ECSTest;
 
-class TestEntities : public EntitiesStream
-{
-public:
-    struct PreStreamedEntity
-    {
-        StreamedEntity streamed;
-        vector<ComponentDesc> descs;
-        vector<unique_ptr<ui8[]>> componentsData;
-
-        PreStreamedEntity() = default;
-        PreStreamedEntity(PreStreamedEntity &&) = default;
-        PreStreamedEntity &operator = (PreStreamedEntity &&) = default;
-    };
-
-private:
-    vector<PreStreamedEntity> _entities{};
-    uiw _currentEntity{};
-
-public:
-    [[nodiscard]] virtual optional<StreamedEntity> Next() override
-    {
-        if (_currentEntity < _entities.size())
-        {
-            uiw index = _currentEntity++;
-            return _entities[index].streamed;
-        }
-        return {};
-    }
-
-    void AddEntity(EntityID id, PreStreamedEntity &&entity)
-    {
-        _entities.emplace_back(move(entity));
-        _entities.back().streamed.components = ToArray(_entities.back().descs);
-        _entities.back().streamed.entityId = id;
-    }
-};
-
-template <typename T> void StreamComponent(const T &component, TestEntities::PreStreamedEntity &preStreamed)
-{
-    EntitiesStream::ComponentDesc desc;
-    auto componentData = make_unique<ui8[]>(sizeof(T));
-    memcpy(componentData.get(), &component, sizeof(T));
-    desc.alignmentOf = alignof(T);
-    desc.isUnique = T::IsUnique();
-    desc.sizeOf = sizeof(T);
-    desc.type = T::GetTypeId();
-    desc.data = componentData.get();
-    preStreamed.componentsData.emplace_back(move(componentData));
-    preStreamed.descs.emplace_back(desc);
-}
-
 static void GenerateScene(EntityIDGenerator &entityIdGenerator, SystemsManager &manager, TestEntities &stream)
 {
     for (uiw index = 0; index < 100; ++index)
@@ -383,13 +330,13 @@ int main()
     auto testPipeline0 = manager->CreatePipeline(1_ms, false);
     auto testPipeline1 = manager->CreatePipeline(1.5_ms, false);
 
-    manager->Register(make_unique<TestIndirectSystem0>(), testPipeline0);
+    manager->Register<TestIndirectSystem0>(testPipeline0);
 
-    manager->Register(make_unique<TestIndirectSystem1>(), testPipeline0);
+    manager->Register<TestIndirectSystem1>(testPipeline0);
 
-    manager->Register(make_unique<TestIndirectSystem2>(), testPipeline0);
+    manager->Register<TestIndirectSystem2>(testPipeline0);
 
-    manager->Register(make_unique<MonitoringSystem>(), testPipeline1);
+    manager->Register<MonitoringSystem>(testPipeline1);
 
     vector<WorkerThread> workers;
     if (isMT)
@@ -397,9 +344,7 @@ int main()
         workers.resize(SystemInfo::LogicalCPUCores());
     }
 
-    vector<unique_ptr<EntitiesStream>> streams;
-    streams.push_back(move(stream));
-    manager->Start(move(entityIdGenerator), move(workers), move(streams));
+    manager->Start(move(entityIdGenerator), move(workers), move(stream));
     
     std::this_thread::sleep_for(2000ms);
 

@@ -17,6 +17,7 @@ namespace ECSTest
 
 		[[nodiscard]] virtual Pipeline CreatePipeline(optional<TimeDifference> executionStep, bool isMergeIfSuchPipelineExists) override;
         [[nodiscard]] virtual PipelineInfo GetPipelineInfo(Pipeline pipeline) const override;
+        [[nodiscard]] virtual ManagerInfo GetManagerInfo() const override;
 		virtual void Register(unique_ptr<System> system, Pipeline pipeline) override;
 		virtual void Unregister(StableTypeId systemType) override;
 		virtual void Start(EntityIDGenerator &&idGenerator, vector<WorkerThread> &&workers, vector<unique_ptr<EntitiesStream>> &&streams) override;
@@ -131,6 +132,7 @@ namespace ECSTest
 		EntityIDGenerator _entityIdGenerator{};
         ComponentIDGenerator _componentIdGenerator{};
 
+        std::atomic<TimeDifference> _timeSinceStartAtomic{0_ms};
         TimeDifference _timeSinceStart{0_ms};
         TimeMoment _currentTime{};
 

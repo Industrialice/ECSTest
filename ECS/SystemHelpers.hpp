@@ -111,6 +111,10 @@ namespace ECSTest
                 static_assert(!std::is_pointer_v<bare> && !std::is_reference_v<bare>, "Type cannot be pointer to reference/pointer");
                 return (T)arg;
             }
+            else if constexpr (isRequired)
+            {
+                return RequiredComponent<componentType>{};
+            }
             else
             {
                 ASSUME(arg == nullptr);

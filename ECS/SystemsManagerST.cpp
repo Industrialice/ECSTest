@@ -44,10 +44,22 @@ namespace ECSTest
 
                     target.alignmentOf = source.alignmentOf;
                     target.isUnique = source.isUnique;
+                    target.isTag = false;
                     target.sizeOf = source.sizeOf;
                     target.type = source.type;
                     target.data = source.data.get() + entityIndex * source.sizeOf * source.stride + offset * source.sizeOf;
                 }
+            }
+
+            for (uiw tagIndex = 0; tagIndex < group->tagsCount; ++tagIndex)
+            {
+                uiw index = _tempComponents.size();
+                _tempComponents.emplace_back();
+                auto &target = _tempComponents[index];
+
+                target.isUnique = true;
+                target.isTag = true;
+                target.type = group->tags[tagIndex];
             }
 
             StreamedEntity streamed;
@@ -111,6 +123,14 @@ auto SystemsManagerST::GetPipelineInfo(Pipeline pipeline) const -> PipelineInfo
     info.indirectSystems = (ui32)pipelineData.indirectSystems.size();
     info.executionStep = pipelineData.executionStep;
 
+    return info;
+}
+
+auto SystemsManagerST::GetManagerInfo() const -> ManagerInfo
+{
+    ManagerInfo info;
+    info.isMultiThreaded = false;
+    info.timeSinceStart = _timeSinceStartAtomic;
     return info;
 }
 
@@ -292,6 +312,7 @@ static void StreamedToSerialized(Array<const EntitiesStream::ComponentDesc> stre
 		t.data = s.data;
         t.id = {};
 		t.isUnique = s.isUnique;
+        t.isTag = s.isTag;
 		t.sizeOf = s.sizeOf;
 		t.type = s.type;
 	}
@@ -340,7 +361,7 @@ void SystemsManagerST::Start(EntityIDGenerator &&idGenerator, vector<WorkerThrea
 	_isPausedExecution = false;
 	_isSchedulerPaused = false;
 
-	_schedulerThread = std::thread([this, &streams] { StartScheduler(move(streams)); });
+	_schedulerThread = std::thread([this, streams = move(streams)]() mutable { StartScheduler(move(streams)); });
 }
 
 void SystemsManagerST::Pause(bool isWaitForStop)
@@ -623,7 +644,7 @@ void SystemsManagerST::StartScheduler(vector<unique_ptr<EntitiesStream>> &&strea
 
 	for (auto &stream : streams)
 	{
-		while (auto entity = stream->Next())
+		while (const auto &entity = stream->Next())
 		{
 			StreamedToSerialized(entity->components, serialized);
 			AssignComponentIDs(ToArray(serialized), _componentIdGenerator);
@@ -774,6 +795,7 @@ void SystemsManagerST::SchedulerLoop()
     }
 
     updateTimes();
+    _timeSinceStartAtomic = _timeSinceStart;
 }
 
 void SystemsManagerST::ExecutePipeline(PipelineData &pipeline, System::Environment &env)

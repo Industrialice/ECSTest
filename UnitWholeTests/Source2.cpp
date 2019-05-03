@@ -1,6 +1,4 @@
 #include "PreHeader.hpp"
-#include <EntitiesStream.hpp>
-#include <SystemsManager.hpp>
 #include <stdio.h>
 #include <tuple>
 #include <set>
@@ -508,60 +506,6 @@ DIRECT_SYSTEM(EmptyDirectWriteSystem)
 
 using namespace ECSTest;
 
-class TestEntities : public EntitiesStream
-{
-public:
-    struct PreStreamedEntity
-    {
-        StreamedEntity streamed;
-        vector<ComponentDesc> descs;
-        vector<unique_ptr<ui8[]>> componentsData;
-
-        PreStreamedEntity() = default;
-        PreStreamedEntity(PreStreamedEntity &&) = default;
-        PreStreamedEntity &operator = (PreStreamedEntity &&) = default;
-    };
-
-private:
-    vector<PreStreamedEntity> _entities{};
-    uiw _currentEntity{};
-
-public:
-    [[nodiscard]] virtual optional<StreamedEntity> Next() override
-    {
-        if (_currentEntity < _entities.size())
-        {
-            uiw index = _currentEntity++;
-            return _entities[index].streamed;
-        }
-        return {};
-    }
-
-    void AddEntity(EntityID id, PreStreamedEntity &&entity)
-    {
-        _entities.emplace_back(move(entity));
-        _entities.back().streamed.components = ToArray(_entities.back().descs);
-        _entities.back().streamed.entityId = id;
-    }
-};
-
-template <typename T> void StreamComponent(const T &component, TestEntities::PreStreamedEntity &preStreamed)
-{
-    EntitiesStream::ComponentDesc desc;
-    auto componentData = make_unique<ui8[]>(sizeof(T));
-    memcpy(componentData.get(), &component, sizeof(T));
-    desc.alignmentOf = alignof(T);
-    desc.isUnique = T::IsUnique();
-    desc.sizeOf = sizeof(T);
-    desc.type = T::GetTypeId();
-    desc.data = componentData.get();
-    preStreamed.componentsData.emplace_back(move(componentData));
-    preStreamed.descs.emplace_back(desc);
-}
-
-static void GenerateScene(EntityIDGenerator &entityIdGenerator, SystemsManager &manager, TestEntities &stream)
-{}
-
 static void PrintStreamInfo(EntitiesStream &stream, bool isFirstPass)
 {
     if (!isFirstPass)
@@ -620,21 +564,18 @@ int main()
 {
     StdLib::Initialization::Initialize({});
 
-    auto stream = make_unique<TestEntities>();
     auto manager = SystemsManager::New(IsMultiThreadedECS);
     EntityIDGenerator entityIdGenerator;
-
-    GenerateScene(entityIdGenerator, *manager, *stream);
 
     auto testPipeline0 = manager->CreatePipeline(/*5_ms*/nullopt, false);
     auto testPipeline1 = manager->CreatePipeline(/*6.5_ms*/nullopt, false);
 
-    manager->Register(make_unique<GeneratorSystem>(), testPipeline0);
-    manager->Register(make_unique<EmptyDirectReadSystem>(), testPipeline0);
-    manager->Register(make_unique<ConsumerIndirectSystem>(), testPipeline1);
-    manager->Register(make_unique<ConsumerDirectSystem>(), testPipeline1);
-    manager->Register(make_unique<EmptyDirectWriteSystem>(), testPipeline1);
-    manager->Register(make_unique<OtherIndirectSystem>(), testPipeline1);
+    manager->Register<GeneratorSystem>(testPipeline0);
+    manager->Register<EmptyDirectReadSystem>(testPipeline0);
+    manager->Register<ConsumerIndirectSystem>(testPipeline1);
+    manager->Register<ConsumerDirectSystem>(testPipeline1);
+    manager->Register<EmptyDirectWriteSystem>(testPipeline1);
+    manager->Register<OtherIndirectSystem>(testPipeline1);
 
     vector<WorkerThread> workers;
     if (IsMultiThreadedECS)
@@ -642,9 +583,7 @@ int main()
         workers.resize(SystemInfo::LogicalCPUCores());
     }
 
-    vector<unique_ptr<EntitiesStream>> streams;
-    streams.push_back(move(stream));
-    manager->Start(move(entityIdGenerator), move(workers), move(streams));
+    manager->Start(move(entityIdGenerator), move(workers));
 
     for (;;)
     {
@@ -662,16 +601,6 @@ int main()
     auto ecsstream = manager->StreamOut();
 
     PrintStreamInfo(*ecsstream, true);
-
-    //manager->Resume();
-
-    //std::this_thread::sleep_for(1500ms);
-
-    //manager->Pause(true);
-
-    //ecsstream = manager->StreamOut();
-
-    //PrintStreamInfo(*ecsstream, false);
 
     manager->Stop(true);
 

@@ -39,8 +39,33 @@ namespace ECSTest
             optional<TimeDifference> executionStep{};
         };
 
+        struct ManagerInfo
+        {
+            bool isMultiThreaded{};
+            TimeDifference timeSinceStart{0_ms};
+        };
+
+        template <typename T> void Register(Pipeline pipeline)
+        {
+            return Register(std::make_unique<T>(), pipeline);
+        }
+
+        void Start(EntityIDGenerator &&idGenerator, vector<WorkerThread> &&workers)
+        {
+            vector<unique_ptr<EntitiesStream>> streams;
+            return Start(move(idGenerator), move(workers), move(streams));
+        }
+
+        void Start(EntityIDGenerator &&idGenerator, vector<WorkerThread> &&workers, unique_ptr<EntitiesStream> &&stream)
+        {
+            vector<unique_ptr<EntitiesStream>> streams;
+            streams.push_back(move(stream));
+            return Start(move(idGenerator), move(workers), move(streams));
+        }
+
         [[nodiscard]] virtual Pipeline CreatePipeline(optional<TimeDifference> executionStep, bool isMergeIfSuchPipelineExists) = 0;
         [[nodiscard]] virtual PipelineInfo GetPipelineInfo(Pipeline pipeline) const = 0;
+        [[nodiscard]] virtual ManagerInfo GetManagerInfo() const = 0;
         virtual void Register(unique_ptr<System> system, Pipeline pipeline) = 0;
         virtual void Unregister(StableTypeId systemType) = 0;
         virtual void Start(EntityIDGenerator &&idGenerator, vector<WorkerThread> &&workers, vector<unique_ptr<EntitiesStream>> &&streams) = 0;

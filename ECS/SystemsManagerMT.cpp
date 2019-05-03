@@ -44,6 +44,7 @@ namespace ECSTest
 
                     target.alignmentOf = source.alignmentOf;
                     target.isUnique = source.isUnique;
+                    target.isTag = false;
                     target.sizeOf = source.sizeOf;
                     target.type = source.type;
                     target.data = source.data.get() + entityIndex * source.sizeOf * source.stride + offset * source.sizeOf;
@@ -164,6 +165,12 @@ auto SystemsManagerMT::CreatePipeline(optional<TimeDifference> executionStep, bo
 }
 
 auto SystemsManagerMT::GetPipelineInfo(Pipeline pipeline) const -> PipelineInfo
+{
+    NOIMPL;
+    return {};
+}
+
+auto SystemsManagerMT::GetManagerInfo() const -> ManagerInfo
 {
     NOIMPL;
     return {};
@@ -405,7 +412,7 @@ void SystemsManagerMT::Start(EntityIDGenerator &&idGenerator, vector<WorkerThrea
     _isPausedExecution = false;
     _isSchedulerPaused = false;
 
-    _schedulerThread = std::thread([this, &streams] { StartScheduler(move(streams)); });
+    _schedulerThread = std::thread([this, streams = move(streams)]() mutable { StartScheduler(move(streams)); });
 }
 
 void SystemsManagerMT::Pause(bool isWaitForStop)

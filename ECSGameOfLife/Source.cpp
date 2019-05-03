@@ -65,6 +65,7 @@ template <typename T> void StreamComponent(const T &component, GameOfLifeEntitie
 	memcpy(componentData.get(), &component, sizeof(T));
 	desc.alignmentOf = alignof(T);
 	desc.isUnique = T::IsUnique();
+    desc.isTag = T::IsTag();
 	desc.sizeOf = sizeof(T);
 	desc.type = T::GetTypeId();
 	desc.data = componentData.get();
