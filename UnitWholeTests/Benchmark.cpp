@@ -109,6 +109,41 @@ static void GenerateScene(EntityIDGenerator &entityIdGenerator, SystemsManager &
     generate(Group3Tag{});
 }
 
+static void MesasureReference()
+{
+    auto entitiesToTest = EntitiesToTest;
+    auto cosine = make_unique<CosineResultComponent[]>(entitiesToTest);
+    auto sinus = make_unique<SinusResultComponent[]>(entitiesToTest);
+    auto sources = make_unique<SourceComponent[]>(entitiesToTest);
+    for (uiw index = 0; index < entitiesToTest; ++index)
+    {
+        sources[index].value = rand() % 4 - 2;
+    }
+
+    ui32 executedTimes = 0;
+    TimeMoment start = TimeMoment::Now();
+    TimeDifference diff{0_ms};
+    for (;;)
+    {
+        for (uiw index = 0; index < entitiesToTest; ++index)
+        {
+            cosine[index].value = cos(sources[index].value);
+            sinus[index].value = sin(sources[index].value);
+        }
+
+        ++executedTimes;
+        diff = TimeMoment::Now() - start;
+        if (diff > 1_s)
+        {
+            break;
+        }
+    }
+
+    auto computed = executedTimes * entitiesToTest;
+    auto time = diff.ToSec_f64();
+    printf("%.2lfkk sin/cos per second (reference 1 thread)\n", (computed / time) / 1000 / 1000);
+}
+
 int main()
 {
     StdLib::Initialization::Initialize({});
@@ -132,6 +167,8 @@ int main()
         workers.resize(SystemInfo::LogicalCPUCores());
     }
 
+    MesasureReference();
+
     manager->Start(move(idGenerator), move(workers), move(stream));
 
     for (;;)
@@ -150,7 +187,7 @@ int main()
 
     auto computed = pipelineInfo.executedTimes * 4 * EntitiesToTest;
     auto time = managerInfo.timeSinceStart.ToSec_f64();
-    printf("%.2lfkk sin/cos per second\n", (computed / time) / 1000 / 1000);
+    printf("%.2lfkk sin/cos per second (ECS %s)\n", (computed / time) / 1000 / 1000, IsMTECS ? "multithreaded" : "singlethreaded");
 
     system("pause");
 }
