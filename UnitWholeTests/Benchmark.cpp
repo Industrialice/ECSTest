@@ -148,8 +148,11 @@ int main()
 {
     StdLib::Initialization::Initialize({});
 
+    auto logger = make_shared<Logger<string_view, true>>();
+    auto handle0 = logger->OnMessage(LogRecipient);
+
     auto idGenerator = EntityIDGenerator{};
-    auto manager = SystemsManager::New(IsMTECS);
+    auto manager = SystemsManager::New(IsMTECS, logger);
     auto stream = make_unique<TestEntities>();
     
     GenerateScene(idGenerator, *manager, *stream);
@@ -169,7 +172,7 @@ int main()
 
     MesasureReference();
 
-    manager->Start(nullptr, move(idGenerator), move(workers), move(stream));
+    manager->Start(move(idGenerator), move(workers), move(stream));
 
     for (;;)
     {

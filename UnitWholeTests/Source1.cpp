@@ -58,6 +58,11 @@ INDIRECT_SYSTEM(TransformGeneratorSystem)
 {
     INDIRECT_ACCEPT_COMPONENTS(Array<Name> &, SubtractiveComponent<Transform>)
     {
+        if (_entitiesToGenerate.empty())
+        {
+            return;
+        }
+
         for (auto &id : _entitiesToGenerate)
         {
             Transform t;
@@ -71,6 +76,8 @@ INDIRECT_SYSTEM(TransformGeneratorSystem)
             }
         }
         _entitiesToGenerate.clear();
+
+        env.logger.Message(LogLevels::Info, "Finished generating entities\n");
     }
 
 private:
@@ -604,9 +611,12 @@ static void PrintStreamInfo(EntitiesStream &stream, bool isFirstPass)
 int main()
 {
     StdLib::Initialization::Initialize({});
+
+    auto logger = make_shared<Logger<string_view, true>>();
+    auto handle0 = logger->OnMessage(LogRecipient);
     
     auto stream = make_unique<TestEntities>();
-    auto manager = SystemsManager::New(IsMultiThreadedECS);
+    auto manager = SystemsManager::New(IsMultiThreadedECS, logger);
     EntityIDGenerator entityIdGenerator;
 
     GenerateScene(entityIdGenerator, *manager, *stream);

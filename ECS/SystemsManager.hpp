@@ -24,7 +24,7 @@ namespace ECSTest
 		using LoggerType = Logger<string_view, true>;
 
     public:
-        static shared_ptr<SystemsManager> New(bool isMultiThreaded, const shared_ptr<LoggerType> &logger = nullptr);
+        static shared_ptr<SystemsManager> New(bool isMultiThreaded, const shared_ptr<LoggerType> &logger);
 
         class Pipeline
         {

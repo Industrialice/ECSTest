@@ -215,7 +215,7 @@ void SystemsManagerMT::Register(unique_ptr<System> system, Pipeline pipeline)
         {
             for (const auto &existingSystem : pipelineData.directSystems)
             {
-                if (existingSystem.system->Type() == system->Type())
+                if (existingSystem.system->GetTypeId() == system->GetTypeId())
                 {
                     SOFTBREAK; // system with such type already exists
                     return;
@@ -226,7 +226,7 @@ void SystemsManagerMT::Register(unique_ptr<System> system, Pipeline pipeline)
         {
             for (const auto &existingSystem : pipelineData.indirectSystems)
             {
-                if (existingSystem.system->Type() == system->Type())
+                if (existingSystem.system->GetTypeId() == system->GetTypeId())
                 {
                     SOFTBREAK; // system with such type already exists
                     return;
@@ -320,7 +320,7 @@ void SystemsManagerMT::Unregister(StableTypeId systemType)
 
         for (auto &managed : directSystems)
         {
-            if (managed.system->Type() == systemType)
+            if (managed.system->GetTypeId() == systemType)
             {
                 _archetypeReflector.StopTrackingMatchingArchetypes((uiw)managed.system.get());
 
@@ -332,7 +332,7 @@ void SystemsManagerMT::Unregister(StableTypeId systemType)
         }
         for (auto &managed : pipeline.indirectSystems)
         {
-            if (managed.system->Type() == systemType)
+            if (managed.system->GetTypeId() == systemType)
             {
                 _archetypeReflector.StopTrackingMatchingArchetypes((uiw)managed.system.get());
 

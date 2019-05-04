@@ -42,8 +42,8 @@ namespace ECSTest
         };
 
 		[[nodiscard]] virtual const Requests &RequestedComponents() const = 0;
-		[[nodiscard]] virtual StableTypeId Type() const = 0;
-        [[nodiscard]] virtual string_view Name() const = 0;
+		[[nodiscard]] virtual StableTypeId GetTypeId() const = 0;
+        [[nodiscard]] virtual string_view GetTypeName() const = 0;
 		[[nodiscard]] virtual struct IndirectSystem *AsIndirectSystem();
 		[[nodiscard]] virtual const struct IndirectSystem *AsIndirectSystem() const;
 		[[nodiscard]] virtual struct DirectSystem *AsDirectSystem();
@@ -74,17 +74,14 @@ namespace ECSTest
     template <typename BaseSystem, typename Type> struct _SystemTypeIdentifiable : public BaseSystem, public Type
     {
     public:
-        using Type::GetTypeId;
-        using Type::GetTypeName;
-
-        [[nodiscard]] virtual StableTypeId Type() const override final
+        [[nodiscard]] virtual StableTypeId GetTypeId() const override final
         {
-            return GetTypeId();
+            return Type::GetTypeId();
         }
 
-        [[nodiscard]] virtual string_view Name() const override final
+        [[nodiscard]] virtual string_view GetTypeName() const override final
         {
-            return GetTypeName();
+            return Type::GetTypeName();
         }
     };
 

@@ -190,7 +190,7 @@ void SystemsManagerST::Register(unique_ptr<System> system, Pipeline pipeline)
 		{
 			for (const auto &existingSystem : pipelineData.directSystems)
 			{
-				if (existingSystem.system->Type() == system->Type())
+				if (existingSystem.system->GetTypeId() == system->GetTypeId())
 				{
                     _logger->Message(LogLevels::Error, selfName, "System with such type already exists");
 					return;
@@ -201,7 +201,7 @@ void SystemsManagerST::Register(unique_ptr<System> system, Pipeline pipeline)
 		{
 			for (const auto &existingSystem : pipelineData.indirectSystems)
 			{
-				if (existingSystem.system->Type() == system->Type())
+				if (existingSystem.system->GetTypeId() == system->GetTypeId())
 				{
                     _logger->Message(LogLevels::Error, selfName, "System with such type already exists");
 					return;
@@ -295,7 +295,7 @@ void SystemsManagerST::Unregister(StableTypeId systemType)
 
 		for (auto &managed : directSystems)
 		{
-			if (managed.system->Type() == systemType)
+			if (managed.system->GetTypeId() == systemType)
 			{
 				_archetypeReflector.StopTrackingMatchingArchetypes((uiw)managed.system.get());
 
@@ -307,7 +307,7 @@ void SystemsManagerST::Unregister(StableTypeId systemType)
 		}
 		for (auto &managed : pipeline.indirectSystems)
 		{
-			if (managed.system->Type() == systemType)
+			if (managed.system->GetTypeId() == systemType)
 			{
 				_archetypeReflector.StopTrackingMatchingArchetypes((uiw)managed.system.get());
 
@@ -825,7 +825,7 @@ void SystemsManagerST::ExecutePipeline(PipelineData &pipeline, System::Environme
 {
     for (auto &managed : pipeline.directSystems)
     {
-        env.messageBuilder.SourceName(managed.system->Type().Name());
+        env.messageBuilder.SourceName(managed.system->GetTypeId().Name());
 
         managed.executedAt = pipeline.executionFrame;
 
@@ -834,10 +834,10 @@ void SystemsManagerST::ExecutePipeline(PipelineData &pipeline, System::Environme
             managed.system->OnCreate(env);
             UpdateECSFromMessages(env.messageBuilder);
             PassMessagesToIndirectSystems(env.messageBuilder, nullptr);
-			env.messageBuilder.SourceName(managed.system->Type().Name()); // the builder was reset, set the name again
+			env.messageBuilder.SourceName(managed.system->GetTypeId().Name()); // the builder was reset, set the name again
         }
 
-        env.logger._name = managed.system->Name();
+        env.logger._name = managed.system->GetTypeName();
         ExecuteDirectSystem(*managed.system, env);
 
         ++managed.executedTimes;
@@ -845,7 +845,7 @@ void SystemsManagerST::ExecutePipeline(PipelineData &pipeline, System::Environme
 
     for (auto &managed : pipeline.indirectSystems)
     {
-        env.messageBuilder.SourceName(managed.system->Type().Name());
+        env.messageBuilder.SourceName(managed.system->GetTypeId().Name());
 
         managed.executedAt = pipeline.executionFrame;
 
@@ -854,10 +854,10 @@ void SystemsManagerST::ExecutePipeline(PipelineData &pipeline, System::Environme
             managed.system->OnCreate(env);
             UpdateECSFromMessages(env.messageBuilder);
             PassMessagesToIndirectSystems(env.messageBuilder, managed.system.get());
-			env.messageBuilder.SourceName(managed.system->Type().Name()); // the builder was reset, set the name again
+			env.messageBuilder.SourceName(managed.system->GetTypeId().Name()); // the builder was reset, set the name again
         }
 
-        env.logger._name = managed.system->Name();
+        env.logger._name = managed.system->GetTypeName();
         ExecuteIndirectSystem(*managed.system, managed.messageQueue, env);
 
         ++managed.executedTimes;
