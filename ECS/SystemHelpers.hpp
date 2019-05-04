@@ -326,7 +326,7 @@ namespace ECSTest
 // TODO: optimize it so std::arrays use only as much space as they actually need
 
 #define DIRECT_ACCEPT_COMPONENTS(...) \
-    virtual const Requests &RequestedComponents() const override \
+    virtual const Requests &RequestedComponents() const override final \
     { \
         using thisType = std::remove_reference_t<std::remove_cv_t<decltype(*this)>>; \
 		struct Local { static void Temp(__VA_ARGS__); }; \
@@ -368,7 +368,7 @@ namespace ECSTest
     void Update(Environment &env, __VA_ARGS__)
 
 #define INDIRECT_ACCEPT_COMPONENTS(...) \
-    virtual const Requests &RequestedComponents() const override \
+    virtual const Requests &RequestedComponents() const override final \
     { \
         using thisType = std::remove_reference_t<std::remove_cv_t<decltype(*this)>>; \
 		struct Local { static void Temp(__VA_ARGS__); }; \
@@ -399,10 +399,5 @@ namespace ECSTest
         }; \
         return requests; \
     } \
-    \
-	virtual void ProcessMessages(const MessageStreamEntityAdded &stream) override; \
-    virtual void ProcessMessages(const MessageStreamComponentAdded &stream) override; \
-    virtual void ProcessMessages(const MessageStreamComponentChanged &stream) override; \
-    virtual void ProcessMessages(const MessageStreamComponentRemoved &stream) override; \
-	virtual void ProcessMessages(const MessageStreamEntityRemoved &stream) override; \
-    virtual void Update(Environment &env) override
+    using IndirectSystem::Update; \
+    using IndirectSystem::ProcessMessages

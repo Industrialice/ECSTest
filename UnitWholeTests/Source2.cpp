@@ -91,7 +91,9 @@ TAG_COMPONENT(FilterTag);
 
 INDIRECT_SYSTEM(GeneratorSystem)
 {
-    INDIRECT_ACCEPT_COMPONENTS(Array<GeneratedComponent> *, SubtractiveComponent<ConsumerInfoComponent>, SubtractiveComponent<OtherComponent>, NonUnique<TagComponent> *, Array<GeneratorInfoComponent> *)
+    INDIRECT_ACCEPT_COMPONENTS(Array<GeneratedComponent> *, SubtractiveComponent<ConsumerInfoComponent>, SubtractiveComponent<OtherComponent>, NonUnique<TagComponent> *, Array<GeneratorInfoComponent> *);
+
+    virtual void Update(Environment &env) override
     {
         [this, &env]
         {
@@ -218,34 +220,11 @@ private:
     GeneratorInfoComponent _info{}, _infoPassed{};
 };
 
-void GeneratorSystem::ProcessMessages(const MessageStreamEntityAdded &stream)
-{
-    SOFTBREAK;
-}
-
-void GeneratorSystem::ProcessMessages(const MessageStreamComponentAdded &stream)
-{
-    SOFTBREAK;
-}
-
-void GeneratorSystem::ProcessMessages(const MessageStreamComponentChanged &stream)
-{
-    SOFTBREAK;
-}
-
-void GeneratorSystem::ProcessMessages(const MessageStreamComponentRemoved &stream)
-{
-    SOFTBREAK;
-}
-
-void GeneratorSystem::ProcessMessages(const MessageStreamEntityRemoved &stream)
-{
-    SOFTBREAK;
-}
-
 INDIRECT_SYSTEM(ConsumerIndirectSystem)
 {
-    INDIRECT_ACCEPT_COMPONENTS(const Array<GeneratedComponent> &, const Array<TempComponent> *, const NonUnique<TagComponent> *, Array<ConsumerInfoComponent> *, RequiredComponent<FilterTag>)
+    INDIRECT_ACCEPT_COMPONENTS(const Array<GeneratedComponent> &, const Array<TempComponent> *, const NonUnique<TagComponent> *, Array<ConsumerInfoComponent> *, RequiredComponent<FilterTag>);
+
+    virtual void Update(Environment &env) override
     {
         if (MemOps::Compare(&_info, &_infoPassed, sizeof(_infoPassed)))
         {
@@ -265,6 +244,120 @@ INDIRECT_SYSTEM(ConsumerIndirectSystem)
         env.messageBuilder.RemoveEntity(_infoID);
     }
 
+    virtual void ProcessMessages(const MessageStreamEntityAdded &stream) override
+    {
+        for (auto &entity : stream)
+        {
+            auto c = entity.FindComponent<GeneratedComponent>();
+            ASSUME(c);
+            ++_info.entityAdded;
+            ASSUME(c->value == 15);
+
+            for (auto &attached : entity.components)
+            {
+                if (attached.type == TagComponent::GetTypeId())
+                {
+                    ASSUME(attached.id.IsValid());
+                    ASSUME(attached.isUnique == false);
+                    ++_info.tagComponentsReceived;
+
+                    auto &t = attached.Cast<TagComponent>();
+                    _info.tagConnectionHash ^= Hash::Integer((ui64)t.connectedTo);
+
+                    _info.tagIDHash ^= Hash::Integer((ui64)t.id.value_or(ComponentID(0)).ID());
+
+                    if (t.id)
+                    {
+                        ++_info.tagComponentsWithIdReceived;
+                    }
+                }
+                else if (attached.type == GeneratedComponent::GetTypeId())
+                {
+                    ASSUME(attached.id.IsValid() == false);
+                    ASSUME(attached.isUnique == true);
+                }
+            }
+        }
+    }
+
+    virtual void ProcessMessages(const MessageStreamComponentAdded &stream) override
+    {
+        SOFTBREAK;
+    }
+
+    virtual void ProcessMessages(const MessageStreamComponentChanged &stream) override
+    {
+        if (stream.Type() == GeneratedComponent::GetTypeId())
+        {
+            for (auto &entity : stream)
+            {
+                const auto &c = entity.component.Cast<GeneratedComponent>();
+                auto it = _entityInfos.find(entity.entityID);
+                if (it == _entityInfos.end())
+                {
+                    ASSUME(c.value == 25);
+                    _entityInfos[entity.entityID] = {c};
+                }
+                else
+                {
+                    ASSUME(it->second.component != nullopt);
+                    ASSUME(it->second.component->value == 25);
+                    ASSUME(it->second.isEntityRemoved == false);
+                    ASSUME(c.value == 35);
+                    it->second.component = c;
+                }
+                ++_info.generatedComponentChanged;
+            }
+        }
+        else if (stream.Type() == TagComponent::GetTypeId())
+        {
+            for (auto &entity : stream)
+            {
+                const auto &c = entity.component.Cast<TagComponent>();
+                ASSUME(c.connectedTo == TagComponent::ConnectedTo::Germany || c.connectedTo == TagComponent::ConnectedTo::China);
+                ASSUME(!c.id || c.id.value() == entity.component.id);
+                ++_info.tagComponentChanged;
+            }
+        }
+        else
+        {
+            SOFTBREAK;
+        }
+    }
+
+    virtual void ProcessMessages(const MessageStreamComponentRemoved &stream) override
+    {
+        if (stream.Type() != TempComponent::GetTypeId())
+        {
+            SOFTBREAK;
+            return;
+        }
+
+        for (auto &entity : stream)
+        {
+            auto it = _entityInfos.find(entity.entityID);
+            ASSUME(it != _entityInfos.end());
+            ASSUME(it->second.component != nullopt);
+            ASSUME(it->second.component->value == 35);
+            ASSUME(it->second.isEntityRemoved == false);
+            it->second.component = nullopt;
+            ++_info.tempComponentRemoved;
+        }
+    }
+
+    virtual void ProcessMessages(const MessageStreamEntityRemoved &stream) override
+    {
+        for (auto &entity : stream)
+        {
+            auto it = _entityInfos.find(entity);
+            ASSUME(it != _entityInfos.end());
+            ASSUME(it->second.component == nullopt);
+            ASSUME(it->second.isEntityRemoved == false);
+            it->second.isEntityRemoved = true;
+            ++_info.entityRemoved;
+        }
+    }
+
 private:
     struct EntityInfo
     {
@@ -276,120 +369,6 @@ private:
     ConsumerInfoComponent _info{}, _infoPassed{};
     std::map<EntityID, EntityInfo> _entityInfos{};
 };
-
-void ConsumerIndirectSystem::ProcessMessages(const MessageStreamEntityAdded &stream)
-{
-    for (auto &entity : stream)
-    {
-        auto c = entity.FindComponent<GeneratedComponent>();
-        ASSUME(c);
-        ++_info.entityAdded;
-        ASSUME(c->value == 15);
-
-        for (auto &attached : entity.components)
-        {
-            if (attached.type == TagComponent::GetTypeId())
-            {
-                ASSUME(attached.id.IsValid());
-                ASSUME(attached.isUnique == false);
-                ++_info.tagComponentsReceived;
-
-                auto &t = attached.Cast<TagComponent>();
-                _info.tagConnectionHash ^= Hash::Integer((ui64)t.connectedTo);
-
-                _info.tagIDHash ^= Hash::Integer((ui64)t.id.value_or(ComponentID(0)).ID());
-
-                if (t.id)
-                {
-                    ++_info.tagComponentsWithIdReceived;
-                }
-            }
-            else if (attached.type == GeneratedComponent::GetTypeId())
-            {
-                ASSUME(attached.id.IsValid() == false);
-                ASSUME(attached.isUnique == true);
-            }
-        }
-    }
-}
-
-void ConsumerIndirectSystem::ProcessMessages(const MessageStreamComponentAdded &stream)
-{
-    SOFTBREAK;
-}
-
-void ConsumerIndirectSystem::ProcessMessages(const MessageStreamComponentChanged &stream)
-{
-    if (stream.Type() == GeneratedComponent::GetTypeId())
-    {
-        for (auto &entity : stream)
-        {
-            const auto &c = entity.component.Cast<GeneratedComponent>();
-            auto it = _entityInfos.find(entity.entityID);
-            if (it == _entityInfos.end())
-            {
-                ASSUME(c.value == 25);
-                _entityInfos[entity.entityID] = {c};
-            }
-            else
-            {
-                ASSUME(it->second.component != nullopt);
-                ASSUME(it->second.component->value == 25);
-                ASSUME(it->second.isEntityRemoved == false);
-                ASSUME(c.value == 35);
-                it->second.component = c;
-            }
-            ++_info.generatedComponentChanged;
-        }
-    }
-    else if (stream.Type() == TagComponent::GetTypeId())
-    {
-        for (auto &entity : stream)
-        {
-            const auto &c = entity.component.Cast<TagComponent>();
-            ASSUME(c.connectedTo == TagComponent::ConnectedTo::Germany || c.connectedTo == TagComponent::ConnectedTo::China);
-            ASSUME(!c.id || c.id.value() == entity.component.id);
-            ++_info.tagComponentChanged;
-        }
-    }
-    else
-    {
-        SOFTBREAK;
-    }
-}
-
-void ConsumerIndirectSystem::ProcessMessages(const MessageStreamComponentRemoved &stream)
-{
-    if (stream.Type() != TempComponent::GetTypeId())
-    {
-        SOFTBREAK;
-        return;
-    }
-
-    for (auto &entity : stream)
-    {
-        auto it = _entityInfos.find(entity.entityID);
-        ASSUME(it != _entityInfos.end());
-        ASSUME(it->second.component != nullopt);
-        ASSUME(it->second.component->value == 35);
-        ASSUME(it->second.isEntityRemoved == false);
-        it->second.component = nullopt;
-        ++_info.tempComponentRemoved;
-    }
-}
-
-void ConsumerIndirectSystem::ProcessMessages(const MessageStreamEntityRemoved &stream)
-{
-    for (auto &entity : stream)
-    {
-        auto it = _entityInfos.find(entity);
-        ASSUME(it != _entityInfos.end());
-        ASSUME(it->second.component == nullopt);
-        ASSUME(it->second.isEntityRemoved == false);
-        it->second.isEntityRemoved = true;
-        ++_info.entityRemoved;
-    }
-}
 
 DIRECT_SYSTEM(ConsumerDirectSystem)
 {
@@ -430,7 +409,9 @@ namespace
 
 INDIRECT_SYSTEM(OtherIndirectSystem)
 {
-    INDIRECT_ACCEPT_COMPONENTS(Array<OtherComponent> &)
+    INDIRECT_ACCEPT_COMPONENTS(Array<OtherComponent> &);
+
+    virtual void Update(Environment &env) override
     {
         if (_leftToGenerate)
         {
@@ -457,47 +438,37 @@ INDIRECT_SYSTEM(OtherIndirectSystem)
     {
     }
 
+    virtual void ProcessMessages(const MessageStreamEntityAdded &stream) override
+    {
+        for (auto &entry : stream)
+        {
+            CurrentData[entry.entityID] = entry.GetComponent<OtherComponent>();
+            _localData[entry.entityID] = entry.GetComponent<OtherComponent>();
+        }
+    }
+
+    virtual void ProcessMessages(const MessageStreamComponentAdded &stream) override
+    {
+        for (auto &entry : stream)
+        {
+            CurrentData[entry.entityID] = entry.component.Cast<OtherComponent>();
+            _localData[entry.entityID] = entry.component.Cast<OtherComponent>();
+        }
+    }
+
+    virtual void ProcessMessages(const MessageStreamComponentChanged &stream) override
+    {
+        for (auto &entry : stream)
+        {
+            CurrentData[entry.entityID] = entry.component.Cast<OtherComponent>();
+            _localData[entry.entityID] = entry.component.Cast<OtherComponent>();
+        }
+    }
+
 private:
     ui32 _leftToGenerate = EntitiesToAdd;
     std::map<EntityID, OtherComponent> _localData{};
 };
-
-void OtherIndirectSystem::ProcessMessages(const MessageStreamEntityAdded &stream)
-{
-    for (auto &entry : stream)
-    {
-        CurrentData[entry.entityID] = entry.GetComponent<OtherComponent>();
-        _localData[entry.entityID] = entry.GetComponent<OtherComponent>();
-    }
-}
-
-void OtherIndirectSystem::ProcessMessages(const MessageStreamComponentAdded &stream)
-{
-    for (auto &entry : stream)
-    {
-        CurrentData[entry.entityID] = entry.component.Cast<OtherComponent>();
-        _localData[entry.entityID] = entry.component.Cast<OtherComponent>();
-    }
-}
-
-void OtherIndirectSystem::ProcessMessages(const MessageStreamComponentChanged &stream)
-{
-    for (auto &entry : stream)
-    {
-        CurrentData[entry.entityID] = entry.component.Cast<OtherComponent>();
-        _localData[entry.entityID] = entry.component.Cast<OtherComponent>();
-    }
-}
-
-void OtherIndirectSystem::ProcessMessages(const MessageStreamComponentRemoved &stream)
-{
-    SOFTBREAK;
-}
-
-void OtherIndirectSystem::ProcessMessages(const MessageStreamEntityRemoved &stream)
-{
-    SOFTBREAK;
-}
 
 DIRECT_SYSTEM(EmptyDirectReadSystem)
 {

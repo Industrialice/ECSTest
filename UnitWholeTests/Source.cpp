@@ -35,195 +35,162 @@ INDIRECT_SYSTEM(TestIndirectSystem0)
 {
     INDIRECT_ACCEPT_COMPONENTS(Array<TestComponent0> &);
 
+    virtual void ProcessMessages(const MessageStreamEntityAdded &stream) override
+    {
+        for (auto &entry : stream)
+        {
+            _entities.insert(entry.entityID);
+        }
+    }
+
+    virtual void ProcessMessages(const MessageStreamEntityRemoved &stream) override
+    {
+        for (auto &entry : stream)
+        {
+            _entities.erase(entry);
+        }
+    }
+
+    virtual void Update(Environment &env) override
+    {
+        if (_entities.empty())
+        {
+            return;
+        }
+
+        TestComponent0 c;
+        c.value = 1;
+        env.messageBuilder.ComponentChanged(*_entities.begin(), c);
+        _entities.erase(_entities.begin());
+    }
+
 private:
     std::set<EntityID> _entities{};
 };
 
-void TestIndirectSystem0::ProcessMessages(const MessageStreamEntityAdded &stream)
-{
-    for (auto &entry : stream)
-    {
-        _entities.insert(entry.entityID);
-    }
-}
-
-void TestIndirectSystem0::ProcessMessages(const MessageStreamComponentAdded &stream)
-{}
-
-void TestIndirectSystem0::ProcessMessages(const MessageStreamComponentChanged &stream)
-{}
-
-void TestIndirectSystem0::ProcessMessages(const MessageStreamComponentRemoved &stream)
-{}
-
-void TestIndirectSystem0::ProcessMessages(const MessageStreamEntityRemoved &stream)
-{
-    for (auto &entry : stream)
-    {
-        _entities.erase(entry);
-    }
-}
-
-void TestIndirectSystem0::Update(Environment &env)
-{
-    if (_entities.empty())
-    {
-        return;
-    }
-
-    TestComponent0 c;
-    c.value = 1;
-    env.messageBuilder.ComponentChanged(*_entities.begin(), c);
-    _entities.erase(_entities.begin());
-}
-
 INDIRECT_SYSTEM(TestIndirectSystem1)
 {
     INDIRECT_ACCEPT_COMPONENTS(const Array<TestComponent0> &, const Array<TestComponent1> &, const NonUnique<TestComponent2> *);
+
+    virtual void ProcessMessages(const MessageStreamEntityAdded &stream) override
+    {
+        for (auto &entry : stream)
+        {
+            _entities.push_back({stream.Archetype(), entry.entityID});
+        }
+    }
+
+    virtual void ProcessMessages(const MessageStreamComponentChanged &stream) override
+    {}
+
+    virtual void Update(Environment &env) override
+    {
+        if (_isFirstUpdate)
+        {
+            ASSUME(_entities.size() == 50);
+            _isFirstUpdate = false;
+        }
+
+        if (_entities.size() > 100)
+        {
+            env.messageBuilder.RemoveEntity(_entities.back().second, _entities.back().first);
+            _entities.pop_back();
+        }
+    }
 
 private:
     vector<pair<Archetype, EntityID>> _entities{};
     bool _isFirstUpdate = true;
 };
 
-void TestIndirectSystem1::ProcessMessages(const MessageStreamEntityAdded &stream)
-{
-    for (auto &entry : stream)
-    {
-        _entities.push_back({stream.Archetype(), entry.entityID});
-    }
-}
-
-void TestIndirectSystem1::ProcessMessages(const MessageStreamComponentAdded &stream)
-{}
-
-void TestIndirectSystem1::ProcessMessages(const MessageStreamComponentChanged &stream)
-{}
-
-void TestIndirectSystem1::ProcessMessages(const MessageStreamComponentRemoved &stream)
-{}
-
-void TestIndirectSystem1::ProcessMessages(const MessageStreamEntityRemoved &stream)
-{}
-
-void TestIndirectSystem1::Update(Environment &env)
-{
-    if (_isFirstUpdate)
-    {
-        ASSUME(_entities.size() == 50);
-        _isFirstUpdate = false;
-    }
-
-    if (_entities.size() > 100)
-    {
-        env.messageBuilder.RemoveEntity(_entities.back().second, _entities.back().first);
-        _entities.pop_back();
-    }
-}
-
 // cannot run in parallel with TestIndirectSystem0
 INDIRECT_SYSTEM(TestIndirectSystem2)
 {
     INDIRECT_ACCEPT_COMPONENTS(Array<TestComponent0> &);
 
+    virtual void ProcessMessages(const MessageStreamEntityAdded &stream) override
+    {}
+
+    virtual void ProcessMessages(const MessageStreamComponentChanged &stream) override
+    {}
+
+    virtual void ProcessMessages(const MessageStreamEntityRemoved &stream) override
+    {}
+
+    virtual void Update(Environment &env) override
+    {
+        if (_entitiesToAdd)
+        {
+            auto &componentBuilder = env.messageBuilder.AddEntity(env.entityIdGenerator.Generate());
+            TestComponent0 c0;
+            c0.value = 10;
+            TestComponent1 c1;
+            c1.value = 20;
+            componentBuilder.AddComponent(c0).AddComponent(c1);
+            --_entitiesToAdd;
+        }
+    }
+
 private:
     ui32 _entitiesToAdd = 100;
 };
-
-void TestIndirectSystem2::ProcessMessages(const MessageStreamEntityAdded &stream)
-{}
-
-void TestIndirectSystem2::ProcessMessages(const MessageStreamComponentAdded &stream)
-{}
-
-void TestIndirectSystem2::ProcessMessages(const MessageStreamComponentChanged &stream)
-{}
-
-void TestIndirectSystem2::ProcessMessages(const MessageStreamComponentRemoved &stream)
-{}
-
-void TestIndirectSystem2::ProcessMessages(const MessageStreamEntityRemoved &stream)
-{}
-
-void TestIndirectSystem2::Update(Environment &env)
-{
-    if (_entitiesToAdd)
-    {
-        auto &componentBuilder = env.messageBuilder.AddEntity(env.entityIdGenerator.Generate());
-        TestComponent0 c0;
-        c0.value = 10;
-        TestComponent1 c1;
-        c1.value = 20;
-        componentBuilder.AddComponent(c0).AddComponent(c1);
-        --_entitiesToAdd;
-    }
-}
 
 INDIRECT_SYSTEM(MonitoringSystem)
 {
     INDIRECT_ACCEPT_COMPONENTS();
 
-private:
-};
-
-void MonitoringSystem::ProcessMessages(const MessageStreamEntityAdded &stream)
-{
-    for (auto &entry : stream)
+    virtual void ProcessMessages(const MessageStreamEntityAdded &stream) override
     {
-        ++MonitoringStats::receivedEntityAddedCount;
-
-        for (auto &component : entry.components)
+        for (auto &entry : stream)
         {
-            if (component.type == TestComponent0::GetTypeId())
+            ++MonitoringStats::receivedEntityAddedCount;
+
+            for (auto &component : entry.components)
             {
-                auto casted = (TestComponent0 *)component.data;
-                ASSUME(casted->value == 0 || casted->value == 10);
+                if (component.type == TestComponent0::GetTypeId())
+                {
+                    auto casted = (TestComponent0 *)component.data;
+                    ASSUME(casted->value == 0 || casted->value == 10);
+                }
             }
         }
     }
-}
 
-void MonitoringSystem::ProcessMessages(const MessageStreamComponentAdded &stream)
-{}
-
-void MonitoringSystem::ProcessMessages(const MessageStreamComponentChanged &stream)
-{
-    for (auto &entry : stream)
+    virtual void ProcessMessages(const MessageStreamComponentChanged &stream) override
     {
-        ++MonitoringStats::receivedComponentChangedCount;
+        for (auto &entry : stream)
+        {
+            ++MonitoringStats::receivedComponentChangedCount;
 
-        if (entry.component.type == TestComponent0::GetTypeId())
-        {
-            ++MonitoringStats::receivedTest0ChangedCount;
+            if (entry.component.type == TestComponent0::GetTypeId())
+            {
+                ++MonitoringStats::receivedTest0ChangedCount;
 
-            auto casted = (TestComponent0 *)entry.component.data;
-            ASSUME(casted->value == 1);
-        }
-        else if (entry.component.type == TestComponent1::GetTypeId())
-        {
-            ++MonitoringStats::receivedTest1ChangedCount;
-        }
-        else if (entry.component.type == TestComponent2::GetTypeId())
-        {
-            ++MonitoringStats::receivedTest2ChangedCount;
+                auto casted = (TestComponent0 *)entry.component.data;
+                ASSUME(casted->value == 1);
+            }
+            else if (entry.component.type == TestComponent1::GetTypeId())
+            {
+                ++MonitoringStats::receivedTest1ChangedCount;
+            }
+            else if (entry.component.type == TestComponent2::GetTypeId())
+            {
+                ++MonitoringStats::receivedTest2ChangedCount;
+            }
         }
     }
-}
 
-void MonitoringSystem::ProcessMessages(const MessageStreamComponentRemoved &stream)
-{}
-
-void MonitoringSystem::ProcessMessages(const MessageStreamEntityRemoved &stream)
-{
-    for (auto &entry : stream)
+    virtual void ProcessMessages(const MessageStreamEntityRemoved &stream) override
     {
-        ++MonitoringStats::receivedEntityRemovedCount;
+        for (auto &entry : stream)
+        {
+            ++MonitoringStats::receivedEntityRemovedCount;
+        }
     }
-}
 
-void MonitoringSystem::Update(Environment &env)
-{
-}
+    virtual void Update(Environment &env) override
+    {}
+};
 
 using namespace ECSTest;
 
@@ -322,7 +289,7 @@ int main()
     constexpr bool isMT = false;
 
     auto stream = make_unique<TestEntities>();
-    auto manager = SystemsManager::New(isMT);
+    auto manager = SystemsManager::New(isMT, nullptr);
     EntityIDGenerator entityIdGenerator;
 
     GenerateScene(entityIdGenerator, *manager, *stream);

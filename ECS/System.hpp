@@ -56,12 +56,12 @@ namespace ECSTest
 	{
 		[[nodiscard]] virtual IndirectSystem *AsIndirectSystem() override final;
 		[[nodiscard]] virtual const IndirectSystem *AsIndirectSystem() const override final;
-        virtual void ProcessMessages(const MessageStreamEntityAdded &stream) = 0;
-        virtual void ProcessMessages(const MessageStreamComponentAdded &stream) = 0;
-        virtual void ProcessMessages(const MessageStreamComponentChanged &stream) = 0;
-        virtual void ProcessMessages(const MessageStreamComponentRemoved &stream) = 0;
-		virtual void ProcessMessages(const MessageStreamEntityRemoved &stream) = 0;
-        virtual void Update(Environment &env) = 0;
+        virtual void ProcessMessages(const MessageStreamEntityAdded &stream) { SOFTBREAK; }
+        virtual void ProcessMessages(const MessageStreamComponentAdded &stream) { SOFTBREAK; }
+        virtual void ProcessMessages(const MessageStreamComponentChanged &stream) { SOFTBREAK; }
+        virtual void ProcessMessages(const MessageStreamComponentRemoved &stream) { SOFTBREAK; }
+        virtual void ProcessMessages(const MessageStreamEntityRemoved &stream) { SOFTBREAK; }
+        virtual void Update(Environment &env) { SOFTBREAK; }
 	};
 
 	struct DirectSystem : public System
@@ -85,8 +85,8 @@ namespace ECSTest
         }
     };
 
-    #define INDIRECT_SYSTEM(name) struct name final : public _SystemTypeIdentifiable<IndirectSystem, NAME_TO_STABLE_ID(name)>
-	#define DIRECT_SYSTEM(name) struct name final : public _SystemTypeIdentifiable<DirectSystem, NAME_TO_STABLE_ID(name)>
+    #define INDIRECT_SYSTEM(name) struct name : public _SystemTypeIdentifiable<IndirectSystem, NAME_TO_STABLE_ID(name)>
+	#define DIRECT_SYSTEM(name) struct name : public _SystemTypeIdentifiable<DirectSystem, NAME_TO_STABLE_ID(name)>
 }
 
 #include "SystemHelpers.hpp"

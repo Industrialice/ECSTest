@@ -56,7 +56,9 @@ static Vector3 GeneratePosition()
 
 INDIRECT_SYSTEM(TransformGeneratorSystem)
 {
-    INDIRECT_ACCEPT_COMPONENTS(Array<Name> &, SubtractiveComponent<Transform>)
+    INDIRECT_ACCEPT_COMPONENTS(Array<Name> &, SubtractiveComponent<Transform>);
+
+    virtual void Update(Environment &env) override
     {
         if (_entitiesToGenerate.empty())
         {
@@ -80,40 +82,33 @@ INDIRECT_SYSTEM(TransformGeneratorSystem)
         env.logger.Message(LogLevels::Info, "Finished generating entities\n");
     }
 
+    virtual void ProcessMessages(const MessageStreamEntityAdded &stream) override
+    {
+        for (auto &entity : stream)
+        {
+            _entitiesToGenerate.push_back(entity.entityID);
+        }
+    }
+
+    virtual void ProcessMessages(const MessageStreamEntityRemoved &stream) override
+    {
+        for (auto &entity : stream)
+        {
+            auto it = std::find(_entitiesToGenerate.begin(), _entitiesToGenerate.end(), entity);
+            ASSUME(it != _entitiesToGenerate.end());
+            _entitiesToGenerate.erase(it);
+        }
+    }
+
 private:
     vector<EntityID> _entitiesToGenerate{};
 };
 
-void TransformGeneratorSystem::ProcessMessages(const MessageStreamEntityAdded &stream)
-{
-    for (auto &entity : stream)
-    {
-        _entitiesToGenerate.push_back(entity.entityID);
-    }
-}
-
-void TransformGeneratorSystem::ProcessMessages(const MessageStreamComponentAdded &stream)
-{}
-
-void TransformGeneratorSystem::ProcessMessages(const MessageStreamComponentChanged &stream)
-{}
-
-void TransformGeneratorSystem::ProcessMessages(const MessageStreamComponentRemoved &stream)
-{}
-
-void TransformGeneratorSystem::ProcessMessages(const MessageStreamEntityRemoved &stream)
-{
-    for (auto &entity : stream)
-    {
-        auto it = std::find(_entitiesToGenerate.begin(), _entitiesToGenerate.end(), entity);
-        ASSUME(it != _entitiesToGenerate.end());
-        _entitiesToGenerate.erase(it);
-    }
-}
-
 INDIRECT_SYSTEM(TransformHeightFixerSystem)
 {
-    INDIRECT_ACCEPT_COMPONENTS(Array<Transform> &, const Array<NegativeHeightCooldown> *, Array<HeightFixerInfo> *)
+    INDIRECT_ACCEPT_COMPONENTS(Array<Transform> &, const Array<NegativeHeightCooldown> *, Array<HeightFixerInfo> *);
+
+    virtual void Update(Environment &env) override
     {
         ++_info.runTimes;
 
@@ -154,90 +149,90 @@ INDIRECT_SYSTEM(TransformHeightFixerSystem)
         env.messageBuilder.RemoveEntity(_infoId);
     }
 
+    virtual void ProcessMessages(const MessageStreamEntityAdded &stream) override
+    {
+        for (auto &entity : stream)
+        {
+            auto t = entity.GetComponent<Transform>();
+            if (t.position.y < 0)
+            {
+                auto cooldown = entity.FindComponent<NegativeHeightCooldown>();
+                if (cooldown && cooldown->cooldown > 0)
+                {
+                    _entitiesWithCooldown.insert(entity.entityID);
+                }
+                t.position.y = 100;
+                _entitiesToFix[entity.entityID] = t;
+            }
+        }
+    }
+
+    virtual void ProcessMessages(const MessageStreamComponentAdded &stream) override
+    {
+        for (auto &entity : stream)
+        {
+            if (entity.component.type == Transform::GetTypeId())
+            {
+                Transform t = *(Transform *)entity.component.data;
+                if (t.position.y < 0)
+                {
+                    t.position.y = 100;
+                    _entitiesToFix[entity.entityID] = t;
+                }
+            }
+            else if (entity.component.type == NegativeHeightCooldown::GetTypeId())
+            {
+                _entitiesWithCooldown.insert(entity.entityID);
+            }
+        }
+    }
+
+    virtual void ProcessMessages(const MessageStreamComponentChanged &stream) override
+    {
+        for (auto &entity : stream)
+        {
+            if (entity.component.type == Transform::GetTypeId())
+            {
+                Transform t = *(Transform *)entity.component.data;
+                if (t.position.y < 0)
+                {
+                    t.position.y = 100;
+                    _entitiesToFix[entity.entityID] = t;
+                }
+            }
+        }
+    }
+
+    virtual void ProcessMessages(const MessageStreamComponentRemoved &stream) override
+    {
+        for (auto &entity : stream)
+        {
+            if (stream.Type() == Transform::GetTypeId())
+            {
+                _entitiesToFix.erase(entity.entityID);
+            }
+            else if (stream.Type() == NegativeHeightCooldown::GetTypeId())
+            {
+                _entitiesWithCooldown.erase(entity.entityID);
+            }
+        }
+    }
+
+    virtual void ProcessMessages(const MessageStreamEntityRemoved &stream) override
+    {
+        for (auto &entity : stream)
+        {
+            _entitiesToFix.erase(entity);
+            _entitiesWithCooldown.erase(entity);
+        }
+    }
+
 private:
 	std::map<EntityID, Transform> _entitiesToFix{};
     std::set<EntityID> _entitiesWithCooldown{};
     HeightFixerInfo _info{};
     EntityID _infoId{};
 };
-
-void TransformHeightFixerSystem::ProcessMessages(const MessageStreamEntityAdded &stream)
-{
-    for (auto &entity : stream)
-    {
-        auto t = entity.GetComponent<Transform>();
-        if (t.position.y < 0)
-        {
-            auto cooldown = entity.FindComponent<NegativeHeightCooldown>();
-            if (cooldown && cooldown->cooldown > 0)
-            {
-                _entitiesWithCooldown.insert(entity.entityID);
-            }
-            t.position.y = 100;
-            _entitiesToFix[entity.entityID] = t;
-        }
-    }
-}
-
-void TransformHeightFixerSystem::ProcessMessages(const MessageStreamComponentAdded &stream)
-{
-    for (auto &entity : stream)
-    {
-        if (entity.component.type == Transform::GetTypeId())
-        {
-            Transform t = *(Transform *)entity.component.data;
-            if (t.position.y < 0)
-            {
-                t.position.y = 100;
-                _entitiesToFix[entity.entityID] = t;
-            }
-        }
-        else if (entity.component.type == NegativeHeightCooldown::GetTypeId())
-        {
-            _entitiesWithCooldown.insert(entity.entityID);
-        }
-    }
-}
-
-void TransformHeightFixerSystem::ProcessMessages(const MessageStreamComponentChanged &stream)
-{
-	for (auto &entity : stream)
-	{
-        if (entity.component.type == Transform::GetTypeId())
-        {
-            Transform t = *(Transform *)entity.component.data;
-            if (t.position.y < 0)
-            {
-                t.position.y = 100;
-                _entitiesToFix[entity.entityID] = t;
-            }
-        }
-	}
-}
-
-void TransformHeightFixerSystem::ProcessMessages(const MessageStreamComponentRemoved &stream)
-{
-    for (auto &entity : stream)
-    {
-        if (stream.Type() == Transform::GetTypeId())
-        {
-            _entitiesToFix.erase(entity.entityID);
-        }
-        else if (stream.Type() == NegativeHeightCooldown::GetTypeId())
-        {
-            _entitiesWithCooldown.erase(entity.entityID);
-        }
-    }
-}
-
-void TransformHeightFixerSystem::ProcessMessages(const MessageStreamEntityRemoved &stream)
-{
-    for (auto &entity : stream)
-    {
-        _entitiesToFix.erase(entity);
-        _entitiesWithCooldown.erase(entity);
-    }
-}
 
 INDIRECT_SYSTEM(TransformFallingIndirectSystem)
 {
@@ -248,7 +243,9 @@ private:
         optional<SpeedOfFall> speedOfFall{};
     };
 
-    INDIRECT_ACCEPT_COMPONENTS(Array<Transform> &, Array<SpeedOfFall> *)
+    INDIRECT_ACCEPT_COMPONENTS(Array<Transform> &, Array<SpeedOfFall> *);
+
+    virtual void Update(Environment &env) override
     {
         for (auto &[entityID, components] : _entities)
         {
@@ -263,89 +260,89 @@ private:
         }
     }
 
+    virtual void ProcessMessages(const MessageStreamEntityAdded &stream) override
+    {
+        for (auto &entity : stream)
+        {
+            auto &target = _entities[entity.entityID];
+            target.transform = entity.GetComponent<Transform>();
+            if (auto speedOfFall = entity.FindComponent<SpeedOfFall>(); speedOfFall)
+            {
+                target.speedOfFall = *speedOfFall;
+            }
+        }
+    }
+
+    virtual void ProcessMessages(const MessageStreamComponentAdded &stream) override
+    {
+        for (auto &entity : stream)
+        {
+            auto &target = _entities[entity.entityID];
+            if (auto transform = entity.component.TryCast<Transform>(); transform)
+            {
+                target.transform = *transform;
+            }
+            else if (auto speedOfFall = entity.component.TryCast<SpeedOfFall>(); speedOfFall)
+            {
+                target.speedOfFall = *speedOfFall;
+            }
+            else
+            {
+                SOFTBREAK;
+            }
+        }
+    }
+
+    virtual void ProcessMessages(const MessageStreamComponentChanged &stream) override
+    {
+        for (auto &entity : stream)
+        {
+            auto &target = _entities[entity.entityID];
+            if (auto transform = entity.component.TryCast<Transform>(); transform)
+            {
+                target.transform = *transform;
+            }
+            else if (auto speedOfFall = entity.component.TryCast<SpeedOfFall>(); speedOfFall)
+            {
+                target.speedOfFall = *speedOfFall;
+            }
+            else
+            {
+                SOFTBREAK;
+            }
+        }
+    }
+
+    virtual void ProcessMessages(const MessageStreamComponentRemoved &stream) override
+    {
+        for (auto &entity : stream)
+        {
+            if (stream.Type() == Transform::GetTypeId())
+            {
+                _entities.erase(entity.entityID);
+            }
+            else if (stream.Type() == SpeedOfFall::GetTypeId())
+            {
+                _entities[entity.entityID].speedOfFall = nullopt;
+            }
+            else
+            {
+                SOFTBREAK;
+            }
+        }
+    }
+
+    virtual void ProcessMessages(const MessageStreamEntityRemoved &stream) override
+    {
+        for (auto &entity : stream)
+        {
+            _entities.erase(entity);
+        }
+    }
+
 private:
 	std::map<EntityID, Components> _entities{};
 };
-
-void TransformFallingIndirectSystem::ProcessMessages(const MessageStreamEntityAdded &stream)
-{
-	for (auto &entity : stream)
-	{
-        auto &target = _entities[entity.entityID];
-        target.transform = entity.GetComponent<Transform>();
-        if (auto speedOfFall = entity.FindComponent<SpeedOfFall>(); speedOfFall)
-        {
-            target.speedOfFall = *speedOfFall;
-        }
-	}
-}
-
-void TransformFallingIndirectSystem::ProcessMessages(const MessageStreamComponentAdded &stream)
-{
-    for (auto &entity : stream)
-    {
-        auto &target = _entities[entity.entityID];
-        if (auto transform = entity.component.TryCast<Transform>(); transform)
-        {
-            target.transform = *transform;
-        }
-        else if (auto speedOfFall = entity.component.TryCast<SpeedOfFall>(); speedOfFall)
-        {
-            target.speedOfFall = *speedOfFall;
-        }
-        else
-        {
-            SOFTBREAK;
-        }
-    }
-}
-
-void TransformFallingIndirectSystem::ProcessMessages(const MessageStreamComponentChanged &stream)
-{
-	for (auto &entity : stream)
-	{
-        auto &target = _entities[entity.entityID];
-        if (auto transform = entity.component.TryCast<Transform>(); transform)
-        {
-            target.transform = *transform;
-        }
-        else if (auto speedOfFall = entity.component.TryCast<SpeedOfFall>(); speedOfFall)
-        {
-            target.speedOfFall = *speedOfFall;
-        }
-        else
-        {
-            SOFTBREAK;
-        }
-	}
-}
-
-void TransformFallingIndirectSystem::ProcessMessages(const MessageStreamComponentRemoved &stream)
-{
-    for (auto &entity : stream)
-    {
-        if (stream.Type() == Transform::GetTypeId())
-        {
-            _entities.erase(entity.entityID);
-        }
-        else if (stream.Type() == SpeedOfFall::GetTypeId())
-        {
-            _entities[entity.entityID].speedOfFall = nullopt;
-        }
-        else
-        {
-            SOFTBREAK;
-        }
-    }
-}
-
-void TransformFallingIndirectSystem::ProcessMessages(const MessageStreamEntityRemoved &stream)
-{
-	for (auto &entity : stream)
-	{
-		_entities.erase(entity);
-	}
-}
 
 DIRECT_SYSTEM(TransformFallingDirectSystem)
 {
@@ -366,7 +363,9 @@ DIRECT_SYSTEM(TransformFallingDirectSystem)
 
 INDIRECT_SYSTEM(AverageHeightAnalyzerSystem)
 {
-    INDIRECT_ACCEPT_COMPONENTS(const Array<Transform> &, Array<AverageHeight> *)
+    INDIRECT_ACCEPT_COMPONENTS(const Array<Transform> &, Array<AverageHeight> *);
+
+    virtual void Update(Environment &env) override
     {
         if (!_isChanged)
         {
@@ -404,63 +403,65 @@ INDIRECT_SYSTEM(AverageHeightAnalyzerSystem)
         env.messageBuilder.RemoveEntity(_entityID);
     }
 
+    virtual void ProcessMessages(const MessageStreamEntityAdded &stream) override
+    {
+        for (auto &entity : stream)
+        {
+            _entities[entity.entityID] = entity.FindComponent<Transform>()->position.y;
+        }
+        _isChanged = true;
+    }
+
+    virtual void ProcessMessages(const MessageStreamComponentAdded &stream) override
+    {
+        for (auto &entity : stream)
+        {
+            if (entity.component.type == Transform::GetTypeId())
+            {
+                _entities[entity.entityID] = (*(Transform *)entity.component.data).position.y;
+                _isChanged = true;
+            }
+        }
+    }
+
+    virtual void ProcessMessages(const MessageStreamComponentChanged &stream) override
+    {
+        for (auto &entity : stream)
+        {
+            _entities[entity.entityID] = (*(Transform *)entity.component.data).position.y;
+        }
+        _isChanged = true;
+    }
+
+    virtual void ProcessMessages(const MessageStreamComponentRemoved &stream) override
+    {
+        for (auto &entity : stream)
+        {
+            _entities.erase(entity.entityID);
+        }
+        _isChanged = true;
+    }
+
+    virtual void ProcessMessages(const MessageStreamEntityRemoved &stream) override
+    {
+        for (auto &entity : stream)
+        {
+            _entities.erase(entity);
+        }
+        _isChanged = true;
+    }
+
 private:
 	std::map<EntityID, f32> _entities{};
 	bool _isChanged = false;
 	EntityID _entityID{};
 };
 
-void AverageHeightAnalyzerSystem::ProcessMessages(const MessageStreamEntityAdded &stream)
-{
-	for (auto &entity : stream)
-	{
-        _entities[entity.entityID] = entity.FindComponent<Transform>()->position.y;
-	}
-	_isChanged = true;
-}
-
-void AverageHeightAnalyzerSystem::ProcessMessages(const MessageStreamComponentAdded &stream)
-{
-    for (auto &entity : stream)
-    {
-        if (entity.component.type == Transform::GetTypeId())
-        {
-            _entities[entity.entityID] = (*(Transform *)entity.component.data).position.y;
-            _isChanged = true;
-        }
-    }
-}
-
-void AverageHeightAnalyzerSystem::ProcessMessages(const MessageStreamComponentChanged &stream)
-{
-	for (auto &entity : stream)
-	{
-		_entities[entity.entityID] = (*(Transform *)entity.component.data).position.y;
-	}
-	_isChanged = true;
-}
-
-void AverageHeightAnalyzerSystem::ProcessMessages(const MessageStreamComponentRemoved &stream)
-{
-    for (auto &entity : stream)
-    {
-        _entities.erase(entity.entityID);
-    }
-    _isChanged = true;
-}
-
-void AverageHeightAnalyzerSystem::ProcessMessages(const MessageStreamEntityRemoved &stream)
-{
-	for (auto &entity : stream)
-	{
-		_entities.erase(entity);
-	}
-	_isChanged = true;
-}
-
 INDIRECT_SYSTEM(CooldownUpdater)
 {
-    INDIRECT_ACCEPT_COMPONENTS(Array<NegativeHeightCooldown> &)
+    INDIRECT_ACCEPT_COMPONENTS(Array<NegativeHeightCooldown> &);
+
+    virtual void Update(Environment &env) override
     {
         for (auto it = _cooldowns.begin(); it != _cooldowns.end(); )
         {
@@ -480,51 +481,51 @@ INDIRECT_SYSTEM(CooldownUpdater)
         }
     }
 
+    virtual void ProcessMessages(const MessageStreamEntityAdded &stream) override
+    {
+        for (auto &entity : stream)
+        {
+            _cooldowns[entity.entityID] = entity.GetComponent<NegativeHeightCooldown>();
+        }
+    }
+
+    virtual void ProcessMessages(const MessageStreamComponentAdded &stream) override
+    {
+        for (auto &entity : stream)
+        {
+            _cooldowns[entity.entityID] = *(NegativeHeightCooldown *)entity.component.data;
+        }
+    }
+
+    virtual void ProcessMessages(const MessageStreamComponentChanged &stream) override
+    {
+        SOFTBREAK;
+        for (auto &entity : stream)
+        {
+            _cooldowns[entity.entityID] = *(NegativeHeightCooldown *)entity.component.data;
+        }
+    }
+
+    virtual void ProcessMessages(const MessageStreamComponentRemoved &stream) override
+    {
+        SOFTBREAK;
+        for (auto &entity : stream)
+        {
+            _cooldowns.erase(entity.entityID);
+        }
+    }
+
+    virtual void ProcessMessages(const MessageStreamEntityRemoved &stream) override
+    {
+        for (auto &entity : stream)
+        {
+            _cooldowns.erase(entity);
+        }
+    }
+
 private:
     std::map<EntityID, NegativeHeightCooldown> _cooldowns{};
 };
-
-void CooldownUpdater::ProcessMessages(const MessageStreamEntityAdded &stream)
-{
-    for (auto &entity : stream)
-    {
-        _cooldowns[entity.entityID] = entity.GetComponent<NegativeHeightCooldown>();
-    }
-}
-
-void CooldownUpdater::ProcessMessages(const MessageStreamComponentAdded &stream)
-{
-    for (auto &entity : stream)
-    {
-        _cooldowns[entity.entityID] = *(NegativeHeightCooldown *)entity.component.data;
-    }
-}
-
-void CooldownUpdater::ProcessMessages(const MessageStreamComponentChanged &stream)
-{
-	SOFTBREAK;
-    for (auto &entity : stream)
-    {
-        _cooldowns[entity.entityID] = *(NegativeHeightCooldown *)entity.component.data;
-    }
-}
-
-void CooldownUpdater::ProcessMessages(const MessageStreamComponentRemoved &stream)
-{
-	SOFTBREAK;
-	for (auto &entity : stream)
-    {
-        _cooldowns.erase(entity.entityID);
-    }
-}
-
-void CooldownUpdater::ProcessMessages(const MessageStreamEntityRemoved &stream)
-{
-    for (auto &entity : stream)
-    {
-        _cooldowns.erase(entity);
-    }
-}
 
 using namespace ECSTest;
 
