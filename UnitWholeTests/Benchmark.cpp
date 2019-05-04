@@ -133,7 +133,7 @@ static void MesasureReference()
 
         ++executedTimes;
         diff = TimeMoment::Now() - start;
-        if (diff > 1_s)
+        if (diff >= 1_s)
         {
             break;
         }
@@ -174,7 +174,7 @@ int main()
     for (;;)
     {
         auto info = manager->GetManagerInfo();
-        if (info.timeSinceStart > 1_s)
+        if (info.timeSinceStart >= 1_s)
         {
             break;
         }
