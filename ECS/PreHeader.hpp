@@ -19,6 +19,7 @@
 
 #include <StdMiscellaneousLib.hpp>
 #include <MatrixMathTypes.hpp>
+#include <Logger.hpp>
 using namespace StdLib;
 
 using std::vector;

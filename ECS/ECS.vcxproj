@@ -25,6 +25,7 @@
     <ClInclude Include="Component.hpp" />
     <ClInclude Include="EntitiesStream.hpp" />
     <ClInclude Include="EntityID.hpp" />
+    <ClInclude Include="LoggerWrapper.hpp" />
     <ClInclude Include="MessageBuilder.hpp" />
     <ClInclude Include="PreHeader.hpp" />
     <ClInclude Include="System.hpp" />
@@ -39,6 +40,7 @@
     <ClCompile Include="ArchetypeReflector.cpp" />
     <ClCompile Include="Component.cpp" />
     <ClCompile Include="EntityID.cpp" />
+    <ClCompile Include="LoggerWrapper.cpp" />
     <ClCompile Include="MessageBuilder.cpp" />
     <ClCompile Include="PreHeader.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

@@ -345,7 +345,7 @@ static void AssignComponentIDs(Array<SerializedComponent> components, ComponentI
 	}
 }
 
-void SystemsManagerST::Start(EntityIDGenerator &&idGenerator, vector<WorkerThread> &&workers, vector<unique_ptr<EntitiesStream>> &&streams)
+void SystemsManagerST::Start(const shared_ptr<LoggerType> &logger, EntityIDGenerator &&idGenerator, vector<WorkerThread> &&workers, vector<unique_ptr<EntitiesStream>> &&streams)
 {
 	ASSUME(_entitiesLocations.empty());
 
@@ -356,6 +356,7 @@ void SystemsManagerST::Start(EntityIDGenerator &&idGenerator, vector<WorkerThrea
 	}
 
 	_entityIdGenerator = move(idGenerator);
+	_logger = logger;
 
 	_isStoppingExecution = false;
 	_isPausedExecution = false;
@@ -754,7 +755,8 @@ void SystemsManagerST::SchedulerLoop()
 			_timeSinceStart,
 			_entityIdGenerator,
             _componentIdGenerator,
-            MessageBuilder()
+            MessageBuilder(),
+			LoggerWrapper(&*_logger, "")
 		};
 
         ExecutePipeline(pipeline, env);

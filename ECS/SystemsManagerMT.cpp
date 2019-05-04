@@ -385,7 +385,7 @@ static void AssignComponentIDs(Array<SerializedComponent> components, ComponentI
     }
 }
 
-void SystemsManagerMT::Start(EntityIDGenerator &&idGenerator, vector<WorkerThread> &&workers, vector<unique_ptr<EntitiesStream>> &&streams)
+void SystemsManagerMT::Start(const shared_ptr<LoggerType> &logger, EntityIDGenerator &&idGenerator, vector<WorkerThread> &&workers, vector<unique_ptr<EntitiesStream>> &&streams)
 {
     ASSUME(_entitiesLocations.empty());
 
@@ -925,7 +925,8 @@ void SystemsManagerMT::ExecutePipeline(PipelineData &pipeline)
 			0_ms,
             _entityIdGenerator,
             _componentIdGenerator,
-            MessageBuilder()
+            MessageBuilder(),
+			LoggerWrapper(nullptr, "")
         };
 
         auto messageQueueLock = managed.messageQueueLock.Lock(DIWRSpinLock::LockType::Exclusive);

@@ -2,14 +2,6 @@
 
 #include <TypeIdentifiable.hpp>
 
-#ifdef USE_ID_NAMES
-    #define IDINPUT , ui64 encoded0, ui64 encoded1, ui64 encoded2
-    #define IDOUTPUT <stableId, encoded0, encoded1, encoded2>
-#else
-    #define IDINPUT
-    #define IDOUTPUT <stableId>
-#endif
-
 namespace ECSTest
 {
     enum RequirementForComponent
@@ -54,10 +46,10 @@ namespace ECSTest
     class Component
     {};
 
-    template <bool isUnique, bool isTag, ui64 stableId IDINPUT> class EMPTY_BASES _BaseComponent : public Component, public StableTypeIdentifiable IDOUTPUT
+    template <bool isUnique, bool isTag, typename Type> class EMPTY_BASES _BaseComponent : public Component, public Type
     {
     public:
-        using StableTypeIdentifiable IDOUTPUT ::GetTypeId;
+        using Type::GetTypeId;
 
 		[[nodiscard]] static constexpr bool IsUnique()
         {
@@ -70,14 +62,7 @@ namespace ECSTest
         }
     };
 
-#ifdef USE_ID_NAMES
-    #define _CREATE_COMPONENT(name, isUnique, isTag) struct name final : public _BaseComponent<isUnique, isTag, Hash::FNVHashCT<Hash::Precision::P64, char, CountOf(TOSTR(name)), true>(TOSTR(name)), \
-        CompileTimeStrings::EncodeASCII(TOSTR(name), CountOf(TOSTR(name)), CompileTimeStrings::CharsPerNumber * 0), \
-        CompileTimeStrings::EncodeASCII(TOSTR(name), CountOf(TOSTR(name)), CompileTimeStrings::CharsPerNumber * 1), \
-        CompileTimeStrings::EncodeASCII(TOSTR(name), CountOf(TOSTR(name)), CompileTimeStrings::CharsPerNumber * 2)>
-#else
-    #define _CREATE_COMPONENT(name, isUnique, isTag) struct name final : public _BaseComponent<isUnique, isTag, Hash::FNVHashCT<Hash::Precision::P64, char, CountOf(TOSTR(name)), true>(TOSTR(name))>
-#endif
+	#define _CREATE_COMPONENT(name, isUnique, isTag) struct name final : public _BaseComponent<isUnique, isTag, NAME_TO_STABLE_ID(name)>
 
     // TODO: replace it with a single COMPONENT macro that optionally accepts properties?
     #define COMPONENT(name) _CREATE_COMPONENT(name, true, false)
@@ -124,6 +109,3 @@ namespace std
         }
     };
 }
-
-#undef IDINPUT
-#undef IDOUTPUT

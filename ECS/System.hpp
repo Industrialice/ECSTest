@@ -2,6 +2,7 @@
 
 #include "Component.hpp"
 #include "MessageBuilder.hpp"
+#include "LoggerWrapper.hpp"
 
 namespace ECSTest
 {
@@ -16,6 +17,7 @@ namespace ECSTest
             EntityIDGenerator &entityIdGenerator;
             ComponentIDGenerator &componentIdGenerator;
             MessageBuilder messageBuilder;
+			LoggerWrapper logger;
         };
 
         struct RequestedComponent
@@ -79,23 +81,8 @@ namespace ECSTest
         }
     };
 
-    #ifdef USE_ID_NAMES
-        #define INDIRECT_SYSTEM(name) struct name final : public _SystemTypeIdentifiable<IndirectSystem, StableTypeIdentifiable<Hash::FNVHashCT<Hash::Precision::P64, char, CountOf(TOSTR(name)), true>(TOSTR(name)), \
-            CompileTimeStrings::EncodeASCII(TOSTR(name), CountOf(TOSTR(name)), CompileTimeStrings::CharsPerNumber * 0), \
-            CompileTimeStrings::EncodeASCII(TOSTR(name), CountOf(TOSTR(name)), CompileTimeStrings::CharsPerNumber * 1), \
-            CompileTimeStrings::EncodeASCII(TOSTR(name), CountOf(TOSTR(name)), CompileTimeStrings::CharsPerNumber * 2)>>
-    #else
-        #define INDIRECT_SYSTEM(name) struct name final : public _SystemTypeIdentifiable<IndirectSystem, StableTypeIdentifiable<Hash::FNVHashCT<Hash::Precision::P64, char, CountOf(TOSTR(name)), true>(TOSTR(name))>>
-    #endif
-
-    #ifdef USE_ID_NAMES
-        #define DIRECT_SYSTEM(name) struct name final : public _SystemTypeIdentifiable<DirectSystem, StableTypeIdentifiable<Hash::FNVHashCT<Hash::Precision::P64, char, CountOf(TOSTR(name)), true>(TOSTR(name)), \
-            CompileTimeStrings::EncodeASCII(TOSTR(name), CountOf(TOSTR(name)), CompileTimeStrings::CharsPerNumber * 0), \
-            CompileTimeStrings::EncodeASCII(TOSTR(name), CountOf(TOSTR(name)), CompileTimeStrings::CharsPerNumber * 1), \
-            CompileTimeStrings::EncodeASCII(TOSTR(name), CountOf(TOSTR(name)), CompileTimeStrings::CharsPerNumber * 2)>>
-    #else
-        #define DIRECT_SYSTEM(name) struct name final : public _SystemTypeIdentifiable<DirectSystem, StableTypeIdentifiable<Hash::FNVHashCT<Hash::Precision::P64, char, CountOf(TOSTR(name)), true>(TOSTR(name))>>
-    #endif
+    #define INDIRECT_SYSTEM(name) struct name final : public _SystemTypeIdentifiable<IndirectSystem, NAME_TO_STABLE_ID(name)>
+	#define DIRECT_SYSTEM(name) struct name final : public _SystemTypeIdentifiable<DirectSystem, NAME_TO_STABLE_ID(name)>
 }
 
 #include "SystemHelpers.hpp"

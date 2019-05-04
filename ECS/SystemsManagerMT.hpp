@@ -20,7 +20,7 @@ namespace ECSTest
         [[nodiscard]] virtual ManagerInfo GetManagerInfo() const override;
         virtual void Register(unique_ptr<System> system, Pipeline pipeline) override;
         virtual void Unregister(StableTypeId systemType) override;
-        virtual void Start(EntityIDGenerator &&idGenerator, vector<WorkerThread> &&workers, vector<unique_ptr<EntitiesStream>> &&streams) override;
+        virtual void Start(const shared_ptr<LoggerType> &logger, EntityIDGenerator &&idGenerator, vector<WorkerThread> &&workers, vector<unique_ptr<EntitiesStream>> &&streams) override;
         virtual void Pause(bool isWaitForStop) override; // you can call it multiple times, for example first time as Pause(false), and then as Pause(true) to wait for paused
         virtual void Resume() override;
         virtual void Stop(bool isWaitForStop) override;

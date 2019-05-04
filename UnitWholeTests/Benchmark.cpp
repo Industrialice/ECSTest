@@ -169,7 +169,7 @@ int main()
 
     MesasureReference();
 
-    manager->Start(move(idGenerator), move(workers), move(stream));
+    manager->Start(nullptr, move(idGenerator), move(workers), move(stream));
 
     for (;;)
     {
