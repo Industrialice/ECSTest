@@ -10,17 +10,18 @@ namespace ECSTest
 
 	protected:
 		~SystemsManagerST() = default;
-		SystemsManagerST() = default;
+		SystemsManagerST(const shared_ptr<LoggerType> &logger);
 
 	public:
-		static shared_ptr<SystemsManagerST> New();
+		static shared_ptr<SystemsManagerST> New(const shared_ptr<LoggerType> &logger);
 
 		[[nodiscard]] virtual Pipeline CreatePipeline(optional<TimeDifference> executionStep, bool isMergeIfSuchPipelineExists) override;
         [[nodiscard]] virtual PipelineInfo GetPipelineInfo(Pipeline pipeline) const override;
         [[nodiscard]] virtual ManagerInfo GetManagerInfo() const override;
-		virtual void Register(unique_ptr<System> system, Pipeline pipeline) override;
+        virtual void SetLogger(const shared_ptr<LoggerType> &logger) override;
+        virtual void Register(unique_ptr<System> system, Pipeline pipeline) override;
 		virtual void Unregister(StableTypeId systemType) override;
-		virtual void Start(const shared_ptr<LoggerType> &logger, EntityIDGenerator &&idGenerator, vector<WorkerThread> &&workers, vector<unique_ptr<EntitiesStream>> &&streams) override;
+		virtual void Start(EntityIDGenerator &&idGenerator, vector<WorkerThread> &&workers, vector<unique_ptr<EntitiesStream>> &&streams) override;
 		virtual void Pause(bool isWaitForStop) override; // you can call it multiple times, for example first time as Pause(false), and then as Pause(true) to wait for paused
 		virtual void Resume() override;
 		virtual void Stop(bool isWaitForStop) override;
@@ -136,12 +137,14 @@ namespace ECSTest
         TimeDifference _timeSinceStart{0_ms};
         TimeMoment _currentTime{};
 
-		shared_ptr<LoggerType> _logger{};
+        shared_ptr<LoggerType> _logger = make_shared<LoggerType>();
 
         vector<SerializedComponent> _tempComponents{};
         vector<Array<ui8>> _tempArrayArgs{};
 		vector<NonUnique<ui8>> _tempNonUniqueArgs{};
         vector<void *> _tempArgs{};
+
+        static constexpr string_view selfName = "SystemsManagerST";
 
 	private:
 		[[nodiscard]] ArchetypeGroup &FindArchetypeGroup(const ArchetypeFull &archetype, Array<const SerializedComponent> components);

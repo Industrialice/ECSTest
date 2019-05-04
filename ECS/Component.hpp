@@ -50,6 +50,7 @@ namespace ECSTest
     {
     public:
         using Type::GetTypeId;
+        using Type::GetTypeName;
 
 		[[nodiscard]] static constexpr bool IsUnique()
         {

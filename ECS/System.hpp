@@ -43,6 +43,7 @@ namespace ECSTest
 
 		[[nodiscard]] virtual const Requests &RequestedComponents() const = 0;
 		[[nodiscard]] virtual StableTypeId Type() const = 0;
+        [[nodiscard]] virtual string_view Name() const = 0;
 		[[nodiscard]] virtual struct IndirectSystem *AsIndirectSystem();
 		[[nodiscard]] virtual const struct IndirectSystem *AsIndirectSystem() const;
 		[[nodiscard]] virtual struct DirectSystem *AsDirectSystem();
@@ -74,10 +75,16 @@ namespace ECSTest
     {
     public:
         using Type::GetTypeId;
+        using Type::GetTypeName;
 
         [[nodiscard]] virtual StableTypeId Type() const override final
         {
             return GetTypeId();
+        }
+
+        [[nodiscard]] virtual string_view Name() const override final
+        {
+            return GetTypeName();
         }
     };
 

@@ -4,11 +4,11 @@
 
 using namespace ECSTest;
 
-shared_ptr<SystemsManager> SystemsManager::New(bool isMultiThreaded)
+shared_ptr<SystemsManager> SystemsManager::New(bool isMultiThreaded, const shared_ptr<LoggerType> &logger)
 {
     if (isMultiThreaded)
     {
-        return SystemsManagerMT::New();
+        return SystemsManagerMT::New(logger);
     }
-    return SystemsManagerST::New();
+    return SystemsManagerST::New(logger);
 }

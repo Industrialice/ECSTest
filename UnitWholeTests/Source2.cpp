@@ -10,7 +10,7 @@ namespace
 {
     constexpr ui32 EntitiesToAdd = 50;
     constexpr bool IsMultiThreadedECS = false;
-    constexpr ui32 WaitForExecutedFrames = 500;
+    constexpr ui32 WaitForExecutedFrames = 150;
 }
 
 class Pipeline
@@ -20,6 +20,11 @@ class Pipeline
     ui32 _phase = 0;
 
 public:
+    ui32 Phase() const
+    {
+        return _phase;
+    }
+
     bool Advance()
     {
         if (_phase != 3)
@@ -42,6 +47,9 @@ COMPONENT(GeneratedComponent)
     ui32 tagsCount;
 };
 
+COMPONENT(TempComponent)
+{};
+
 COMPONENT(GeneratorInfoComponent)
 {
     ui32 tagComponentsGenerated = 0;
@@ -55,7 +63,7 @@ COMPONENT(ConsumerInfoComponent)
     ui32 entityRemoved = 0;
     ui32 generatedComponentAdded = 0;
     ui32 generatedComponentChanged = 0;
-    ui32 generatedComponentRemoved = 0;
+    ui32 tempComponentRemoved = 0;
     ui32 tagComponentChanged = 0;
     ui32 tagComponentsReceived = 0;
     ui32 tagComponentsWithIdReceived = 0;
@@ -92,7 +100,7 @@ INDIRECT_SYSTEM(GeneratorSystem)
                 GeneratedComponent c;
                 c.value = 15;
                 c.tagsCount = 0;
-                auto &builder = env.messageBuilder.AddEntity(env.entityIdGenerator.Generate()).AddComponent(c).AddComponent(FilterTag{});
+                auto &builder = env.messageBuilder.AddEntity(env.entityIdGenerator.Generate()).AddComponent(c).AddComponent(FilterTag{}).AddComponent(TempComponent{});
                 for (i32 index = 0, count = rand() % 4; index < count; ++index)
                 {
                     ++c.tagsCount;
@@ -117,9 +125,14 @@ INDIRECT_SYSTEM(GeneratorSystem)
                 --_leftToGenerate;
                 _toComponentChange.push({env.entityIdGenerator.LastGenerated(), c.tagsCount});
 
-                if (!_pipeline.Advance())
+                if (_pipeline.Phase() == 0)
                 {
-                    return;
+                    if (!_pipeline.Advance())
+                    {
+                        return;
+                    }
+
+                    env.logger.Message(LogLevels::Info, "Finished generating entities\n");
                 }
             }
 
@@ -141,21 +154,31 @@ INDIRECT_SYSTEM(GeneratorSystem)
                 _toComponentRemove.push(_toComponentChange.front().first);
                 _toComponentChange.pop();
 
-                if (!_pipeline.Advance())
+                if (_pipeline.Phase() == 1)
                 {
-                    return;
+                    if (!_pipeline.Advance())
+                    {
+                        return;
+                    }
+
+                    env.logger.Message(LogLevels::Info, "Finished changing components\n");
                 }
             }
 
             if (_toComponentRemove.size())
             {
-                env.messageBuilder.RemoveComponent(_toComponentRemove.front(), GeneratedComponent{});
+                env.messageBuilder.RemoveComponent(_toComponentRemove.front(), TempComponent{});
                 _toEntityRemove.push(_toComponentRemove.front());
                 _toComponentRemove.pop();
 
-                if (!_pipeline.Advance())
+                if (_pipeline.Phase() == 2)
                 {
-                    return;
+                    if (!_pipeline.Advance())
+                    {
+                        return;
+                    }
+
+                    env.logger.Message(LogLevels::Info, "Finished removing components\n");
                 }
             }
 
@@ -222,7 +245,7 @@ void GeneratorSystem::ProcessMessages(const MessageStreamEntityRemoved &stream)
 
 INDIRECT_SYSTEM(ConsumerIndirectSystem)
 {
-    INDIRECT_ACCEPT_COMPONENTS(const Array<GeneratedComponent> &, const NonUnique<TagComponent> *, Array<ConsumerInfoComponent> *, RequiredComponent<FilterTag>)
+    INDIRECT_ACCEPT_COMPONENTS(const Array<GeneratedComponent> &, const Array<TempComponent> *, const NonUnique<TagComponent> *, Array<ConsumerInfoComponent> *, RequiredComponent<FilterTag>)
     {
         if (MemOps::Compare(&_info, &_infoPassed, sizeof(_infoPassed)))
         {
@@ -337,7 +360,7 @@ void ConsumerIndirectSystem::ProcessMessages(const MessageStreamComponentChanged
 
 void ConsumerIndirectSystem::ProcessMessages(const MessageStreamComponentRemoved &stream)
 {
-    if (stream.Type() != GeneratedComponent::GetTypeId())
+    if (stream.Type() != TempComponent::GetTypeId())
     {
         SOFTBREAK;
         return;
@@ -351,7 +374,7 @@ void ConsumerIndirectSystem::ProcessMessages(const MessageStreamComponentRemoved
         ASSUME(it->second.component->value == 35);
         ASSUME(it->second.isEntityRemoved == false);
         it->second.component = nullopt;
-        ++_info.generatedComponentRemoved;
+        ++_info.tempComponentRemoved;
     }
 }
 
@@ -530,13 +553,13 @@ static void PrintStreamInfo(EntitiesStream &stream, bool isFirstPass)
                 printf("consumer stats:\n");
                 printf("  componentAdded %u\n", t.generatedComponentAdded);
                 printf("  componentChanged %u", t.generatedComponentChanged);
-                printf("  componentRemoved %u", t.generatedComponentRemoved);
+                printf("  componentRemoved %u", t.tempComponentRemoved);
                 printf("  entityAdded %u\n", t.entityAdded);
                 printf("  entityRemoved %u\n", t.entityRemoved);
 
                 ASSUME(t.generatedComponentAdded == 0);
                 ASSUME(t.generatedComponentChanged == EntitiesToAdd * 2);
-                ASSUME(t.generatedComponentRemoved == EntitiesToAdd);
+                ASSUME(t.tempComponentRemoved == EntitiesToAdd);
                 ASSUME(t.tagComponentChanged == t.tagComponentsWithIdReceived);
                 ASSUME(t.entityAdded == EntitiesToAdd);
                 ASSUME(t.entityRemoved == EntitiesToAdd);
@@ -564,7 +587,10 @@ int main()
 {
     StdLib::Initialization::Initialize({});
 
-    auto manager = SystemsManager::New(IsMultiThreadedECS);
+    auto logger = make_shared<Logger<string_view, true>>();
+    auto handle0 = logger->OnMessage(LogRecipient);
+
+    auto manager = SystemsManager::New(IsMultiThreadedECS, logger);
     EntityIDGenerator entityIdGenerator;
 
     auto testPipeline0 = manager->CreatePipeline(/*5_ms*/nullopt, false);

@@ -24,7 +24,7 @@ namespace ECSTest
 		using LoggerType = Logger<string_view, true>;
 
     public:
-        static shared_ptr<SystemsManager> New(bool isMultiThreaded);
+        static shared_ptr<SystemsManager> New(bool isMultiThreaded, const shared_ptr<LoggerType> &logger = nullptr);
 
         class Pipeline
         {
@@ -52,25 +52,26 @@ namespace ECSTest
             return Register(std::make_unique<T>(), pipeline);
         }
 
-        void Start(const shared_ptr<LoggerType> &logger, EntityIDGenerator &&idGenerator, vector<WorkerThread> &&workers)
+        void Start(EntityIDGenerator &&idGenerator, vector<WorkerThread> &&workers)
         {
             vector<unique_ptr<EntitiesStream>> streams;
-            return Start(logger, move(idGenerator), move(workers), move(streams));
+            return Start(move(idGenerator), move(workers), move(streams));
         }
 
-        void Start(const shared_ptr<LoggerType> &logger, EntityIDGenerator &&idGenerator, vector<WorkerThread> &&workers, unique_ptr<EntitiesStream> &&stream)
+        void Start(EntityIDGenerator &&idGenerator, vector<WorkerThread> &&workers, unique_ptr<EntitiesStream> &&stream)
         {
             vector<unique_ptr<EntitiesStream>> streams;
             streams.push_back(move(stream));
-            return Start(logger, move(idGenerator), move(workers), move(streams));
+            return Start(move(idGenerator), move(workers), move(streams));
         }
 
         [[nodiscard]] virtual Pipeline CreatePipeline(optional<TimeDifference> executionStep, bool isMergeIfSuchPipelineExists) = 0;
         [[nodiscard]] virtual PipelineInfo GetPipelineInfo(Pipeline pipeline) const = 0;
         [[nodiscard]] virtual ManagerInfo GetManagerInfo() const = 0;
+        virtual void SetLogger(const shared_ptr<LoggerType> &logger) = 0;
         virtual void Register(unique_ptr<System> system, Pipeline pipeline) = 0;
         virtual void Unregister(StableTypeId systemType) = 0;
-        virtual void Start(const shared_ptr<LoggerType> &logger, EntityIDGenerator &&idGenerator, vector<WorkerThread> &&workers, vector<unique_ptr<EntitiesStream>> &&streams) = 0;
+        virtual void Start(EntityIDGenerator &&idGenerator, vector<WorkerThread> &&workers, vector<unique_ptr<EntitiesStream>> &&streams) = 0;
         virtual void Pause(bool isWaitForStop) = 0; // you can call it multiple times, for example first time as Pause(false), and then as Pause(true) to wait for paused
         virtual void Resume() = 0;
         virtual void Stop(bool isWaitForStop) = 0;

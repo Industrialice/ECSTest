@@ -75,14 +75,22 @@ namespace ECSTest
 
 using namespace ECSTest;
 
-shared_ptr<SystemsManagerST> SystemsManagerST::New()
+SystemsManagerST::SystemsManagerST(const shared_ptr<LoggerType> &logger) : _logger(logger)
+{
+    if (_logger == nullptr)
+    {
+        _logger = make_shared<LoggerType>();
+    }
+}
+
+shared_ptr<SystemsManagerST> SystemsManagerST::New(const shared_ptr<LoggerType> &logger)
 {
     struct Inherited : public SystemsManagerST
     {
-        Inherited() : SystemsManagerST()
+        Inherited(const shared_ptr<LoggerType> &logger) : SystemsManagerST(logger)
         {}
     };
-    return make_shared<Inherited>();
+    return make_shared<Inherited>(logger);
 }
 
 auto SystemsManagerST::CreatePipeline(optional<TimeDifference> executionStep, bool isMergeIfSuchPipelineExists) -> Pipeline
@@ -134,6 +142,20 @@ auto SystemsManagerST::GetManagerInfo() const -> ManagerInfo
     return info;
 }
 
+void SystemsManagerST::SetLogger(const shared_ptr<LoggerType> &logger)
+{
+    if (Funcs::AreSharedPointersEqual(_logger, logger))
+    {
+        return;
+    }
+
+    _logger = logger;
+    if (!_logger)
+    {
+        _logger = make_shared<LoggerType>();
+    }
+}
+
 void SystemsManagerST::Register(unique_ptr<System> system, Pipeline pipeline)
 {
 	ASSUME(system);
@@ -157,7 +179,7 @@ void SystemsManagerST::Register(unique_ptr<System> system, Pipeline pipeline)
 
 		if (requiredCount == 0 && requiredWithDataCount == 0 && optionalCount == 0)
 		{
-			SOFTBREAK; // the system will never be executed with such configuration
+            _logger->Message(LogLevels::Error, selfName, "The system will never be executed with such configuration");
 			return;
 		}
 	}
@@ -170,7 +192,7 @@ void SystemsManagerST::Register(unique_ptr<System> system, Pipeline pipeline)
 			{
 				if (existingSystem.system->Type() == system->Type())
 				{
-					SOFTBREAK; // system with such type already exists
+                    _logger->Message(LogLevels::Error, selfName, "System with such type already exists");
 					return;
 				}
 			}
@@ -181,7 +203,7 @@ void SystemsManagerST::Register(unique_ptr<System> system, Pipeline pipeline)
 			{
 				if (existingSystem.system->Type() == system->Type())
 				{
-					SOFTBREAK; // system with such type already exists
+                    _logger->Message(LogLevels::Error, selfName, "System with such type already exists");
 					return;
 				}
 			}
@@ -201,7 +223,7 @@ void SystemsManagerST::Register(unique_ptr<System> system, Pipeline pipeline)
 		{
 			if (std::find(otherPipeline.writeComponents.begin(), otherPipeline.writeComponents.end(), req.type) != otherPipeline.writeComponents.end())
 			{
-				SOFTBREAK; // other pipeline already requested that component for write, that is not allowed
+                _logger->Message(LogLevels::Error, selfName, "Other pipeline already requested that component for write, that is not allowed");
 				return;
 			}
 		}
@@ -297,7 +319,7 @@ void SystemsManagerST::Unregister(StableTypeId systemType)
 		}
 	}
 
-	SOFTBREAK; // system not found
+    _logger->Message(LogLevels::Error, selfName, "System not found");
 }
 
 static void StreamedToSerialized(Array<const EntitiesStream::ComponentDesc> streamed, vector<SerializedComponent> &serialized)
@@ -345,18 +367,17 @@ static void AssignComponentIDs(Array<SerializedComponent> components, ComponentI
 	}
 }
 
-void SystemsManagerST::Start(const shared_ptr<LoggerType> &logger, EntityIDGenerator &&idGenerator, vector<WorkerThread> &&workers, vector<unique_ptr<EntitiesStream>> &&streams)
+void SystemsManagerST::Start(EntityIDGenerator &&idGenerator, vector<WorkerThread> &&workers, vector<unique_ptr<EntitiesStream>> &&streams)
 {
 	ASSUME(_entitiesLocations.empty());
 
 	if (workers.size())
 	{
-		SOFTBREAK;
+        _logger->Message(LogLevels::Warning, selfName, "Workers aren't used by a single threaded systems manager");
 		workers.clear();
 	}
 
 	_entityIdGenerator = move(idGenerator);
-	_logger = logger;
 
 	_isStoppingExecution = false;
 	_isPausedExecution = false;
@@ -380,13 +401,13 @@ void SystemsManagerST::Resume()
 {
 	if (!_isPausedExecution)
 	{
-		SOFTBREAK;
+        _logger->Message(LogLevels::Error, selfName, "Cannot resume because the execution is already running");
 		return;
 	}
 
 	if (_isStoppingExecution || _schedulerThread.joinable() == false)
 	{
-		SOFTBREAK;
+        _logger->Message(LogLevels::Error, selfName, "Cannot resume because the system is not started");
 		return;
 	}
 
@@ -816,6 +837,7 @@ void SystemsManagerST::ExecutePipeline(PipelineData &pipeline, System::Environme
 			env.messageBuilder.SourceName(managed.system->Type().Name()); // the builder was reset, set the name again
         }
 
+        env.logger._name = managed.system->Name();
         ExecuteDirectSystem(*managed.system, env);
 
         ++managed.executedTimes;
@@ -835,6 +857,7 @@ void SystemsManagerST::ExecutePipeline(PipelineData &pipeline, System::Environme
 			env.messageBuilder.SourceName(managed.system->Type().Name()); // the builder was reset, set the name again
         }
 
+        env.logger._name = managed.system->Name();
         ExecuteIndirectSystem(*managed.system, managed.messageQueue, env);
 
         ++managed.executedTimes;

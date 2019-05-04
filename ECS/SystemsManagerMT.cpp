@@ -128,14 +128,17 @@ using namespace ECSTest;
 //{
 //}
 
-shared_ptr<SystemsManagerMT> SystemsManagerMT::New()
+SystemsManagerMT::SystemsManagerMT(const shared_ptr<LoggerType> &logger)
+{}
+
+shared_ptr<SystemsManagerMT> SystemsManagerMT::New(const shared_ptr<LoggerType> &logger)
 {
     struct Inherited : public SystemsManagerMT
     {
-        Inherited() : SystemsManagerMT()
+        Inherited(const shared_ptr<LoggerType> &logger) : SystemsManagerMT(logger)
         {}
     };
-    return make_shared<Inherited>();
+    return make_shared<Inherited>(logger);
 }
 
 auto SystemsManagerMT::CreatePipeline(optional<TimeDifference> executionStep, bool isMergeIfSuchPipelineExists) -> Pipeline
@@ -175,6 +178,9 @@ auto SystemsManagerMT::GetManagerInfo() const -> ManagerInfo
     NOIMPL;
     return {};
 }
+
+void SystemsManagerMT::SetLogger(const shared_ptr<LoggerType> &logger)
+{}
 
 void SystemsManagerMT::Register(unique_ptr<System> system, Pipeline pipeline)
 {
@@ -385,7 +391,7 @@ static void AssignComponentIDs(Array<SerializedComponent> components, ComponentI
     }
 }
 
-void SystemsManagerMT::Start(const shared_ptr<LoggerType> &logger, EntityIDGenerator &&idGenerator, vector<WorkerThread> &&workers, vector<unique_ptr<EntitiesStream>> &&streams)
+void SystemsManagerMT::Start(EntityIDGenerator &&idGenerator, vector<WorkerThread> &&workers, vector<unique_ptr<EntitiesStream>> &&streams)
 {
     ASSUME(_entitiesLocations.empty());
 
