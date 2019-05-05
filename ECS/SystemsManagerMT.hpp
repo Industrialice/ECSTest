@@ -21,14 +21,14 @@ namespace ECSTest
         virtual void SetLogger(const shared_ptr<LoggerType> &logger) override;
         virtual void Register(unique_ptr<System> system, Pipeline pipeline) override;
         virtual void Unregister(StableTypeId systemType) override;
-        virtual void Start(EntityIDGenerator &&idGenerator, vector<WorkerThread> &&workers, vector<unique_ptr<EntitiesStream>> &&streams) override;
+        virtual void Start(EntityIDGenerator &&idGenerator, vector<WorkerThread> &&workers, vector<unique_ptr<IEntitiesStream>> &&streams) override;
         virtual void Pause(bool isWaitForStop) override; // you can call it multiple times, for example first time as Pause(false), and then as Pause(true) to wait for paused
         virtual void Resume() override;
         virtual void Stop(bool isWaitForStop) override;
         [[nodiscard]] virtual bool IsRunning() const override;
         [[nodiscard]] virtual bool IsPaused() const override;
-        //virtual void StreamIn(vector<unique_ptr<EntitiesStream>> &&streams) override;
-        [[nodiscard]] virtual shared_ptr<EntitiesStream> StreamOut() const override; // the manager must be paused
+        //virtual void StreamIn(vector<unique_ptr<IEntitiesStream>> &&streams) override;
+        [[nodiscard]] virtual shared_ptr<IEntitiesStream> StreamOut() const override; // the manager must be paused
 
     private:
         struct ArchetypeGroup
@@ -189,7 +189,7 @@ namespace ECSTest
         [[nodiscard]] ArchetypeGroup &FindArchetypeGroup(const ArchetypeFull &archetype, Array<const SerializedComponent> components);
         ArchetypeGroup &AddNewArchetypeGroup(const ArchetypeFull &archetype, Array<const SerializedComponent> components);
         void AddEntityToArchetypeGroup(const ArchetypeFull &archetype, ArchetypeGroup &group, EntityID entityId, Array<const SerializedComponent> components, MessageBuilder *messageBuilder);
-        void StartScheduler(vector<unique_ptr<EntitiesStream>> &&streams);
+        void StartScheduler(vector<unique_ptr<IEntitiesStream>> &&streams);
         void SchedulerLoop();
         void ExecutePipeline(PipelineData &pipeline);
         void CalculateGroupsToExectute(const System *system, vector<std::reference_wrapper<ArchetypeGroup>> &groups);

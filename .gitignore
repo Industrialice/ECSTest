@@ -225,3 +225,4 @@ ModelManifest.xml
 /x64_Debug
 /Win32_Debug
 /x64_Release
+/ECSEngine/log.txt

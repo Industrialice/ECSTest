@@ -3,7 +3,7 @@
 
 namespace ECSTest
 {
-    class ECSEntitiesST : public EntitiesStream
+    class ECSEntitiesST : public IEntitiesStream
     {
         std::weak_ptr<const SystemsManagerST> _parent{};
         vector<ComponentDesc> _tempComponents{};
@@ -322,7 +322,7 @@ void SystemsManagerST::Unregister(StableTypeId systemType)
     _logger->Message(LogLevels::Error, selfName, "System not found");
 }
 
-static void StreamedToSerialized(Array<const EntitiesStream::ComponentDesc> streamed, vector<SerializedComponent> &serialized)
+static void StreamedToSerialized(Array<const IEntitiesStream::ComponentDesc> streamed, vector<SerializedComponent> &serialized)
 {
 	serialized.resize(streamed.size());
 	for (uiw index = 0; index < streamed.size(); ++index)
@@ -367,7 +367,7 @@ static void AssignComponentIDs(Array<SerializedComponent> components, ComponentI
 	}
 }
 
-void SystemsManagerST::Start(EntityIDGenerator &&idGenerator, vector<WorkerThread> &&workers, vector<unique_ptr<EntitiesStream>> &&streams)
+void SystemsManagerST::Start(EntityIDGenerator &&idGenerator, vector<WorkerThread> &&workers, vector<unique_ptr<IEntitiesStream>> &&streams)
 {
 	ASSUME(_entitiesLocations.empty());
 
@@ -451,7 +451,7 @@ bool SystemsManagerST::IsPaused() const
 	return _isPausedExecution;
 }
 
-shared_ptr<EntitiesStream> SystemsManagerST::StreamOut() const
+shared_ptr<IEntitiesStream> SystemsManagerST::StreamOut() const
 {
     return make_shared<ECSEntitiesST>(shared_from_this());
 }
@@ -658,7 +658,7 @@ void SystemsManagerST::AddEntityToArchetypeGroup(const ArchetypeFull &archetype,
 	++group.entitiesCount;
 }
 
-void SystemsManagerST::StartScheduler(vector<unique_ptr<EntitiesStream>> &streams)
+void SystemsManagerST::StartScheduler(vector<unique_ptr<IEntitiesStream>> &streams)
 {
 	MessageBuilder messageBulder;
     messageBulder.SourceName("Initial Streaming");
@@ -693,18 +693,22 @@ void SystemsManagerST::StartScheduler(vector<unique_ptr<EntitiesStream>> &stream
 		}
 	}
 
-	uiw workerIndex = 0;
-	for (auto &pipeline : _pipelines)
-	{
-		for (auto &managed : pipeline.indirectSystems)
-		{
-			if (managed.messageQueue.entityAddedStreams.size())
-			{
-				ProcessMessages(*managed.system, managed.messageQueue);
-			}
-            managed.messageQueue.clear();
-		}
-	}
+	//uiw workerIndex = 0;
+	//for (auto &pipeline : _pipelines)
+	//{
+	//	for (auto &managed : pipeline.indirectSystems)
+	//	{
+ //           ASSUME(managed.messageQueue.componentAddedStreams.empty());
+ //           ASSUME(managed.messageQueue.componentChangedStreams.empty());
+ //           ASSUME(managed.messageQueue.componentRemovedStreams.empty());
+ //           ASSUME(managed.messageQueue.entityRemovedStreams.empty());
+ //           for (const auto &stream : managed.messageQueue.entityAddedStreams)
+ //           {
+ //               managed.system->ProcessMessages(env, stream);
+ //           }
+ //           managed.messageQueue.clear();
+	//	}
+	//}
 
     _currentTime = TimeMoment::Now();
 
@@ -866,33 +870,33 @@ void SystemsManagerST::ExecutePipeline(PipelineData &pipeline, System::Environme
     ++pipeline.executionFrame;
 }
 
-void SystemsManagerST::ProcessMessages(IndirectSystem &system, const ManagedIndirectSystem::MessageQueue &messageQueue)
+void SystemsManagerST::ProcessMessages(IndirectSystem &system, const ManagedIndirectSystem::MessageQueue &messageQueue, System::Environment &env)
 {
 	for (const auto &stream : messageQueue.entityAddedStreams)
 	{
-		system.ProcessMessages(stream);
+		system.ProcessMessages(env, stream);
 	}
     for (const auto &stream : messageQueue.componentAddedStreams)
     {
-        system.ProcessMessages(stream);
+        system.ProcessMessages(env, stream);
     }
 	for (const auto &stream : messageQueue.componentChangedStreams)
 	{
-		system.ProcessMessages(stream);
+		system.ProcessMessages(env, stream);
 	}
     for (const auto &stream : messageQueue.componentRemovedStreams)
     {
-        system.ProcessMessages(stream);
+        system.ProcessMessages(env, stream);
     }
 	for (const auto &stream : messageQueue.entityRemovedStreams)
 	{
-		system.ProcessMessages(stream);
+		system.ProcessMessages(env, stream);
 	}
 }
 
 void SystemsManagerST::ExecuteIndirectSystem(IndirectSystem &system, ManagedIndirectSystem::MessageQueue &messageQueue, System::Environment &env)
 {
-    ProcessMessages(system, messageQueue);
+    ProcessMessages(system, messageQueue, env);
     messageQueue.clear();
 
     system.Update(env);

@@ -35,7 +35,7 @@ INDIRECT_SYSTEM(TestIndirectSystem0)
 {
     INDIRECT_ACCEPT_COMPONENTS(Array<TestComponent0> &);
 
-    virtual void ProcessMessages(const MessageStreamEntityAdded &stream) override
+    virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override
     {
         for (auto &entry : stream)
         {
@@ -43,7 +43,7 @@ INDIRECT_SYSTEM(TestIndirectSystem0)
         }
     }
 
-    virtual void ProcessMessages(const MessageStreamEntityRemoved &stream) override
+    virtual void ProcessMessages(Environment &env, const MessageStreamEntityRemoved &stream) override
     {
         for (auto &entry : stream)
         {
@@ -72,7 +72,7 @@ INDIRECT_SYSTEM(TestIndirectSystem1)
 {
     INDIRECT_ACCEPT_COMPONENTS(const Array<TestComponent0> &, const Array<TestComponent1> &, const NonUnique<TestComponent2> *);
 
-    virtual void ProcessMessages(const MessageStreamEntityAdded &stream) override
+    virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override
     {
         for (auto &entry : stream)
         {
@@ -80,7 +80,7 @@ INDIRECT_SYSTEM(TestIndirectSystem1)
         }
     }
 
-    virtual void ProcessMessages(const MessageStreamComponentChanged &stream) override
+    virtual void ProcessMessages(Environment &env, const MessageStreamComponentChanged &stream) override
     {}
 
     virtual void Update(Environment &env) override
@@ -108,13 +108,13 @@ INDIRECT_SYSTEM(TestIndirectSystem2)
 {
     INDIRECT_ACCEPT_COMPONENTS(Array<TestComponent0> &);
 
-    virtual void ProcessMessages(const MessageStreamEntityAdded &stream) override
+    virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override
     {}
 
-    virtual void ProcessMessages(const MessageStreamComponentChanged &stream) override
+    virtual void ProcessMessages(Environment &env, const MessageStreamComponentChanged &stream) override
     {}
 
-    virtual void ProcessMessages(const MessageStreamEntityRemoved &stream) override
+    virtual void ProcessMessages(Environment &env, const MessageStreamEntityRemoved &stream) override
     {}
 
     virtual void Update(Environment &env) override
@@ -139,7 +139,7 @@ INDIRECT_SYSTEM(MonitoringSystem)
 {
     INDIRECT_ACCEPT_COMPONENTS();
 
-    virtual void ProcessMessages(const MessageStreamEntityAdded &stream) override
+    virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override
     {
         for (auto &entry : stream)
         {
@@ -156,7 +156,7 @@ INDIRECT_SYSTEM(MonitoringSystem)
         }
     }
 
-    virtual void ProcessMessages(const MessageStreamComponentChanged &stream) override
+    virtual void ProcessMessages(Environment &env, const MessageStreamComponentChanged &stream) override
     {
         for (auto &entry : stream)
         {
@@ -180,7 +180,7 @@ INDIRECT_SYSTEM(MonitoringSystem)
         }
     }
 
-    virtual void ProcessMessages(const MessageStreamEntityRemoved &stream) override
+    virtual void ProcessMessages(Environment &env, const MessageStreamEntityRemoved &stream) override
     {
         for (auto &entry : stream)
         {
@@ -194,45 +194,45 @@ INDIRECT_SYSTEM(MonitoringSystem)
 
 using namespace ECSTest;
 
-static void GenerateScene(EntityIDGenerator &entityIdGenerator, SystemsManager &manager, TestEntities &stream)
+static void GenerateScene(EntityIDGenerator &entityIdGenerator, SystemsManager &manager, EntitiesStream &stream)
 {
     for (uiw index = 0; index < 100; ++index)
     {
-        TestEntities::PreStreamedEntity entity;
+        EntitiesStream::EntityData entity;
 
         if (index < 75)
         {
             TestComponent0 c;
             c.value = 0;
-            StreamComponent(c, entity);
+            entity.AddComponent(c);
         }
 
         if (index < 50)
         {
             TestComponent1 c;
             c.value = 1;
-            StreamComponent(c, entity);
+            entity.AddComponent(c);
         }
 
         if (index < 25)
         {
             TestComponent2 c;
             c.value = 2;
-            StreamComponent(c, entity);
+            entity.AddComponent(c);
         }
 
         if (index < 10)
         {
             TestComponent2 c;
             c.value = 3;
-            StreamComponent(c, entity);
+            entity.AddComponent(c);
         }
 
         stream.AddEntity(entityIdGenerator.Generate(), move(entity));
     }
 }
 
-static void PrintStreamInfo(EntitiesStream &stream, bool isFirstPass)
+static void PrintStreamInfo(IEntitiesStream &stream, bool isFirstPass)
 {
     ui32 entitiesCount = 0;
     ui32 test0Count = 0;
@@ -288,7 +288,7 @@ int main()
 
     constexpr bool isMT = false;
 
-    auto stream = make_unique<TestEntities>();
+    auto stream = make_unique<EntitiesStream>();
     auto manager = SystemsManager::New(isMT, nullptr);
     EntityIDGenerator entityIdGenerator;
 

@@ -54,13 +54,13 @@ namespace ECSTest
 
         void Start(EntityIDGenerator &&idGenerator, vector<WorkerThread> &&workers)
         {
-            vector<unique_ptr<EntitiesStream>> streams;
+            vector<unique_ptr<IEntitiesStream>> streams;
             return Start(move(idGenerator), move(workers), move(streams));
         }
 
-        void Start(EntityIDGenerator &&idGenerator, vector<WorkerThread> &&workers, unique_ptr<EntitiesStream> &&stream)
+        void Start(EntityIDGenerator &&idGenerator, vector<WorkerThread> &&workers, unique_ptr<IEntitiesStream> &&stream)
         {
-            vector<unique_ptr<EntitiesStream>> streams;
+            vector<unique_ptr<IEntitiesStream>> streams;
             streams.push_back(move(stream));
             return Start(move(idGenerator), move(workers), move(streams));
         }
@@ -71,13 +71,13 @@ namespace ECSTest
         virtual void SetLogger(const shared_ptr<LoggerType> &logger) = 0;
         virtual void Register(unique_ptr<System> system, Pipeline pipeline) = 0;
         virtual void Unregister(StableTypeId systemType) = 0;
-        virtual void Start(EntityIDGenerator &&idGenerator, vector<WorkerThread> &&workers, vector<unique_ptr<EntitiesStream>> &&streams) = 0;
+        virtual void Start(EntityIDGenerator &&idGenerator, vector<WorkerThread> &&workers, vector<unique_ptr<IEntitiesStream>> &&streams) = 0;
         virtual void Pause(bool isWaitForStop) = 0; // you can call it multiple times, for example first time as Pause(false), and then as Pause(true) to wait for paused
         virtual void Resume() = 0;
         virtual void Stop(bool isWaitForStop) = 0;
         [[nodiscard]] virtual bool IsRunning() const = 0;
         [[nodiscard]] virtual bool IsPaused() const = 0;
-        //virtual void StreamIn(vector<unique_ptr<EntitiesStream>> &&streams) = 0;
-        [[nodiscard]] virtual shared_ptr<EntitiesStream> StreamOut() const = 0; // the manager must be paused
+        //virtual void StreamIn(vector<unique_ptr<IEntitiesStream>> &&streams) = 0;
+        [[nodiscard]] virtual shared_ptr<IEntitiesStream> StreamOut() const = 0; // the manager must be paused
 	};
 }

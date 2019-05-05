@@ -434,7 +434,7 @@ namespace ECSTest
 			ComponentArrayBuilder(ComponentArrayBuilder &&) = default;
 			ComponentArrayBuilder &operator = (ComponentArrayBuilder &&) = default;
 
-            ComponentArrayBuilder &AddComponent(const EntitiesStream::ComponentDesc &desc, ComponentID id); // the data will be copied over
+            ComponentArrayBuilder &AddComponent(const IEntitiesStream::ComponentDesc &desc, ComponentID id); // the data will be copied over
             ComponentArrayBuilder &AddComponent(const SerializedComponent &sc); // the data will be copied over
 
             template <typename T, typename = std::enable_if_t<T::IsUnique()>> ComponentArrayBuilder &AddComponent(const T &component)

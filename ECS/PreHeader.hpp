@@ -31,6 +31,7 @@ using std::pair;
 using std::function;
 using std::array;
 using std::optional;
+using std::variant;
 using std::move;
 using std::swap;
 using std::make_pair;

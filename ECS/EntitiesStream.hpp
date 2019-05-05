@@ -5,7 +5,7 @@
 
 namespace ECSTest
 {
-    class PURE EntitiesStream
+    class PURE IEntitiesStream
     {
     public:
         struct ComponentDesc
@@ -24,7 +24,7 @@ namespace ECSTest
             Array<ComponentDesc> components{};
         };
 
-        virtual ~EntitiesStream() = default;
+        virtual ~IEntitiesStream() = default;
         [[nodiscard]] virtual optional<StreamedEntity> Next() = 0; // the previous value may get invalidated when you request the next one
     };
 }

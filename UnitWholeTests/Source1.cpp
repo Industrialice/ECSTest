@@ -82,7 +82,7 @@ INDIRECT_SYSTEM(TransformGeneratorSystem)
         env.logger.Message(LogLevels::Info, "Finished generating entities\n");
     }
 
-    virtual void ProcessMessages(const MessageStreamEntityAdded &stream) override
+    virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override
     {
         for (auto &entity : stream)
         {
@@ -90,7 +90,7 @@ INDIRECT_SYSTEM(TransformGeneratorSystem)
         }
     }
 
-    virtual void ProcessMessages(const MessageStreamEntityRemoved &stream) override
+    virtual void ProcessMessages(Environment &env, const MessageStreamEntityRemoved &stream) override
     {
         for (auto &entity : stream)
         {
@@ -149,7 +149,7 @@ INDIRECT_SYSTEM(TransformHeightFixerSystem)
         env.messageBuilder.RemoveEntity(_infoId);
     }
 
-    virtual void ProcessMessages(const MessageStreamEntityAdded &stream) override
+    virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override
     {
         for (auto &entity : stream)
         {
@@ -167,7 +167,7 @@ INDIRECT_SYSTEM(TransformHeightFixerSystem)
         }
     }
 
-    virtual void ProcessMessages(const MessageStreamComponentAdded &stream) override
+    virtual void ProcessMessages(Environment &env, const MessageStreamComponentAdded &stream) override
     {
         for (auto &entity : stream)
         {
@@ -187,7 +187,7 @@ INDIRECT_SYSTEM(TransformHeightFixerSystem)
         }
     }
 
-    virtual void ProcessMessages(const MessageStreamComponentChanged &stream) override
+    virtual void ProcessMessages(Environment &env, const MessageStreamComponentChanged &stream) override
     {
         for (auto &entity : stream)
         {
@@ -203,7 +203,7 @@ INDIRECT_SYSTEM(TransformHeightFixerSystem)
         }
     }
 
-    virtual void ProcessMessages(const MessageStreamComponentRemoved &stream) override
+    virtual void ProcessMessages(Environment &env, const MessageStreamComponentRemoved &stream) override
     {
         for (auto &entity : stream)
         {
@@ -218,7 +218,7 @@ INDIRECT_SYSTEM(TransformHeightFixerSystem)
         }
     }
 
-    virtual void ProcessMessages(const MessageStreamEntityRemoved &stream) override
+    virtual void ProcessMessages(Environment &env, const MessageStreamEntityRemoved &stream) override
     {
         for (auto &entity : stream)
         {
@@ -260,7 +260,7 @@ private:
         }
     }
 
-    virtual void ProcessMessages(const MessageStreamEntityAdded &stream) override
+    virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override
     {
         for (auto &entity : stream)
         {
@@ -273,7 +273,7 @@ private:
         }
     }
 
-    virtual void ProcessMessages(const MessageStreamComponentAdded &stream) override
+    virtual void ProcessMessages(Environment &env, const MessageStreamComponentAdded &stream) override
     {
         for (auto &entity : stream)
         {
@@ -293,7 +293,7 @@ private:
         }
     }
 
-    virtual void ProcessMessages(const MessageStreamComponentChanged &stream) override
+    virtual void ProcessMessages(Environment &env, const MessageStreamComponentChanged &stream) override
     {
         for (auto &entity : stream)
         {
@@ -313,7 +313,7 @@ private:
         }
     }
 
-    virtual void ProcessMessages(const MessageStreamComponentRemoved &stream) override
+    virtual void ProcessMessages(Environment &env, const MessageStreamComponentRemoved &stream) override
     {
         for (auto &entity : stream)
         {
@@ -332,7 +332,7 @@ private:
         }
     }
 
-    virtual void ProcessMessages(const MessageStreamEntityRemoved &stream) override
+    virtual void ProcessMessages(Environment &env, const MessageStreamEntityRemoved &stream) override
     {
         for (auto &entity : stream)
         {
@@ -403,7 +403,7 @@ INDIRECT_SYSTEM(AverageHeightAnalyzerSystem)
         env.messageBuilder.RemoveEntity(_entityID);
     }
 
-    virtual void ProcessMessages(const MessageStreamEntityAdded &stream) override
+    virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override
     {
         for (auto &entity : stream)
         {
@@ -412,7 +412,7 @@ INDIRECT_SYSTEM(AverageHeightAnalyzerSystem)
         _isChanged = true;
     }
 
-    virtual void ProcessMessages(const MessageStreamComponentAdded &stream) override
+    virtual void ProcessMessages(Environment &env, const MessageStreamComponentAdded &stream) override
     {
         for (auto &entity : stream)
         {
@@ -424,7 +424,7 @@ INDIRECT_SYSTEM(AverageHeightAnalyzerSystem)
         }
     }
 
-    virtual void ProcessMessages(const MessageStreamComponentChanged &stream) override
+    virtual void ProcessMessages(Environment &env, const MessageStreamComponentChanged &stream) override
     {
         for (auto &entity : stream)
         {
@@ -433,7 +433,7 @@ INDIRECT_SYSTEM(AverageHeightAnalyzerSystem)
         _isChanged = true;
     }
 
-    virtual void ProcessMessages(const MessageStreamComponentRemoved &stream) override
+    virtual void ProcessMessages(Environment &env, const MessageStreamComponentRemoved &stream) override
     {
         for (auto &entity : stream)
         {
@@ -442,7 +442,7 @@ INDIRECT_SYSTEM(AverageHeightAnalyzerSystem)
         _isChanged = true;
     }
 
-    virtual void ProcessMessages(const MessageStreamEntityRemoved &stream) override
+    virtual void ProcessMessages(Environment &env, const MessageStreamEntityRemoved &stream) override
     {
         for (auto &entity : stream)
         {
@@ -481,7 +481,7 @@ INDIRECT_SYSTEM(CooldownUpdater)
         }
     }
 
-    virtual void ProcessMessages(const MessageStreamEntityAdded &stream) override
+    virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override
     {
         for (auto &entity : stream)
         {
@@ -489,7 +489,7 @@ INDIRECT_SYSTEM(CooldownUpdater)
         }
     }
 
-    virtual void ProcessMessages(const MessageStreamComponentAdded &stream) override
+    virtual void ProcessMessages(Environment &env, const MessageStreamComponentAdded &stream) override
     {
         for (auto &entity : stream)
         {
@@ -497,7 +497,7 @@ INDIRECT_SYSTEM(CooldownUpdater)
         }
     }
 
-    virtual void ProcessMessages(const MessageStreamComponentChanged &stream) override
+    virtual void ProcessMessages(Environment &env, const MessageStreamComponentChanged &stream) override
     {
         SOFTBREAK;
         for (auto &entity : stream)
@@ -506,7 +506,7 @@ INDIRECT_SYSTEM(CooldownUpdater)
         }
     }
 
-    virtual void ProcessMessages(const MessageStreamComponentRemoved &stream) override
+    virtual void ProcessMessages(Environment &env, const MessageStreamComponentRemoved &stream) override
     {
         SOFTBREAK;
         for (auto &entity : stream)
@@ -515,7 +515,7 @@ INDIRECT_SYSTEM(CooldownUpdater)
         }
     }
 
-    virtual void ProcessMessages(const MessageStreamEntityRemoved &stream) override
+    virtual void ProcessMessages(Environment &env, const MessageStreamEntityRemoved &stream) override
     {
         for (auto &entity : stream)
         {
@@ -529,35 +529,35 @@ private:
 
 using namespace ECSTest;
 
-static void GenerateScene(EntityIDGenerator &entityIdGenerator, SystemsManager &manager, TestEntities &stream)
+static void GenerateScene(EntityIDGenerator &entityIdGenerator, SystemsManager &manager, EntitiesStream &stream)
 {
     for (uiw index = 0; index < EntitiesToTest; ++index)
     {
-        TestEntities::PreStreamedEntity entity;
+        EntitiesStream::EntityData entity;
 
         if (IsPreGenerateTransform)
         {
             Transform t;
             t.position = GeneratePosition();
-            StreamComponent(t, entity);
+            entity.AddComponent(t);
             if (rand() % 2)
             {
                 SpeedOfFall speed;
                 speed.speed = rand() % 25;
-                StreamComponent(speed, entity);
+                entity.AddComponent(speed);
             }
         }
 
 		string name = "Entity"s + std::to_string(index);
 		Name n;
 		strcpy_s(n.name.data(), n.name.size(), name.c_str());
-		StreamComponent(n, entity);
+        entity.AddComponent(n);
 
         stream.AddEntity(entityIdGenerator.Generate(), move(entity));
     }
 }
 
-static void PrintStreamInfo(EntitiesStream &stream, bool isFirstPass)
+static void PrintStreamInfo(IEntitiesStream &stream, bool isFirstPass)
 {
     if (!isFirstPass)
     {
@@ -616,7 +616,7 @@ int main()
     auto logger = make_shared<Logger<string_view, true>>();
     auto handle0 = logger->OnMessage(LogRecipient);
     
-    auto stream = make_unique<TestEntities>();
+    auto stream = make_unique<EntitiesStream>();
     auto manager = SystemsManager::New(IsMultiThreadedECS, logger);
     EntityIDGenerator entityIdGenerator;
 

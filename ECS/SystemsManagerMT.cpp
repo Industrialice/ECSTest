@@ -3,7 +3,7 @@
 
 namespace ECSTest
 {
-    class ECSEntitiesMT : public EntitiesStream
+    class ECSEntitiesMT : public IEntitiesStream
     {
         std::weak_ptr<const SystemsManagerMT> _parent{};
         vector<ComponentDesc> _tempComponents{};
@@ -347,7 +347,7 @@ void SystemsManagerMT::Unregister(StableTypeId systemType)
     SOFTBREAK; // system not found
 }
 
-static void StreamedToSerialized(Array<const EntitiesStream::ComponentDesc> streamed, vector<SerializedComponent> &serialized)
+static void StreamedToSerialized(Array<const IEntitiesStream::ComponentDesc> streamed, vector<SerializedComponent> &serialized)
 {
     serialized.resize(streamed.size());
     for (uiw index = 0; index < streamed.size(); ++index)
@@ -391,7 +391,7 @@ static void AssignComponentIDs(Array<SerializedComponent> components, ComponentI
     }
 }
 
-void SystemsManagerMT::Start(EntityIDGenerator &&idGenerator, vector<WorkerThread> &&workers, vector<unique_ptr<EntitiesStream>> &&streams)
+void SystemsManagerMT::Start(EntityIDGenerator &&idGenerator, vector<WorkerThread> &&workers, vector<unique_ptr<IEntitiesStream>> &&streams)
 {
     ASSUME(_entitiesLocations.empty());
 
@@ -487,12 +487,12 @@ bool SystemsManagerMT::IsPaused() const
     return _isPausedExecution;
 }
 
-//void SystemsManagerMT::StreamIn(vector<unique_ptr<EntitiesStream>> &&streams)
+//void SystemsManagerMT::StreamIn(vector<unique_ptr<IEntitiesStream>> &&streams)
 //{
 //    NOIMPL;
 //}
 
-shared_ptr<EntitiesStream> SystemsManagerMT::StreamOut() const
+shared_ptr<IEntitiesStream> SystemsManagerMT::StreamOut() const
 {
     return make_shared<ECSEntitiesMT>(shared_from_this());
 }
@@ -657,7 +657,7 @@ void SystemsManagerMT::AddEntityToArchetypeGroup(const ArchetypeFull &archetype,
     ++group.entitiesCount;
 }
 
-void SystemsManagerMT::StartScheduler(vector<unique_ptr<EntitiesStream>> &&streams)
+void SystemsManagerMT::StartScheduler(vector<unique_ptr<IEntitiesStream>> &&streams)
 {
     MessageBuilder messageBulder;
     vector<SerializedComponent> serialized;
@@ -984,18 +984,18 @@ WorkerThread &SystemsManagerMT::FindBestWorker()
 
 void SystemsManagerMT::TaskProcessMessages(IndirectSystem &system, const ManagedIndirectSystem::MessageQueue &messageQueue)
 {
-    for (const auto &stream : messageQueue.entityAddedStreams)
-    {
-        system.ProcessMessages(stream);
-    }
-    for (const auto &stream : messageQueue.componentChangedStreams)
-    {
-        system.ProcessMessages(stream);
-    }
-    for (const auto &stream : messageQueue.entityRemovedStreams)
-    {
-        system.ProcessMessages(stream);
-    }
+    //for (const auto &stream : messageQueue.entityAddedStreams)
+    //{
+    //    system.ProcessMessages(stream);
+    //}
+    //for (const auto &stream : messageQueue.componentChangedStreams)
+    //{
+    //    system.ProcessMessages(stream);
+    //}
+    //for (const auto &stream : messageQueue.entityRemovedStreams)
+    //{
+    //    system.ProcessMessages(stream);
+    //}
 }
 
 void SystemsManagerMT::TaskExecuteIndirectSystem(IndirectSystem &system, ManagedIndirectSystem::MessageQueue messageQueue, System::Environment &env, std::atomic<ui32> &decrementAtCompletion, vector<shared_ptr<ManagedSystem::GroupLock>> &groupLocks, vector<shared_ptr<ManagedSystem::ComponentLock>> &componentLocks)

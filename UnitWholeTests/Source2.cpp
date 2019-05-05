@@ -244,7 +244,7 @@ INDIRECT_SYSTEM(ConsumerIndirectSystem)
         env.messageBuilder.RemoveEntity(_infoID);
     }
 
-    virtual void ProcessMessages(const MessageStreamEntityAdded &stream) override
+    virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override
     {
         for (auto &entity : stream)
         {
@@ -280,12 +280,12 @@ INDIRECT_SYSTEM(ConsumerIndirectSystem)
         }
     }
 
-    virtual void ProcessMessages(const MessageStreamComponentAdded &stream) override
+    virtual void ProcessMessages(Environment &env, const MessageStreamComponentAdded &stream) override
     {
         SOFTBREAK;
     }
 
-    virtual void ProcessMessages(const MessageStreamComponentChanged &stream) override
+    virtual void ProcessMessages(Environment &env, const MessageStreamComponentChanged &stream) override
     {
         if (stream.Type() == GeneratedComponent::GetTypeId())
         {
@@ -325,7 +325,7 @@ INDIRECT_SYSTEM(ConsumerIndirectSystem)
         }
     }
 
-    virtual void ProcessMessages(const MessageStreamComponentRemoved &stream) override
+    virtual void ProcessMessages(Environment &env, const MessageStreamComponentRemoved &stream) override
     {
         if (stream.Type() != TempComponent::GetTypeId())
         {
@@ -345,7 +345,7 @@ INDIRECT_SYSTEM(ConsumerIndirectSystem)
         }
     }
 
-    virtual void ProcessMessages(const MessageStreamEntityRemoved &stream) override
+    virtual void ProcessMessages(Environment &env, const MessageStreamEntityRemoved &stream) override
     {
         for (auto &entity : stream)
         {
@@ -438,7 +438,7 @@ INDIRECT_SYSTEM(OtherIndirectSystem)
     {
     }
 
-    virtual void ProcessMessages(const MessageStreamEntityAdded &stream) override
+    virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override
     {
         for (auto &entry : stream)
         {
@@ -447,7 +447,7 @@ INDIRECT_SYSTEM(OtherIndirectSystem)
         }
     }
 
-    virtual void ProcessMessages(const MessageStreamComponentAdded &stream) override
+    virtual void ProcessMessages(Environment &env, const MessageStreamComponentAdded &stream) override
     {
         for (auto &entry : stream)
         {
@@ -456,7 +456,7 @@ INDIRECT_SYSTEM(OtherIndirectSystem)
         }
     }
 
-    virtual void ProcessMessages(const MessageStreamComponentChanged &stream) override
+    virtual void ProcessMessages(Environment &env, const MessageStreamComponentChanged &stream) override
     {
         for (auto &entry : stream)
         {
@@ -500,7 +500,7 @@ DIRECT_SYSTEM(EmptyDirectWriteSystem)
 
 using namespace ECSTest;
 
-static void PrintStreamInfo(EntitiesStream &stream, bool isFirstPass)
+static void PrintStreamInfo(IEntitiesStream &stream, bool isFirstPass)
 {
     if (!isFirstPass)
     {

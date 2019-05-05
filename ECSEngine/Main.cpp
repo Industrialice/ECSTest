@@ -1,4 +1,8 @@
 #include "PreHeader.hpp"
+#include "RendererDX11.hpp"
+#include "Scene.hpp"
+
+using namespace ECSEngine;
 
 namespace
 {
@@ -21,7 +25,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
     LogFile = File(L"log.txt", FileOpenMode::CreateAlways, FileProcModes::Write);
     if (LogFile)
     {
-        LoggerFileHandle = EngineLogger->OnMessage(std::bind(FileLogRecipient, LogFile, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
+        LoggerFileHandle = EngineLogger->OnMessage(std::bind(FileLogRecipient, std::ref(LogFile), _1, _2, _3));
     }
 
     LoggerVSHandle = EngineLogger->OnMessage(LogRecipient);
@@ -29,6 +33,29 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
     EngineLogger->Message(LogLevels::Info, "WinMain", "Engine has started\n");
 
     auto manager = SystemsManager::New(false, EngineLogger);
+
+    auto renderer = RendererDX11System::New();
+
+    auto rendererPipeline = manager->CreatePipeline(nullopt, false);
+    manager->Register(move(renderer), rendererPipeline);
+
+    vector<WorkerThread> workers;
+    EntityIDGenerator idGenerator;
+    auto stream = Scene::Create(idGenerator);
+
+    manager->Start(move(idGenerator), move(workers), move(stream));
+
+    for (;;)
+    {
+        auto info = manager->GetPipelineInfo(rendererPipeline);
+        if (info.executedTimes > 500)
+        {
+            break;
+        }
+        std::this_thread::yield();
+    }
+
+    manager->Stop(true);
 
     EngineLogger->Message(LogLevels::Info, "WinMain", "Engine has finished\n");
 
@@ -87,7 +114,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 //    WindowData *windowData = nullptr;
 //    if (hwnd == Application::GetMainWindow().hwnd)
 //    {
-//        windowData = (WindowData *)GetWindowLongPtrA(hwnd, GWLP_USERDATA);;
+//        windowData = (WindowData *)GetWindowLongPtrA(hwnd, GWLP_USERDATA);
 //        if (windowData == nullptr || windowData->hwnd != hwnd)
 //        {
 //            SOFTBREAK;

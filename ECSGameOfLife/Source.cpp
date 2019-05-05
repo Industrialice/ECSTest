@@ -24,19 +24,19 @@ using namespace ECSTest;
 class GameOfLifeEntities : public EntitiesStream
 {
 public:
-	struct PreStreamedEntity
+	struct EntityData
 	{
 		StreamedEntity streamed;
 		vector<ComponentDesc> descs;
 		vector<unique_ptr<ui8[]>> componentsData;
 
-		PreStreamedEntity() = default;
-		PreStreamedEntity(PreStreamedEntity &&) = default;
-		PreStreamedEntity &operator = (PreStreamedEntity &&) = default;
+		EntityData() = default;
+		EntityData(EntityData &&) = default;
+		EntityData &operator = (EntityData &&) = default;
 	};
 
 private:
-    vector<PreStreamedEntity> _entities{};
+    vector<EntityData> _entities{};
     uiw _currentEntity{};
 
 public:
@@ -50,7 +50,7 @@ public:
         return {};
     }
 
-    void AddEntity(EntityID id, PreStreamedEntity &&entity)
+    void AddEntity(EntityID id, EntityData &&entity)
     {
         _entities.emplace_back(move(entity));
         _entities.back().streamed.components = ToArray(_entities.back().descs);
@@ -58,7 +58,7 @@ public:
     }
 };
 
-template <typename T> void StreamComponent(const T &component, GameOfLifeEntities::PreStreamedEntity &preStreamed)
+template <typename T> void StreamComponent(const T &component, GameOfLifeEntities::EntityData &preStreamed)
 {
 	EntitiesStream::ComponentDesc desc;
 	auto componentData = make_unique<ui8[]>(sizeof(T));
@@ -73,9 +73,9 @@ template <typename T> void StreamComponent(const T &component, GameOfLifeEntitie
 	preStreamed.descs.emplace_back(desc);
 }
 
-template <typename... Args> GameOfLifeEntities::PreStreamedEntity Stream(const Args &... args)
+template <typename... Args> GameOfLifeEntities::EntityData Stream(const Args &... args)
 {
-	GameOfLifeEntities::PreStreamedEntity preStreamed;
+	GameOfLifeEntities::EntityData preStreamed;
 	(StreamComponent(args, preStreamed), ...);
 	return preStreamed;
 }
@@ -247,7 +247,7 @@ template <typename... CompanyComponents> void GenerateEmployees(GameOfLifeEntiti
             static constexpr const char *firstNamesFemale[] = {"Mria", "Colgate", "Alyx", "Hillary", "Michelle"};
             static constexpr const char *lastNames[] = {"Clinton", "Merkel", "Trump", "Putin", "Assad", "Laden", "Obama", "Payne"};
 
-            GameOfLifeEntities::PreStreamedEntity preStreamed;
+            GameOfLifeEntities::EntityData preStreamed;
             for (const auto &profession : professions)
             {
                 std::visit([&preStreamed](const auto &arg) { StreamComponent(arg, preStreamed); }, profession);

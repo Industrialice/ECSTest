@@ -4,4 +4,6 @@
 #include <SystemsManager.hpp>
 #include "WinAPI.hpp"
 
+using namespace std::placeholders;
+
 using namespace ECSTest;

@@ -9,7 +9,7 @@ void MessageBuilder::ComponentArrayBuilder::Clear()
 	_data = {};
 }
 
-auto MessageBuilder::ComponentArrayBuilder::AddComponent(const EntitiesStream::ComponentDesc &desc, ComponentID id) -> ComponentArrayBuilder &
+auto MessageBuilder::ComponentArrayBuilder::AddComponent(const IEntitiesStream::ComponentDesc &desc, ComponentID id) -> ComponentArrayBuilder &
 {
     SerializedComponent serialized;
     serialized.alignmentOf = desc.alignmentOf;

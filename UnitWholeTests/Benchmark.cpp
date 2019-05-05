@@ -83,21 +83,21 @@ DIRECT_SYSTEM(System3)
     }
 };
 
-static void GenerateScene(EntityIDGenerator &entityIdGenerator, SystemsManager &manager, TestEntities &stream)
+static void GenerateScene(EntityIDGenerator &entityIdGenerator, SystemsManager &manager, EntitiesStream &stream)
 {
     auto generate = [&stream, &entityIdGenerator](auto group)
     {
         for (uiw index = 0; index < EntitiesToTest; ++index)
         {
-            TestEntities::PreStreamedEntity entity;
+            EntitiesStream::EntityData entity;
 
             SourceComponent source;
             source.value = rand() % 4 - 2;
 
-            StreamComponent(source, entity);
-            StreamComponent(CosineResultComponent{}, entity);
-            StreamComponent(SinusResultComponent{}, entity);
-            StreamComponent(group, entity);
+            entity.AddComponent(source);
+            entity.AddComponent(CosineResultComponent{});
+            entity.AddComponent(SinusResultComponent{});
+            entity.AddComponent(group);
 
             stream.AddEntity(entityIdGenerator.Generate(), move(entity));
         }
@@ -153,7 +153,7 @@ int main()
 
     auto idGenerator = EntityIDGenerator{};
     auto manager = SystemsManager::New(IsMTECS, logger);
-    auto stream = make_unique<TestEntities>();
+    auto stream = make_unique<EntitiesStream>();
     
     GenerateScene(idGenerator, *manager, *stream);
 

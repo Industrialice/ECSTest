@@ -56,11 +56,11 @@ namespace ECSTest
 	{
 		[[nodiscard]] virtual IndirectSystem *AsIndirectSystem() override final;
 		[[nodiscard]] virtual const IndirectSystem *AsIndirectSystem() const override final;
-        virtual void ProcessMessages(const MessageStreamEntityAdded &stream) { SOFTBREAK; }
-        virtual void ProcessMessages(const MessageStreamComponentAdded &stream) { SOFTBREAK; }
-        virtual void ProcessMessages(const MessageStreamComponentChanged &stream) { SOFTBREAK; }
-        virtual void ProcessMessages(const MessageStreamComponentRemoved &stream) { SOFTBREAK; }
-        virtual void ProcessMessages(const MessageStreamEntityRemoved &stream) { SOFTBREAK; }
+        virtual void ProcessMessages(System::Environment &env, const MessageStreamEntityAdded &stream) { SOFTBREAK; }
+        virtual void ProcessMessages(System::Environment &env, const MessageStreamComponentAdded &stream) { SOFTBREAK; }
+        virtual void ProcessMessages(System::Environment &env, const MessageStreamComponentChanged &stream) { SOFTBREAK; }
+        virtual void ProcessMessages(System::Environment &env, const MessageStreamComponentRemoved &stream) { SOFTBREAK; }
+        virtual void ProcessMessages(System::Environment &env, const MessageStreamEntityRemoved &stream) { SOFTBREAK; }
         virtual void Update(Environment &env) { SOFTBREAK; }
 	};
 
