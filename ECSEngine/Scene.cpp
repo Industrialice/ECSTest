@@ -18,8 +18,9 @@ unique_ptr<IEntitiesStream> Scene::Create(EntityIDGenerator &idGenerator)
     window.isMaximized = false;
     window.isNoBorders = false;
     strcpy_s(window.title.data(), window.title.size(), "Industrialice ECS test engine");
-    window.x = 100;
-    window.y = 100;
+    window.x = 500;
+    window.y = 500;
+    window.cursorType = Window::CursorTypet::Normal;
 
     RT rt;
     rt.target = window;

@@ -32,6 +32,7 @@ using std::function;
 using std::array;
 using std::optional;
 using std::variant;
+using std::to_string;
 using std::move;
 using std::swap;
 using std::make_pair;

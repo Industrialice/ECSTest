@@ -38,11 +38,11 @@ namespace ECSEngine
         i32 width{}, height{}; // they are signed so you wounldn't have missmatches when combining windows' sizes with x/y
         i32 x{}, y{};
         i16 dpiX{}, dpiY{};
-        std::array<char, 32> title{};
         bool isFullscreen = false;
         bool isNoBorders = isFullscreen;
         bool isMaximized = !isFullscreen;
         CursorTypet cursorType{};
+        std::array<char, 64> title{};
     };
 
     struct RT
