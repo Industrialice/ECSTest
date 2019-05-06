@@ -562,6 +562,8 @@ auto SystemsManagerST::AddNewArchetypeGroup(const ArchetypeFull &archetype, Arra
 
 void SystemsManagerST::AddEntityToArchetypeGroup(const ArchetypeFull &archetype, ArchetypeGroup &group, EntityID entityId, Array<const SerializedComponent> components, MessageBuilder *messageBuilder)
 {
+    ASSUME(group.reservedCount && group.uniqueTypedComponentsCount);
+
 	if (group.entitiesCount == group.reservedCount)
 	{
 		group.reservedCount *= 2;
@@ -570,7 +572,7 @@ void SystemsManagerST::AddEntityToArchetypeGroup(const ArchetypeFull &archetype,
 		{
 			auto &componentArray = group.components[index];
 
-			ASSUME(componentArray.sizeOf > 0 && componentArray.stride > 0 && group.reservedCount && componentArray.alignmentOf > 0);
+			ASSUME(componentArray.sizeOf > 0 && componentArray.stride > 0 && componentArray.alignmentOf > 0);
 
 			void *oldPtr = componentArray.data.release();
 			void *newPtr = _aligned_realloc(oldPtr, componentArray.sizeOf * componentArray.stride * group.reservedCount, componentArray.alignmentOf);
@@ -664,6 +666,7 @@ void SystemsManagerST::StartScheduler(vector<unique_ptr<IEntitiesStream>> &strea
     messageBulder.SourceName("Initial Streaming");
 	vector<SerializedComponent> serialized;
 
+    auto before = TimeMoment::Now();
 	for (auto &stream : streams)
 	{
 		while (const auto &entity = stream->Next())
@@ -675,6 +678,11 @@ void SystemsManagerST::StartScheduler(vector<unique_ptr<IEntitiesStream>> &strea
 			AddEntityToArchetypeGroup(entityArchetype, archetypeGroup, entity->entityId, ToArray(serialized), &messageBulder);
 		}
 	}
+    auto after = TimeMoment::Now();
+    if (streams.size())
+    {
+        _logger->Message(LogLevels::Info, selfName, "Creating ECS structure took %.2lfs\n", (after - before).ToSec_f64());
+    }
 
 	auto &entityAddedStreams = messageBulder.EntityAddedStreams();
 	for (auto &[archetype, messages] : entityAddedStreams._data)
@@ -839,6 +847,11 @@ void SystemsManagerST::ExecutePipeline(PipelineData &pipeline, System::Environme
             UpdateECSFromMessages(env.messageBuilder);
             PassMessagesToIndirectSystems(env.messageBuilder, nullptr);
 			env.messageBuilder.SourceName(managed.system->GetTypeId().Name()); // the builder was reset, set the name again
+
+            managed.system->OnInitialized(env);
+            UpdateECSFromMessages(env.messageBuilder);
+            PassMessagesToIndirectSystems(env.messageBuilder, nullptr);
+            env.messageBuilder.SourceName(managed.system->GetTypeId().Name()); // the builder was reset, set the name again
         }
 
         env.logger._name = managed.system->GetTypeName();
@@ -859,6 +872,15 @@ void SystemsManagerST::ExecutePipeline(PipelineData &pipeline, System::Environme
             UpdateECSFromMessages(env.messageBuilder);
             PassMessagesToIndirectSystems(env.messageBuilder, managed.system.get());
 			env.messageBuilder.SourceName(managed.system->GetTypeId().Name()); // the builder was reset, set the name again
+
+            auto before = TimeMoment::Now();
+            ProcessMessages(*managed.system, managed.messageQueue, env);
+            auto after = TimeMoment::Now();
+            managed.system->OnInitialized(env);
+            _logger->Message(LogLevels::Info, selfName, "Initializing %*s took %.2lfs\n", (i32)managed.system->GetTypeName().size(), managed.system->GetTypeName().data(), (after - before).ToSec_f64());
+            UpdateECSFromMessages(env.messageBuilder);
+            PassMessagesToIndirectSystems(env.messageBuilder, managed.system.get());
+            env.messageBuilder.SourceName(managed.system->GetTypeId().Name()); // the builder was reset, set the name again
         }
 
         env.logger._name = managed.system->GetTypeName();

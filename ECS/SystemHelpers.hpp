@@ -133,6 +133,7 @@ namespace ECSTest
         {
             using pureType = std::remove_cv_t<std::remove_pointer_t<std::remove_reference_t<T>>>;
             using componentType = typename GetComponentType<pureType>::type;
+            constexpr bool isRefOrPtr = std::is_reference_v<T> || std::is_pointer_v<T>;
             constexpr bool isSubtractive = GetComponentType<pureType>::isSubtractive;
             constexpr bool isRequired = GetComponentType<pureType>::isRequired;
             constexpr bool isNonUnique = GetComponentType<pureType>::isNonUnique;
@@ -149,6 +150,10 @@ namespace ECSTest
             static_assert(isComponent || (isSubtractive == false), "SubtractiveComponent used with a non-component type");
             static_assert(isComponent || (isRequired == false), "RequiredComponent used with a non-component type");
             static_assert(isSubtractive || isNonUnique || isComponent || isEntityID, "Invalid argument type, must be either Component, SubtractiveComponent, RequiredComponent, or EntityID");
+            if constexpr (isComponent)
+            {
+                static_assert(isSubtractive || isRequired || isRefOrPtr, "Components must be passed by either pointer, or by reference");
+            }
         }
 
         template <typename T> static constexpr StableTypeId ArgumentToTypeId()

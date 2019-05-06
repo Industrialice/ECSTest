@@ -4,7 +4,7 @@
 
 using namespace ECSEngine;
 
-static optional<HWND> CreateSystemWindow(LoggerWrapper &logger, const string &title, bool isFullscreen, bool hideBorders, bool isMaximized, RECT &dimensions, Window::CursorTypet cursorType);
+static optional<HWND> CreateSystemWindow(LoggerWrapper &logger, const string &title, bool isFullscreen, bool hideBorders, bool isMaximized, RECT &dimensions, Window::CursorTypet cursorType, void *userData);
 static LRESULT WINAPI MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 static HCURSOR AcquireCursor(Window::CursorTypet type);
 
@@ -79,6 +79,10 @@ public:
     
     virtual void ProcessMessages(Environment &env, const MessageStreamEntityRemoved &stream) override
     {
+        for (auto id : stream)
+        {
+            RemoveCamera(id);
+        }
     }
     
     virtual void Update(Environment &env) override
@@ -97,17 +101,7 @@ public:
                 dim.top = window.y;
                 dim.bottom = window.y + window.height;
 
-                camera.hwnd = CreateSystemWindow(env.logger, title, window.isFullscreen, window.isNoBorders, window.isMaximized, dim, window.cursorType);
-                if (camera.hwnd)
-                {
-                    SetWindowLongPtrA(*camera.hwnd, GWLP_USERDATA, (LONG_PTR)&camera);
-                }
-            }
-
-            if (camera.isChanged)
-            {
-                env.messageBuilder.ComponentChanged(camera.id, camera.data);
-                camera.isChanged = false;
+                camera.hwnd = CreateSystemWindow(env.logger, title, window.isFullscreen, window.isNoBorders, window.isMaximized, dim, window.cursorType, &camera);
             }
         }
 
@@ -119,6 +113,15 @@ public:
         }
         if (msg.message == WM_QUIT)
         {
+        }
+
+        for (auto &camera : _cameras)
+        {
+            if (camera.isChanged)
+            {
+                env.messageBuilder.ComponentChanged(camera.id, camera.data);
+                camera.isChanged = false;
+            }
         }
     }
 
@@ -184,7 +187,7 @@ unique_ptr<Renderer> RendererDX11System::New()
     return make_unique<RendereDX11SystemImpl>();
 }
 
-optional<HWND> CreateSystemWindow(LoggerWrapper &logger, const string &title, bool isFullscreen, bool hideBorders, bool isMaximized, RECT &dimensions, Window::CursorTypet cursorType)
+optional<HWND> CreateSystemWindow(LoggerWrapper &logger, const string &title, bool isFullscreen, bool hideBorders, bool isMaximized, RECT &dimensions, Window::CursorTypet cursorType, void *userData)
 {
     HINSTANCE instance = GetModuleHandleW(NULL);
     LARGE_INTEGER seed;
@@ -233,6 +236,8 @@ optional<HWND> CreateSystemWindow(LoggerWrapper &logger, const string &title, bo
         logger.Message(LogLevels::Critical, "Failed to create requested window\n");
         return nullopt;
     }
+
+    SetWindowLongPtrA(hwnd, GWLP_USERDATA, (LONG_PTR)userData);
 
     ShowWindow(hwnd, SW_SHOW);
     UpdateWindow(hwnd);

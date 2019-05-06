@@ -74,7 +74,7 @@ void MessageBuilder::SourceName(string_view name)
     _sourceName = name;
 }
 
-const string &MessageBuilder::SourceName() const
+string_view MessageBuilder::SourceName() const
 {
     return _sourceName;
 }

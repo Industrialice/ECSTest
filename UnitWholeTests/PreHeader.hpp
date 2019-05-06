@@ -1,5 +1,7 @@
 #pragma once
 
+#include <algorithm>
+#include <numeric>
 #include <PreHeader.hpp>
 #include <SystemsManager.hpp>
 #include <Windows.h>
