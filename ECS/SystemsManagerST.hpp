@@ -1,6 +1,8 @@
 #pragma once
 
 #include "SystemsManager.hpp"
+#include "MessageBuilder.hpp"
+#include "ArchetypeReflector.hpp"
 
 namespace ECSTest
 {
@@ -156,6 +158,7 @@ namespace ECSTest
 		static void ProcessMessages(IndirectSystem &system, const ManagedIndirectSystem::MessageQueue &messageQueue, System::Environment &env);
         void ExecuteIndirectSystem(IndirectSystem &system, ManagedIndirectSystem::MessageQueue &messageQueue, System::Environment &env);
         void ExecuteDirectSystem(DirectSystem &system, System::Environment &env);
+        void PatchComponentAddedMessages(MessageBuilder &messageBuilder);
         void UpdateECSFromMessages(MessageBuilder &messageBuilder);
         void PassMessagesToIndirectSystems(MessageBuilder &messageBuilder, System *systemToIgnore);
 	};

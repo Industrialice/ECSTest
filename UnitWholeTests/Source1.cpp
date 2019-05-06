@@ -87,6 +87,11 @@ INDIRECT_SYSTEM(TransformGeneratorSystem)
         for (auto &entity : stream)
         {
             _entitiesToGenerate.push_back(entity.entityID);
+            if (auto *name = entity.FindComponent<Name>(); name)
+            {
+                string str = "Entity"s + to_string(entity.entityID.Hash());
+                ASSUME(str == string_view(name->name.data()));
+            }
         }
     }
 
@@ -171,16 +176,22 @@ INDIRECT_SYSTEM(TransformHeightFixerSystem)
     {
         for (auto &entity : stream)
         {
-            if (entity.component.type == Transform::GetTypeId())
+            if (auto *name = entity.FindComponent<Name>(); name)
             {
-                Transform t = *(Transform *)entity.component.data;
+                string str = "Entity"s + to_string(entity.entityID.Hash());
+                ASSUME(str == string_view(name->name.data()));
+            }
+
+            if (stream.Type() == Transform::GetTypeId())
+            {
+                Transform t = entity.added.Cast<Transform>();
                 if (t.position.y < 0)
                 {
                     t.position.y = 100;
                     _entitiesToFix[entity.entityID] = t;
                 }
             }
-            else if (entity.component.type == NegativeHeightCooldown::GetTypeId())
+            else if (stream.Type() == NegativeHeightCooldown::GetTypeId())
             {
                 _entitiesWithCooldown.insert(entity.entityID);
             }
@@ -278,11 +289,11 @@ private:
         for (auto &entity : stream)
         {
             auto &target = _entities[entity.entityID];
-            if (auto transform = entity.component.TryCast<Transform>(); transform)
+            if (auto transform = entity.added.TryCast<Transform>(); transform)
             {
                 target.transform = *transform;
             }
-            else if (auto speedOfFall = entity.component.TryCast<SpeedOfFall>(); speedOfFall)
+            else if (auto speedOfFall = entity.added.TryCast<SpeedOfFall>(); speedOfFall)
             {
                 target.speedOfFall = *speedOfFall;
             }
@@ -416,9 +427,9 @@ INDIRECT_SYSTEM(AverageHeightAnalyzerSystem)
     {
         for (auto &entity : stream)
         {
-            if (entity.component.type == Transform::GetTypeId())
+            if (stream.Type() == Transform::GetTypeId())
             {
-                _entities[entity.entityID] = (*(Transform *)entity.component.data).position.y;
+                _entities[entity.entityID] = entity.added.Cast<Transform>().position.y;
                 _isChanged = true;
             }
         }
@@ -428,7 +439,7 @@ INDIRECT_SYSTEM(AverageHeightAnalyzerSystem)
     {
         for (auto &entity : stream)
         {
-            _entities[entity.entityID] = (*(Transform *)entity.component.data).position.y;
+            _entities[entity.entityID] = entity.component.Cast<Transform>().position.y;
         }
         _isChanged = true;
     }
@@ -493,7 +504,7 @@ INDIRECT_SYSTEM(CooldownUpdater)
     {
         for (auto &entity : stream)
         {
-            _cooldowns[entity.entityID] = *(NegativeHeightCooldown *)entity.component.data;
+            _cooldowns[entity.entityID] = entity.added.Cast<NegativeHeightCooldown>();
         }
     }
 
@@ -502,7 +513,7 @@ INDIRECT_SYSTEM(CooldownUpdater)
         SOFTBREAK;
         for (auto &entity : stream)
         {
-            _cooldowns[entity.entityID] = *(NegativeHeightCooldown *)entity.component.data;
+            _cooldowns[entity.entityID] = entity.component.Cast<NegativeHeightCooldown>();
         }
     }
 
@@ -548,12 +559,14 @@ static void GenerateScene(EntityIDGenerator &entityIdGenerator, SystemsManager &
             }
         }
 
-		string name = "Entity"s + std::to_string(index);
+        EntityID id = entityIdGenerator.Generate();
+
+		string name = "Entity"s + std::to_string(id.Hash());
 		Name n;
 		strcpy_s(n.name.data(), n.name.size(), name.c_str());
         entity.AddComponent(n);
 
-        stream.AddEntity(entityIdGenerator.Generate(), move(entity));
+        stream.AddEntity(id, move(entity));
     }
 }
 

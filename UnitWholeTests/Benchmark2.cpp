@@ -104,21 +104,13 @@ INDIRECT_SYSTEM(PhysicsSystem)
 
     virtual void ProcessMessages(Environment &env, const MessageStreamComponentAdded &stream) override
     {
-        if (stream.Type() == Position::GetTypeId())
+        for (auto &entry : stream)
         {
-        }
-        else if (stream.Type() == Rotation::GetTypeId())
-        {
-        }
-        else if (stream.Type() == Physics::GetTypeId())
-        {
-        }
-        else if (stream.Type() == MeshCollider::GetTypeId())
-        {
-        }
-        else
-        {
-            HARDBREAK;
+            Data data;
+            data.pos = entry.GetComponent<Position>().position;
+            data.rot = entry.GetComponent<Rotation>().rotation;
+            data.properties = entry.GetComponent<Physics>();
+            _entities[entry.entityID] = data;
         }
     }
 
@@ -217,7 +209,16 @@ INDIRECT_SYSTEM(RendererSystem)
     }
 
     virtual void ProcessMessages(Environment &env, const MessageStreamComponentAdded &stream) override
-    {}
+    {
+        for (auto &entry : stream)
+        {
+            Data data;
+            data.pos = entry.GetComponent<Position>().position;
+            data.rot = entry.GetComponent<Rotation>().rotation;
+            data.mesh = entry.GetComponent<MeshRenderer>();
+            _entities[entry.entityID] = data;
+        }
+    }
 
     virtual void ProcessMessages(Environment &env, const MessageStreamComponentChanged &stream) override
     {
@@ -298,6 +299,8 @@ static void GenerateScene(EntityIDGenerator &entityIdGenerator, SystemsManager &
     }
 }
 
+#define PRINT_BACK "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b"
+
 int main()
 {
     StdLib::Initialization::Initialize({});
@@ -314,7 +317,7 @@ int main()
     auto after = TimeMoment::Now();
     printf("Generating scene took %.2lfs\n", (after - before).ToSec());
 
-    auto physicsPipeline = manager->CreatePipeline(16.6_ms, false);
+    auto physicsPipeline = manager->CreatePipeline(16.666_ms, false);
     auto rendererPipeline = manager->CreatePipeline(nullopt, false);
 
     manager->Register<PhysicsSystem>(physicsPipeline);
@@ -329,7 +332,7 @@ int main()
     manager->Start(move(idGenerator), move(workers), move(stream));
 
     TimeDifference lastDifference = 0_s;
-    ui32 lastExecuted = 0;
+    ui32 lastExecutedRenderer = 0, lastExecutedPhysics = 0;
 
     std::vector<f32> fpsHistory{};
 
@@ -340,13 +343,18 @@ int main()
         if (timeDiff >= 1_s)
         {
             auto rendererInfo = manager->GetPipelineInfo(rendererPipeline);
-            ui32 execDiff = rendererInfo.executedTimes - lastExecuted;
-
-            f32 fps = (f32)execDiff / timeDiff.ToSec();
-            printf("\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b%.2f fps   ", fps);
+            ui32 rexecDiff = rendererInfo.executedTimes - lastExecutedRenderer;
             
-            fpsHistory.push_back(fps);
-            lastExecuted = rendererInfo.executedTimes;
+            auto physicsInfo = manager->GetPipelineInfo(physicsPipeline);
+            ui32 pexecDiff = physicsInfo.executedTimes - lastExecutedPhysics;
+
+            f32 rfps = (f32)rexecDiff / timeDiff.ToSec();
+            f32 pfps = (f32)pexecDiff / timeDiff.ToSec();
+            printf(PRINT_BACK "renderer %.2f fps, physics %.2f fps   ", rfps, pfps);
+            
+            fpsHistory.push_back(rfps);
+            lastExecutedRenderer = rendererInfo.executedTimes;
+            lastExecutedPhysics = physicsInfo.executedTimes;
             lastDifference = managerInfo.timeSinceStart;
         }
         std::this_thread::yield();

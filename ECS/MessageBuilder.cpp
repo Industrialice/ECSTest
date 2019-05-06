@@ -3,72 +3,6 @@
 
 using namespace ECSTest;
 
-void MessageBuilder::ComponentArrayBuilder::Clear()
-{
-	_components = {};
-	_data = {};
-}
-
-auto MessageBuilder::ComponentArrayBuilder::AddComponent(const IEntitiesStream::ComponentDesc &desc, ComponentID id) -> ComponentArrayBuilder &
-{
-    SerializedComponent serialized;
-    serialized.alignmentOf = desc.alignmentOf;
-    serialized.data = desc.data;
-    serialized.id = id;
-    serialized.isUnique = desc.isUnique;
-    serialized.isTag = desc.isTag;
-    serialized.sizeOf = desc.sizeOf;
-    serialized.type = desc.type;
-    return AddComponent(serialized);
-}
-
-auto MessageBuilder::ComponentArrayBuilder::AddComponent(const SerializedComponent &sc) -> ComponentArrayBuilder &
-{
-    uiw copyIndex;
-
-    if (sc.isTag == false)
-    {
-        ui8 *oldPtr = _data.data();
-        _data.resize(_data.size() + _data.size() % sc.alignmentOf);
-        copyIndex = _data.size();
-        _data.resize(_data.size() + sc.sizeOf);
-        ui8 *newPtr = _data.data();
-        if (oldPtr != newPtr)
-        {
-            for (auto &stored : _components)
-            {
-                if (stored.data)
-                {
-                    if (newPtr > oldPtr)
-                    {
-                        stored.data += newPtr - oldPtr;
-                    }
-                    else
-                    {
-                        stored.data -= oldPtr - newPtr;
-                    }
-                }
-            }
-        }
-    }
-    else
-    {
-        ASSUME(sc.data == nullptr);
-    }
-
-	_components.push_back(sc);
-
-    if (sc.isTag == false)
-    {
-        SerializedComponent &added = _components.back();
-        std::copy(sc.data, sc.data + sc.sizeOf, _data.begin() + copyIndex);
-
-        added.data = _data.data() + copyIndex;
-    }
-
-	return *this;
-}
-
 void MessageBuilder::SourceName(string_view name)
 {
     _sourceName = name;
@@ -171,51 +105,16 @@ void MessageBuilder::AddComponent(EntityID entityID, const SerializedComponent &
     auto &entry = _componentAddedStreams._data[sc.type];
     if (!entry)
     {
-        entry = make_shared<MessageStreamComponentAdded::InfoWithData>();
+        entry = make_shared<vector<MessageStreamComponentAdded::EntityWithComponents>>();
     }
 
-    uiw copyIndex;
+    entry->emplace_back();
+    auto &last = entry->back();
+    last.entityID = entityID;
+    last.addedComponentID = sc.id;
+    last.cab.AddComponent(sc);
 
-    if (sc.isTag == false)
-    {
-        copyIndex = sc.sizeOf * entry->infos.size();
-
-        ui8 *oldPtr = entry->data.release();
-        ui8 *newPtr = (ui8 *)_aligned_realloc(oldPtr, copyIndex + sc.sizeOf, sc.alignmentOf);
-        entry->data.reset(newPtr);
-
-        if (oldPtr != newPtr)
-        {
-            for (auto &stored : entry->infos)
-            {
-                if (stored.component.data)
-                {
-                    if (newPtr > oldPtr)
-                    {
-                        stored.component.data += newPtr - oldPtr;
-                    }
-                    else
-                    {
-                        stored.component.data -= oldPtr - newPtr;
-                    }
-                }
-            }
-        }
-    }
-    else
-    {
-        ASSUME(sc.data == nullptr);
-    }
-
-    entry->infos.push_back({entityID, sc});
-
-    if (sc.isTag == false)
-    {
-        SerializedComponent &added = entry->infos.back().component;
-        std::copy(sc.data, sc.data + sc.sizeOf, entry->data.get() + copyIndex);
-
-        added.data = entry->data.get() + copyIndex;
-    }
+    ASSUME(last.components.empty() && last.componentsData.empty());
 }
 
 void MessageBuilder::ComponentChanged(EntityID entityID, const SerializedComponent &sc)

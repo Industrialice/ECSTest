@@ -2,60 +2,10 @@
 
 #include "EntityID.hpp"
 #include "Archetype.hpp"
-#include "EntitiesStream.hpp"
+#include "ComponentArrayBuilder.hpp"
 
 namespace ECSTest
 {
-	struct SerializedComponent
-	{
-		StableTypeId type{};
-		ui16 sizeOf{};
-		ui16 alignmentOf{};
-		const ui8 *data{}; // aigned by alignmentOf
-		bool isUnique{};
-        bool isTag{};
-		ComponentID id{};
-
-        template <typename T, typename = std::enable_if_t<T::IsTag() == false>> T &Cast()
-        {
-            ASSUME(T::GetTypeId() == type);
-            return *(T *)data;
-        }
-
-        template <typename T, typename = std::enable_if_t<T::IsTag() == false>> const T &Cast() const
-        {
-            ASSUME(T::GetTypeId() == type);
-            return *(T *)data;
-        }
-
-        template <typename T, typename = std::enable_if_t<T::IsTag() == false>> T *TryCast()
-        {
-            if (T::GetTypeId() == type)
-            {
-                return (T *)data;
-            }
-            return nullptr;
-        }
-
-        template <typename T, typename = std::enable_if_t<T::IsTag() == false>> const T *TryCast() const
-        {
-            if (T::GetTypeId() == type)
-            {
-                return (T *)data;
-            }
-            return nullptr;
-        }
-
-        template <typename T, typename = std::enable_if_t<T::IsTag()>> bool TryCast() const
-        {
-            if (T::GetTypeId() == type)
-            {
-                return true;
-            }
-            return false;
-        }
-	};
-
     class MessageStreamEntityAdded
     {
         friend class SystemsManagerMT;
@@ -139,17 +89,6 @@ namespace ECSTest
         {
             return _sourceName;
         }
-
-    private:
-        [[nodiscard]] EntityWithComponents *begin()
-        {
-            return _source->data();
-        }
-
-        [[nodiscard]] EntityWithComponents *end()
-        {
-            return _source->data() + _source->size();
-        }
     };
 
     class MessageStreamComponentAdded
@@ -161,28 +100,65 @@ namespace ECSTest
         friend class MessageStreamsBuilderComponentAdded;
 
     public:
-        struct ComponentInfo
+        struct EntityWithComponents
         {
+            friend class SystemsManagerMT;
+            friend class SystemsManagerST;
             friend class MessageBuilder;
 
             EntityID entityID;
-            SerializedComponent component;
+            ComponentID addedComponentID;
+            std::remove_reference_t<SerializedComponent> added;
+            vector<SerializedComponent> components;
+
+            template <typename T> const T *FindComponent() const
+            {
+                static_assert(T::IsTag() == false, "Passed component type is a tag component, use FindTag() instead");
+
+                for (auto &c : components)
+                {
+                    if (c.type == T::GetTypeId())
+                    {
+                        return (T *)c.data;
+                    }
+                }
+                return nullptr;
+            }
+
+            template <typename T> const T &GetComponent() const
+            {
+                auto *c = FindComponent<T>();
+                ASSUME(c);
+                return *c;
+            }
+
+            template <typename T> bool FindTag() const
+            {
+                static_assert(T::IsTag(), "Passed component type is not a tag component");
+
+                for (auto &c : components)
+                {
+                    if (c.type == T::GetTypeId())
+                    {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+        private:
+            vector<ui8> componentsData;
+            ComponentArrayBuilder cab;
         };
 
     private:
-        struct InfoWithData
-        {
-            vector<ComponentInfo> infos;
-            unique_ptr<ui8[], AlignedMallocDeleter> data;
-        };
-
-        shared_ptr<InfoWithData> _source{};
+        shared_ptr<vector<EntityWithComponents>> _source{};
         StableTypeId _type{};
         string_view _sourceName{};
 
-        MessageStreamComponentAdded(StableTypeId type, const shared_ptr<InfoWithData> &source, string_view sourceName) : _type(type), _source(source), _sourceName(sourceName)
+        MessageStreamComponentAdded(StableTypeId type, const shared_ptr<vector<EntityWithComponents>> &source, string_view sourceName) : _type(type), _source(source), _sourceName(sourceName)
         {
-            ASSUME(_source->infos.size());
+            ASSUME(_source->size());
 			ASSUME(_type != StableTypeId{});
         }
 
@@ -192,14 +168,14 @@ namespace ECSTest
         }
 
     public:
-        [[nodiscard]] const ComponentInfo *begin() const
+        [[nodiscard]] const EntityWithComponents *begin() const
         {
-            return _source->infos.data();
+            return _source->data();
         }
 
-        [[nodiscard]] const ComponentInfo *end() const
+        [[nodiscard]] const EntityWithComponents *end() const
         {
-            return _source->infos.data() + _source->infos.size();
+            return _source->data() + _source->size();
         }
 
         [[nodiscard]] StableTypeId Type() const
@@ -368,7 +344,7 @@ namespace ECSTest
         friend class MessageBuilder;
         friend UnitTests;
 
-        std::unordered_map<StableTypeId, shared_ptr<MessageStreamComponentAdded::InfoWithData>> _data{};
+        std::unordered_map<StableTypeId, shared_ptr<vector<MessageStreamComponentAdded::EntityWithComponents>>> _data{};
     };
 
     class MessageStreamsBuilderComponentChanged
@@ -420,62 +396,6 @@ namespace ECSTest
         [[nodiscard]] const vector<EntityID> &EntityRemovedNoArchetype();
 
     public:
-        class ComponentArrayBuilder
-        {
-			friend class MessageBuilder;
-
-			vector<SerializedComponent> _components{};
-			vector<ui8> _data{};
-
-			void Clear();
-
-        public:
-			ComponentArrayBuilder() = default;
-			ComponentArrayBuilder(ComponentArrayBuilder &&) = default;
-			ComponentArrayBuilder &operator = (ComponentArrayBuilder &&) = default;
-
-            ComponentArrayBuilder &AddComponent(const IEntitiesStream::ComponentDesc &desc, ComponentID id); // the data will be copied over
-            ComponentArrayBuilder &AddComponent(const SerializedComponent &sc); // the data will be copied over
-
-            template <typename T, typename = std::enable_if_t<T::IsUnique()>> ComponentArrayBuilder &AddComponent(const T &component)
-            {
-                SerializedComponent sc;
-                sc.isUnique = true;
-                sc.isTag = T::IsTag();
-                sc.type = T::GetTypeId();
-                if constexpr (T::IsTag() == false)
-                {
-                    sc.alignmentOf = alignof(T);
-                    sc.sizeOf = sizeof(T);
-                    sc.data = (ui8 *)&component;
-                }
-                return AddComponent(sc);
-            }
-
-            template <typename T, typename = std::enable_if_t<std::is_base_of_v<Component, T> == false>, typename = void> ComponentArrayBuilder &AddComponent(const T &)
-            {
-                static_assert(false, "Passed value is not a component");
-            }
-
-            template <typename T, typename = std::enable_if_t<T::IsUnique() == false && T::IsTag() == false>> ComponentArrayBuilder &AddComponent(const T &component, ComponentID id = {})
-            {
-                SerializedComponent sc;
-                sc.alignmentOf = alignof(T);
-                sc.sizeOf = sizeof(T);
-                sc.isUnique = false;
-                sc.isTag = false;
-                sc.type = T::GetTypeId();
-                sc.data = (ui8 *)&component;
-                sc.id = id;
-                return AddComponent(sc);
-            }
-
-            template <typename T, typename = std::enable_if_t<std::is_base_of_v<Component, T> == false>, typename = void> ComponentArrayBuilder &AddComponent(const T &, ComponentID = {})
-            {
-                static_assert(false, "Passed value is not a component");
-            }
-        };
-
         template <typename T, typename = std::enable_if_t<T::IsUnique() && T::IsTag() == false>> void AddComponent(EntityID entityID, const T &component)
         {
             SerializedComponent sc;

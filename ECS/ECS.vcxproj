@@ -23,11 +23,13 @@
     <ClInclude Include="ArchetypeReflector.hpp" />
     <ClInclude Include="Array.hpp" />
     <ClInclude Include="Component.hpp" />
-    <ClInclude Include="EntitiesStream.hpp" />
+    <ClInclude Include="ComponentArrayBuilder.hpp" />
+    <ClInclude Include="IEntitiesStream.hpp" />
     <ClInclude Include="EntityID.hpp" />
     <ClInclude Include="LoggerWrapper.hpp" />
     <ClInclude Include="MessageBuilder.hpp" />
     <ClInclude Include="PreHeader.hpp" />
+    <ClInclude Include="SerializedComponent.hpp" />
     <ClInclude Include="System.hpp" />
     <ClInclude Include="SystemHelpers.hpp" />
     <ClInclude Include="SystemsManager.hpp" />
@@ -39,6 +41,7 @@
     <ClCompile Include="Archetype.cpp" />
     <ClCompile Include="ArchetypeReflector.cpp" />
     <ClCompile Include="Component.cpp" />
+    <ClCompile Include="ComponentArrayBuilder.cpp" />
     <ClCompile Include="EntityID.cpp" />
     <ClCompile Include="LoggerWrapper.cpp" />
     <ClCompile Include="MessageBuilder.cpp" />

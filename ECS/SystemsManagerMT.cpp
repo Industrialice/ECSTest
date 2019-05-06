@@ -608,7 +608,7 @@ void SystemsManagerMT::AddEntityToArchetypeGroup(const ArchetypeFull &archetype,
         group.entities.reset(newPtr);
     }
 
-    optional<std::reference_wrapper<MessageBuilder::ComponentArrayBuilder>> componentBuilder;
+    optional<std::reference_wrapper<ComponentArrayBuilder>> componentBuilder;
     if (messageBuilder)
     {
         componentBuilder = messageBuilder->AddEntity(entityId);

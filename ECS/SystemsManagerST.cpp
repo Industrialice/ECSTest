@@ -562,7 +562,7 @@ auto SystemsManagerST::AddNewArchetypeGroup(const ArchetypeFull &archetype, Arra
 
 void SystemsManagerST::AddEntityToArchetypeGroup(const ArchetypeFull &archetype, ArchetypeGroup &group, EntityID entityId, Array<const SerializedComponent> components, MessageBuilder *messageBuilder)
 {
-    ASSUME(group.reservedCount && group.uniqueTypedComponentsCount);
+    ASSUME(group.reservedCount);
 
 	if (group.entitiesCount == group.reservedCount)
 	{
@@ -592,7 +592,7 @@ void SystemsManagerST::AddEntityToArchetypeGroup(const ArchetypeFull &archetype,
 		group.entities.reset(newPtr);
 	}
 
-	optional<std::reference_wrapper<MessageBuilder::ComponentArrayBuilder>> componentBuilder;
+	optional<std::reference_wrapper<ComponentArrayBuilder>> componentBuilder;
 	if (messageBuilder)
 	{
 		componentBuilder = messageBuilder->AddEntity(entityId);
@@ -844,11 +844,13 @@ void SystemsManagerST::ExecutePipeline(PipelineData &pipeline, System::Environme
         if (managed.executedTimes == 0)
         {
             managed.system->OnCreate(env);
+            PatchComponentAddedMessages(env.messageBuilder);
             UpdateECSFromMessages(env.messageBuilder);
             PassMessagesToIndirectSystems(env.messageBuilder, nullptr);
 			env.messageBuilder.SourceName(managed.system->GetTypeId().Name()); // the builder was reset, set the name again
 
             managed.system->OnInitialized(env);
+            PatchComponentAddedMessages(env.messageBuilder);
             UpdateECSFromMessages(env.messageBuilder);
             PassMessagesToIndirectSystems(env.messageBuilder, nullptr);
             env.messageBuilder.SourceName(managed.system->GetTypeId().Name()); // the builder was reset, set the name again
@@ -869,15 +871,18 @@ void SystemsManagerST::ExecutePipeline(PipelineData &pipeline, System::Environme
         if (managed.executedTimes == 0)
         {
             managed.system->OnCreate(env);
+            PatchComponentAddedMessages(env.messageBuilder);
             UpdateECSFromMessages(env.messageBuilder);
             PassMessagesToIndirectSystems(env.messageBuilder, managed.system.get());
 			env.messageBuilder.SourceName(managed.system->GetTypeId().Name()); // the builder was reset, set the name again
 
             auto before = TimeMoment::Now();
             ProcessMessages(*managed.system, managed.messageQueue, env);
+            managed.messageQueue.clear();
             auto after = TimeMoment::Now();
             managed.system->OnInitialized(env);
             _logger->Message(LogLevels::Info, selfName, "Initializing %*s took %.2lfs\n", (i32)managed.system->GetTypeName().size(), managed.system->GetTypeName().data(), (after - before).ToSec_f64());
+            PatchComponentAddedMessages(env.messageBuilder);
             UpdateECSFromMessages(env.messageBuilder);
             PassMessagesToIndirectSystems(env.messageBuilder, managed.system.get());
             env.messageBuilder.SourceName(managed.system->GetTypeId().Name()); // the builder was reset, set the name again
@@ -931,6 +936,7 @@ void SystemsManagerST::ExecuteIndirectSystem(IndirectSystem &system, ManagedIndi
         ASSUME(it != requested.end()); // system changed component without requesting write access
     }
 
+    PatchComponentAddedMessages(env.messageBuilder);
     UpdateECSFromMessages(env.messageBuilder);
     PassMessagesToIndirectSystems(env.messageBuilder, &system);
 }
@@ -1096,8 +1102,50 @@ void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, System::Environ
         }
     }
 
+    PatchComponentAddedMessages(env.messageBuilder);
     UpdateECSFromMessages(env.messageBuilder);
     PassMessagesToIndirectSystems(env.messageBuilder, nullptr);
+}
+
+void SystemsManagerST::PatchComponentAddedMessages(MessageBuilder &messageBuilder)
+{
+    for (auto &[componentType, stream] : messageBuilder.ComponentAddedStreams()._data)
+    {
+        for (auto &info : *stream)
+        {
+            auto it = _entitiesLocations.find(info.entityID);
+            ASSUME(it != _entitiesLocations.end());
+
+            const auto &group = *it->second.group;
+
+            for (ui32 index = 0; index < group.uniqueTypedComponentsCount; ++index)
+            {
+                const auto &stored = group.components[index];
+
+                SerializedComponent serialized;
+                serialized.alignmentOf = stored.alignmentOf;
+                serialized.isTag = false;
+                serialized.isUnique = stored.isUnique;
+                serialized.sizeOf = stored.sizeOf;
+                serialized.type = stored.type;
+                
+                for (ui32 stride = 0; stride < stored.stride; ++stride)
+                {
+                    serialized.data = stored.data.get() + stored.sizeOf * it->second.index * stored.stride + stride * stored.sizeOf;
+                    if (!serialized.isUnique)
+                    {
+                        serialized.id = stored.ids[it->second.index * stored.stride + stride];
+                    }
+
+                    info.cab.AddComponent(serialized);
+                }
+            }
+
+            info.componentsData = move(info.cab._data);
+            info.components = move(info.cab._components);
+            info.added = info.components.front();
+        }
+    }
 }
 
 void SystemsManagerST::UpdateECSFromMessages(MessageBuilder &messageBuilder)
@@ -1254,9 +1302,9 @@ void SystemsManagerST::UpdateECSFromMessages(MessageBuilder &messageBuilder)
 
     for (auto &[componentType, stream] : messageBuilder.ComponentAddedStreams()._data)
     {
-        for (const auto &info : stream->infos)
+        for (const auto &info : *stream)
         {
-            addOrRemoveComponent(info.entityID, {}, {}, info.component);
+            addOrRemoveComponent(info.entityID, {}, {}, info.added);
         }
     }
 

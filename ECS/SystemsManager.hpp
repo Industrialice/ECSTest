@@ -2,13 +2,8 @@
 
 #include "System.hpp"
 #include "EntityID.hpp"
-#include "Archetype.hpp"
-#include <DIWRSpinLock.hpp>
-#include "EntitiesStream.hpp"
-#include "MessageBuilder.hpp"
-#include "ArchetypeReflector.hpp"
+#include "IEntitiesStream.hpp"
 #include "WokerThread.hpp"
-//#include <ListenerHandle.hpp>
 
 namespace ECSTest
 {

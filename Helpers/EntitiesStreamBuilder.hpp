@@ -1,6 +1,6 @@
 #pragma once
 
-#include <EntitiesStream.hpp>
+#include <IEntitiesStream.hpp>
 
 namespace ECSTest
 {

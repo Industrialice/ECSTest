@@ -1,6 +1,9 @@
 #pragma once
 
 #include "SystemsManager.hpp"
+#include "MessageBuilder.hpp"
+#include "ArchetypeReflector.hpp"
+#include <DIWRSpinLock.hpp>
 
 namespace ECSTest
 {

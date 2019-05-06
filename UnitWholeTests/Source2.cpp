@@ -451,8 +451,8 @@ INDIRECT_SYSTEM(OtherIndirectSystem)
     {
         for (auto &entry : stream)
         {
-            CurrentData[entry.entityID] = entry.component.Cast<OtherComponent>();
-            _localData[entry.entityID] = entry.component.Cast<OtherComponent>();
+            CurrentData[entry.entityID] = entry.added.Cast<OtherComponent>();
+            _localData[entry.entityID] = entry.added.Cast<OtherComponent>();
         }
     }
 
