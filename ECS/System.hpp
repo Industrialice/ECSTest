@@ -14,6 +14,7 @@ namespace ECSTest
 			const f32 timeSinceLastFrame;
             const ui32 frameNumber;
 			const TimeDifference timeSinceStarted;
+            const StableTypeId targetSystem; // useful when the same class used to implement different systems
             EntityIDGenerator &entityIdGenerator;
             ComponentIDGenerator &componentIdGenerator;
             MessageBuilder messageBuilder;

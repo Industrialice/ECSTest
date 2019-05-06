@@ -929,6 +929,7 @@ void SystemsManagerMT::ExecutePipeline(PipelineData &pipeline)
 			0,
             0,
 			0_ms,
+            StableTypeId{},
             _entityIdGenerator,
             _componentIdGenerator,
             MessageBuilder(),

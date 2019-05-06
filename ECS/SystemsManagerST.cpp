@@ -781,18 +781,7 @@ void SystemsManagerST::SchedulerLoop()
 			timeSinceLastFrame = TimeMoment::Now() - pipeline.lastExecutedTime;
 		}
 
-		System::Environment env =
-		{
-			timeSinceLastFrame.ToSec(),
-			pipeline.executionFrame,
-			_timeSinceStart,
-			_entityIdGenerator,
-            _componentIdGenerator,
-            MessageBuilder(),
-			LoggerWrapper(&*_logger, "")
-		};
-
-        ExecutePipeline(pipeline, env);
+        ExecutePipeline(pipeline, timeSinceLastFrame);
 
         auto currentTime = updateTimes();
 
@@ -833,10 +822,21 @@ void SystemsManagerST::SchedulerLoop()
     _timeSinceStartAtomic = _timeSinceStart;
 }
 
-void SystemsManagerST::ExecutePipeline(PipelineData &pipeline, System::Environment &env)
+void SystemsManagerST::ExecutePipeline(PipelineData &pipeline, TimeDifference timeSinceLastFrame)
 {
     for (auto &managed : pipeline.directSystems)
     {
+        System::Environment env =
+        {
+            timeSinceLastFrame.ToSec(),
+            pipeline.executionFrame,
+            _timeSinceStart,
+            managed.system->GetTypeId(),
+            _entityIdGenerator,
+            _componentIdGenerator,
+            MessageBuilder(),
+            LoggerWrapper(&*_logger, managed.system->GetTypeName())
+        };
         env.messageBuilder.SourceName(managed.system->GetTypeId().Name());
 
         managed.executedAt = pipeline.executionFrame;
@@ -856,7 +856,6 @@ void SystemsManagerST::ExecutePipeline(PipelineData &pipeline, System::Environme
             env.messageBuilder.SourceName(managed.system->GetTypeId().Name()); // the builder was reset, set the name again
         }
 
-        env.logger._name = managed.system->GetTypeName();
         ExecuteDirectSystem(*managed.system, env);
 
         ++managed.executedTimes;
@@ -864,6 +863,17 @@ void SystemsManagerST::ExecutePipeline(PipelineData &pipeline, System::Environme
 
     for (auto &managed : pipeline.indirectSystems)
     {
+        System::Environment env =
+        {
+            timeSinceLastFrame.ToSec(),
+            pipeline.executionFrame,
+            _timeSinceStart,
+            managed.system->GetTypeId(),
+            _entityIdGenerator,
+            _componentIdGenerator,
+            MessageBuilder(),
+            LoggerWrapper(&*_logger, managed.system->GetTypeName())
+        };
         env.messageBuilder.SourceName(managed.system->GetTypeId().Name());
 
         managed.executedAt = pipeline.executionFrame;
@@ -888,7 +898,6 @@ void SystemsManagerST::ExecutePipeline(PipelineData &pipeline, System::Environme
             env.messageBuilder.SourceName(managed.system->GetTypeId().Name()); // the builder was reset, set the name again
         }
 
-        env.logger._name = managed.system->GetTypeName();
         ExecuteIndirectSystem(*managed.system, managed.messageQueue, env);
 
         ++managed.executedTimes;
