@@ -5,6 +5,7 @@ using namespace ECSTest;
 namespace
 {
     constexpr bool IsMTECS = false;
+    constexpr ui32 FramesToWait = 100;
 
     ui32 PhysicsSentKeys = 0;
     ui32 PhysicsReceivedRendererKeys = 0;
@@ -15,14 +16,25 @@ namespace
     ui32 RendererReceivedPhysicsKeys = 0;
 }
 
+#define PHYSICS_INDIRECT
+#define RENDERER_INDIRECT
+
+#ifdef PHYSICS_INDIRECT
+    #define PHYSICS_DECLARE INDIRECT_SYSTEM
+    #define PHYSICS_ACCEPT INDIRECT_ACCEPT_COMPONENTS
+#else
+    #define PHYSICS_DECLARE DIRECT_SYSTEM
+    #define PHYSICS_ACCEPT DIRECT_ACCEPT_COMPONENTS
+#endif
+
 COMPONENT(Position)
 {
     Vector3 position;
 };
 
-INDIRECT_SYSTEM(PhysicsSystem)
+PHYSICS_DECLARE(PhysicsSystem)
 {
-    INDIRECT_ACCEPT_COMPONENTS(Array<Position> &);
+    PHYSICS_ACCEPT(Array<Position> &);
 
     virtual bool ControlInput(Environment &env, const ControlAction &input) override
     {
@@ -52,19 +64,26 @@ INDIRECT_SYSTEM(PhysicsSystem)
         return false;
     }
 
-    virtual void Update(Environment &env) override
-    {
-        ControlAction::Key key;
-        key.key = KeyCode::C;
-        key.keyState = ControlAction::Key::KeyState::Pressed;
-
-        env.keyController->Dispatch({key, {}, DeviceTypes::MouseKeyboard});
-
-        ++PhysicsSentKeys;
-    }
-
+#ifdef PHYSICS_INDIRECT
     virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override {}
+    virtual void Update(Environment &env) override;
+#endif
 };
+
+#ifdef PHYSICS_INDIRECT
+    void PhysicsSystem::Update(Environment &env)
+#else
+    void PhysicsSystem::Update(Environment &env, Array<Position> &)
+#endif
+{
+    ControlAction::Key key;
+    key.key = KeyCode::C;
+    key.keyState = ControlAction::Key::KeyState::Pressed;
+
+    env.keyController->Dispatch({key, {}, DeviceTypes::MouseKeyboard});
+
+    ++PhysicsSentKeys;
+}
 
 INDIRECT_SYSTEM(RendererSystem)
 {
@@ -110,6 +129,7 @@ INDIRECT_SYSTEM(RendererSystem)
     }
 
     virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override {}
+    virtual void ProcessMessages(Environment &env, const MessageStreamComponentChanged &stream) override {}
 };
 
 static void GenerateScene(EntityIDGenerator &entityIdGenerator, SystemsManager &manager, EntitiesStream &stream)
@@ -137,6 +157,8 @@ int main()
     auto idGenerator = EntityIDGenerator{};
     auto manager = SystemsManager::New(IsMTECS, logger);
 
+    GenerateScene(idGenerator, *manager, *stream);
+
     auto pipeline = manager->CreatePipeline(nullopt, false);
 
     auto physicsSystem = make_unique<PhysicsSystem>();
@@ -159,7 +181,7 @@ int main()
     for (;;)
     {
         auto info = manager->GetPipelineInfo(pipeline);
-        if (info.executedTimes > 100)
+        if (info.executedTimes > FramesToWait)
         {
             break;
         }
@@ -173,5 +195,6 @@ int main()
     ASSUME(RendererReceivedRendererKeys == RendererSentKeys);
     ASSUME(RendererReceivedPhysicsKeys >= PhysicsSentKeys - 1);
 
+    printf("Tests complete\n");
     system("pause");
 }
