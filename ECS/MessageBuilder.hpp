@@ -60,11 +60,11 @@ namespace ECSTest
         };
 
     private:
-        shared_ptr<vector<EntityWithComponents>> _source{};
+        shared_ptr<const vector<EntityWithComponents>> _source{};
         Archetype _archetype;
         string_view _sourceName{};
 
-        MessageStreamEntityAdded(Archetype archetype, const shared_ptr<vector<EntityWithComponents>> &source, string_view sourceName) : _archetype(archetype), _source(source), _sourceName(sourceName)
+        MessageStreamEntityAdded(Archetype archetype, const shared_ptr<const vector<EntityWithComponents>> &source, string_view sourceName) : _archetype(archetype), _source(source), _sourceName(sourceName)
         {
             ASSUME(_source->size());
         }
@@ -152,11 +152,11 @@ namespace ECSTest
         };
 
     private:
-        shared_ptr<vector<EntityWithComponents>> _source{};
+        shared_ptr<const vector<EntityWithComponents>> _source{};
         StableTypeId _type{};
         string_view _sourceName{};
 
-        MessageStreamComponentAdded(StableTypeId type, const shared_ptr<vector<EntityWithComponents>> &source, string_view sourceName) : _type(type), _source(source), _sourceName(sourceName)
+        MessageStreamComponentAdded(StableTypeId type, const shared_ptr<const vector<EntityWithComponents>> &source, string_view sourceName) : _type(type), _source(source), _sourceName(sourceName)
         {
             ASSUME(_source->size());
 			ASSUME(_type != StableTypeId{});
@@ -206,13 +206,14 @@ namespace ECSTest
         {
             vector<ComponentInfo> infos;
             unique_ptr<ui8[], AlignedMallocDeleter> data;
+            ui32 dataReserved{};
         };
 
-        shared_ptr<InfoWithData> _source{};
+        shared_ptr<const InfoWithData> _source{};
         StableTypeId _type{};
         string_view _sourceName{};
 
-        MessageStreamComponentChanged(StableTypeId type, const shared_ptr<InfoWithData> &source, string_view sourceName) : _type(type), _source(source), _sourceName(sourceName)
+        MessageStreamComponentChanged(StableTypeId type, const shared_ptr<const InfoWithData> &source, string_view sourceName) : _type(type), _source(source), _sourceName(sourceName)
         {
             ASSUME(_source->infos.size());
 			ASSUME(_type != StableTypeId{});
@@ -258,11 +259,11 @@ namespace ECSTest
         };
 
     private:
-        shared_ptr<vector<ComponentInfo>> _source{};
+        shared_ptr<const vector<ComponentInfo>> _source{};
         StableTypeId _type{};
         string_view _sourceName{};
 
-        MessageStreamComponentRemoved(StableTypeId type, const shared_ptr<vector<ComponentInfo>> &source, string_view sourceName) : _type(type), _source(source), _sourceName(sourceName)
+        MessageStreamComponentRemoved(StableTypeId type, const shared_ptr<const vector<ComponentInfo>> &source, string_view sourceName) : _type(type), _source(source), _sourceName(sourceName)
         {
             ASSUME(_source->size());
 			ASSUME(_type != StableTypeId{});

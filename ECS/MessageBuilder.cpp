@@ -130,23 +130,31 @@ void MessageBuilder::ComponentChanged(EntityID entityID, const SerializedCompone
 
     uiw copyIndex = sc.sizeOf * entry->infos.size();
 
-    ui8 *oldPtr = entry->data.release();
-    ui8 *newPtr = (ui8 *)_aligned_realloc(oldPtr, copyIndex + sc.sizeOf, sc.alignmentOf);
-    entry->data.reset(newPtr);
-
-    if (oldPtr != newPtr)
+    if (copyIndex + sc.sizeOf > entry->dataReserved)
     {
-        for (auto &stored : entry->infos)
+        entry->dataReserved *= 2;
+        entry->dataReserved += sc.sizeOf;
+
+        ASSUME(entry->dataReserved >= copyIndex + sc.sizeOf);
+
+        ui8 *oldPtr = entry->data.release();
+        ui8 *newPtr = (ui8 *)_aligned_realloc(oldPtr, entry->dataReserved, sc.alignmentOf);
+        entry->data.reset(newPtr);
+
+        if (oldPtr != newPtr)
         {
-            if (stored.component.data)
+            for (auto &stored : entry->infos)
             {
-                if (newPtr > oldPtr)
+                if (stored.component.data)
                 {
-                    stored.component.data += newPtr - oldPtr;
-                }
-                else
-                {
-                    stored.component.data -= oldPtr - newPtr;
+                    if (newPtr > oldPtr)
+                    {
+                        stored.component.data += newPtr - oldPtr;
+                    }
+                    else
+                    {
+                        stored.component.data -= oldPtr - newPtr;
+                    }
                 }
             }
         }
@@ -154,7 +162,7 @@ void MessageBuilder::ComponentChanged(EntityID entityID, const SerializedCompone
 
     entry->infos.push_back({entityID, sc});
     SerializedComponent &added = entry->infos.back().component;
-    std::copy(sc.data, sc.data + sc.sizeOf, entry->data.get() + copyIndex);
+    memcpy(entry->data.get() + copyIndex, sc.data, sc.sizeOf);
 
     added.data = entry->data.get() + copyIndex;
 }
