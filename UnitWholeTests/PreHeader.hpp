@@ -6,6 +6,7 @@
 #include <SystemsManager.hpp>
 #include <Windows.h>
 #include <EntitiesStreamBuilder.hpp>
+#include <KeyController.hpp>
 
 namespace ECSTest
 {

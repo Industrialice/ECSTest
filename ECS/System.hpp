@@ -3,11 +3,14 @@
 #include "Component.hpp"
 #include "MessageBuilder.hpp"
 #include "LoggerWrapper.hpp"
+#include "IKeyController.hpp"
 
 namespace ECSTest
 {
     class System
     {
+        shared_ptr<IKeyController> _keyController{};
+
     public:
         struct Environment
         {
@@ -19,6 +22,7 @@ namespace ECSTest
             ComponentIDGenerator &componentIdGenerator;
             MessageBuilder messageBuilder;
 			LoggerWrapper logger;
+            IKeyController *keyController;
         };
 
         struct RequestedComponent
@@ -49,6 +53,10 @@ namespace ECSTest
 		[[nodiscard]] virtual const struct IndirectSystem *AsIndirectSystem() const;
 		[[nodiscard]] virtual struct DirectSystem *AsDirectSystem();
 		[[nodiscard]] virtual const struct DirectSystem *AsDirectSystem() const;
+        [[nodiscard]] IKeyController *GetKeyController();
+        [[nodiscard]] const IKeyController *GetKeyController() const;
+        void SetKeyController(const shared_ptr<IKeyController> &controller);
+        virtual bool ControlInput(Environment &env, const ControlAction &input) { SOFTBREAK; return false; }
         virtual void OnCreate(Environment &env) {}
         virtual void OnInitialized(Environment &env) {}
         virtual void OnDestroy(Environment &env) {}

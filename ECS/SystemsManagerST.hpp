@@ -66,6 +66,7 @@ namespace ECSTest
 		{
 			ui32 executedAt{}; // last executed frame, gets set to PipelineData::executionFrame at first execution attempt on a new frame
             ui32 executedTimes{};
+            ControlsQueue controlsReceivedQueue{}, controlsToSendQueue{}; // 2 separate queues are necessary because you can send new control actions from ControlInput method
 		};
 
 		struct ManagedDirectSystem : ManagedSystem
@@ -146,7 +147,7 @@ namespace ECSTest
 		vector<NonUnique<ui8>> _tempNonUniqueArgs{};
         vector<void *> _tempArgs{};
 
-        static constexpr string_view selfName = "SystemsManagerST";
+        static constexpr string_view selfName = "ECSSingleThreaded";
 
 	private:
 		[[nodiscard]] ArchetypeGroup &FindArchetypeGroup(const ArchetypeFull &archetype, Array<const SerializedComponent> components);
@@ -155,11 +156,14 @@ namespace ECSTest
 		void StartScheduler(vector<unique_ptr<IEntitiesStream>> &streams);
 		void SchedulerLoop();
 		void ExecutePipeline(PipelineData &pipeline, TimeDifference timeSinceLastFrame);
-		static void ProcessMessages(IndirectSystem &system, const ManagedIndirectSystem::MessageQueue &messageQueue, System::Environment &env);
-        void ExecuteIndirectSystem(IndirectSystem &system, ManagedIndirectSystem::MessageQueue &messageQueue, System::Environment &env);
-        void ExecuteDirectSystem(DirectSystem &system, System::Environment &env);
+		static void ProcessMessagesAndClear(IndirectSystem &system, ManagedIndirectSystem::MessageQueue &messageQueue, System::Environment &env);
+        void ExecuteIndirectSystem(IndirectSystem &system, ManagedIndirectSystem::MessageQueue &messageQueue, ControlsQueue &controlsReceivedQueue, ControlsQueue &controlsToSendQueue, System::Environment &env);
+        void ExecuteDirectSystem(DirectSystem &system, ControlsQueue &controlsReceivedQueue, ControlsQueue &controlsToSendQueue, System::Environment &env);
+        static void ProcessControlsQueueAndClear(System &system, ControlsQueue &controlsQueue);
+        void PassControlsToOtherSystemsAndClear(ControlsQueue &controlsQueue, System *systemToIgnore);
         void PatchComponentAddedMessages(MessageBuilder &messageBuilder);
         void UpdateECSFromMessages(MessageBuilder &messageBuilder);
         void PassMessagesToIndirectSystems(MessageBuilder &messageBuilder, System *systemToIgnore);
+        static bool SendControlActionToQueue(ControlsQueue &controlsQueue, const ControlAction &action);
 	};
 }

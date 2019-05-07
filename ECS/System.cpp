@@ -23,6 +23,21 @@ const DirectSystem *System::AsDirectSystem() const
 	return nullptr;
 }
 
+IKeyController *System::GetKeyController()
+{
+    return _keyController.get();
+}
+
+const IKeyController *System::GetKeyController() const
+{
+    return _keyController.get();
+}
+
+void System::SetKeyController(const shared_ptr<IKeyController> &controller)
+{
+    _keyController = controller;
+}
+
 IndirectSystem *IndirectSystem::AsIndirectSystem()
 {
 	return this;

@@ -278,12 +278,10 @@ static void GenerateScene(EntityIDGenerator &entityIdGenerator, SystemsManager &
     {
         EntitiesStream::EntityData entity;
 
-        Position pos;
-        pos.position = {(f32)rand(), (f32)rand(), (f32)rand()};
+        Position pos = {Vector3((f32)rand(), (f32)rand(), (f32)rand())};
         entity.AddComponent(pos);
 
-        Rotation rot;
-        rot.rotation = Quaternion::FromEuler({(f32)rand(), (f32)rand(), (f32)rand()});
+        Rotation rot = Quaternion::FromEuler({(f32)rand(), (f32)rand(), (f32)rand()});
         entity.AddComponent(rot);
 
         Physics phy;
@@ -317,7 +315,7 @@ int main()
     auto after = TimeMoment::Now();
     printf("Generating scene took %.2lfs\n", (after - before).ToSec());
 
-    auto physicsPipeline = manager->CreatePipeline(16.666_ms, false);
+    auto physicsPipeline = manager->CreatePipeline(SecondsFP64(1.0 / 60.0), false);
     auto rendererPipeline = manager->CreatePipeline(nullopt, false);
 
     manager->Register<PhysicsSystem>(physicsPipeline);

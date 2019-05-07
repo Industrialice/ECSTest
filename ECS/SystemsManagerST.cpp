@@ -239,18 +239,22 @@ void SystemsManagerST::Register(unique_ptr<System> system, Pipeline pipeline)
 
 	_archetypeReflector.StartTrackingMatchingArchetypes((uiw)system.get(), requestedComponents.archetypeDefining);
 
-	if (isDirectSystem)
+    auto addSystem = [&pipelineData](auto &managed, auto *system)
+    {
+        managed.executedAt = pipelineData.executionFrame - 1;
+        managed.system.reset(system);
+    };
+    
+    if (isDirectSystem)
 	{
 		ManagedDirectSystem direct;
-		direct.executedAt = pipelineData.executionFrame - 1;
-		direct.system.reset(system.release()->AsDirectSystem());
+        addSystem(direct, system.release()->AsDirectSystem());
 		pipelineData.directSystems.emplace_back(move(direct));
 	}
 	else
 	{
 		ManagedIndirectSystem indirect;
-		indirect.executedAt = pipelineData.executionFrame - 1;
-		indirect.system.reset(system.release()->AsIndirectSystem());
+        addSystem(indirect, system.release()->AsIndirectSystem());
 		pipelineData.indirectSystems.emplace_back(move(indirect));
 	}
 }
@@ -701,23 +705,6 @@ void SystemsManagerST::StartScheduler(vector<unique_ptr<IEntitiesStream>> &strea
 		}
 	}
 
-	//uiw workerIndex = 0;
-	//for (auto &pipeline : _pipelines)
-	//{
-	//	for (auto &managed : pipeline.indirectSystems)
-	//	{
- //           ASSUME(managed.messageQueue.componentAddedStreams.empty());
- //           ASSUME(managed.messageQueue.componentChangedStreams.empty());
- //           ASSUME(managed.messageQueue.componentRemovedStreams.empty());
- //           ASSUME(managed.messageQueue.entityRemovedStreams.empty());
- //           for (const auto &stream : managed.messageQueue.entityAddedStreams)
- //           {
- //               managed.system->ProcessMessages(env, stream);
- //           }
- //           managed.messageQueue.clear();
-	//	}
-	//}
-
     _currentTime = TimeMoment::Now();
 
 	while (!_isStoppingExecution)
@@ -835,28 +822,43 @@ void SystemsManagerST::ExecutePipeline(PipelineData &pipeline, TimeDifference ti
             _entityIdGenerator,
             _componentIdGenerator,
             MessageBuilder(),
-            LoggerWrapper(&*_logger, managed.system->GetTypeName())
+            LoggerWrapper(_logger.get(), managed.system->GetTypeName()),
+            managed.system->GetKeyController()
         };
         env.messageBuilder.SourceName(managed.system->GetTypeId().Name());
+
+        IKeyController::ListenerHandle inputHandle;
+        if (env.keyController)
+        {
+            inputHandle = env.keyController->OnControlAction(std::bind(&System::ControlInput, managed.system.get(), std::ref(env), _1));
+        }
 
         managed.executedAt = pipeline.executionFrame;
 
         if (managed.executedTimes == 0)
         {
+            IKeyController::ListenerHandle addToQueueHandle;
+            if (env.keyController)
+            {
+                addToQueueHandle = env.keyController->OnControlAction(std::bind(&SendControlActionToQueue, std::ref(managed.controlsToSendQueue), _1));
+            }
+
             managed.system->OnCreate(env);
+            PassControlsToOtherSystemsAndClear(managed.controlsToSendQueue, managed.system.get());
             PatchComponentAddedMessages(env.messageBuilder);
             UpdateECSFromMessages(env.messageBuilder);
             PassMessagesToIndirectSystems(env.messageBuilder, nullptr);
 			env.messageBuilder.SourceName(managed.system->GetTypeId().Name()); // the builder was reset, set the name again
 
             managed.system->OnInitialized(env);
+            PassControlsToOtherSystemsAndClear(managed.controlsToSendQueue, managed.system.get());
             PatchComponentAddedMessages(env.messageBuilder);
             UpdateECSFromMessages(env.messageBuilder);
             PassMessagesToIndirectSystems(env.messageBuilder, nullptr);
             env.messageBuilder.SourceName(managed.system->GetTypeId().Name()); // the builder was reset, set the name again
         }
 
-        ExecuteDirectSystem(*managed.system, env);
+        ExecuteDirectSystem(*managed.system, managed.controlsReceivedQueue, managed.controlsToSendQueue, env);
 
         ++managed.executedTimes;
     }
@@ -872,33 +874,47 @@ void SystemsManagerST::ExecutePipeline(PipelineData &pipeline, TimeDifference ti
             _entityIdGenerator,
             _componentIdGenerator,
             MessageBuilder(),
-            LoggerWrapper(&*_logger, managed.system->GetTypeName())
+            LoggerWrapper(_logger.get(), managed.system->GetTypeName()),
+            managed.system->GetKeyController()
         };
         env.messageBuilder.SourceName(managed.system->GetTypeId().Name());
+
+        IKeyController::ListenerHandle inputHandle;
+        if (env.keyController)
+        {
+            inputHandle = env.keyController->OnControlAction(std::bind(&System::ControlInput, managed.system.get(), std::ref(env), _1));
+        }
 
         managed.executedAt = pipeline.executionFrame;
 
         if (managed.executedTimes == 0)
         {
+            IKeyController::ListenerHandle addToQueueHandle;
+            if (env.keyController)
+            {
+                addToQueueHandle = env.keyController->OnControlAction(std::bind(&SendControlActionToQueue, std::ref(managed.controlsToSendQueue), _1));
+            }
+
             managed.system->OnCreate(env);
+            PassControlsToOtherSystemsAndClear(managed.controlsToSendQueue, managed.system.get());
             PatchComponentAddedMessages(env.messageBuilder);
             UpdateECSFromMessages(env.messageBuilder);
             PassMessagesToIndirectSystems(env.messageBuilder, managed.system.get());
 			env.messageBuilder.SourceName(managed.system->GetTypeId().Name()); // the builder was reset, set the name again
 
             auto before = TimeMoment::Now();
-            ProcessMessages(*managed.system, managed.messageQueue, env);
-            managed.messageQueue.clear();
-            auto after = TimeMoment::Now();
+            ProcessMessagesAndClear(*managed.system, managed.messageQueue, env);
             managed.system->OnInitialized(env);
+            auto after = TimeMoment::Now();
             _logger->Message(LogLevels::Info, selfName, "Initializing %*s took %.2lfs\n", (i32)managed.system->GetTypeName().size(), managed.system->GetTypeName().data(), (after - before).ToSec_f64());
+            PassControlsToOtherSystemsAndClear(managed.controlsToSendQueue, managed.system.get());
             PatchComponentAddedMessages(env.messageBuilder);
             UpdateECSFromMessages(env.messageBuilder);
             PassMessagesToIndirectSystems(env.messageBuilder, managed.system.get());
             env.messageBuilder.SourceName(managed.system->GetTypeId().Name()); // the builder was reset, set the name again
         }
 
-        ExecuteIndirectSystem(*managed.system, managed.messageQueue, env);
+        ExecuteIndirectSystem(*managed.system, managed.messageQueue, managed.controlsReceivedQueue, managed.controlsToSendQueue, env);
 
         ++managed.executedTimes;
     }
@@ -906,7 +922,7 @@ void SystemsManagerST::ExecutePipeline(PipelineData &pipeline, TimeDifference ti
     ++pipeline.executionFrame;
 }
 
-void SystemsManagerST::ProcessMessages(IndirectSystem &system, const ManagedIndirectSystem::MessageQueue &messageQueue, System::Environment &env)
+void SystemsManagerST::ProcessMessagesAndClear(IndirectSystem &system, ManagedIndirectSystem::MessageQueue &messageQueue, System::Environment &env)
 {
 	for (const auto &stream : messageQueue.entityAddedStreams)
 	{
@@ -928,12 +944,21 @@ void SystemsManagerST::ProcessMessages(IndirectSystem &system, const ManagedIndi
 	{
 		system.ProcessMessages(env, stream);
 	}
+
+    messageQueue.clear();
 }
 
-void SystemsManagerST::ExecuteIndirectSystem(IndirectSystem &system, ManagedIndirectSystem::MessageQueue &messageQueue, System::Environment &env)
+void SystemsManagerST::ExecuteIndirectSystem(IndirectSystem &system, ManagedIndirectSystem::MessageQueue &messageQueue, ControlsQueue &controlsReceivedQueue, ControlsQueue &controlsToSendQueue, System::Environment &env)
 {
-    ProcessMessages(system, messageQueue, env);
-    messageQueue.clear();
+    ProcessControlsQueueAndClear(system, controlsReceivedQueue);
+
+    IKeyController::ListenerHandle addToQueueHandle;
+    if (env.keyController)
+    {
+        addToQueueHandle = env.keyController->OnControlAction(std::bind(&SendControlActionToQueue, std::ref(controlsToSendQueue), _1));
+    }
+
+    ProcessMessagesAndClear(system, messageQueue, env);
 
     system.Update(env);
 
@@ -945,13 +970,22 @@ void SystemsManagerST::ExecuteIndirectSystem(IndirectSystem &system, ManagedIndi
         ASSUME(it != requested.end()); // system changed component without requesting write access
     }
 
+    PassControlsToOtherSystemsAndClear(controlsToSendQueue, &system);
     PatchComponentAddedMessages(env.messageBuilder);
     UpdateECSFromMessages(env.messageBuilder);
     PassMessagesToIndirectSystems(env.messageBuilder, &system);
 }
 
-void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, System::Environment &env)
+void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, ControlsQueue &controlsReceivedQueue, ControlsQueue &controlsToSendQueue, System::Environment &env)
 {
+    ProcessControlsQueueAndClear(system, controlsReceivedQueue);
+
+    IKeyController::ListenerHandle addToQueueHandle;
+    if (env.keyController)
+    {
+        addToQueueHandle = env.keyController->OnControlAction(std::bind(&SendControlActionToQueue, std::ref(controlsToSendQueue), _1));
+    }
+
     auto &reqested = system.RequestedComponents();
 
     uiw maxArgs = reqested.requiredWithData.size() + reqested.optional.size() + (reqested.idsArgumentNumber != nullopt) + reqested.required.size();
@@ -1111,9 +1145,52 @@ void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, System::Environ
         }
     }
 
+    PassControlsToOtherSystemsAndClear(controlsToSendQueue, &system);
     PatchComponentAddedMessages(env.messageBuilder);
     UpdateECSFromMessages(env.messageBuilder);
     PassMessagesToIndirectSystems(env.messageBuilder, nullptr);
+}
+
+void SystemsManagerST::ProcessControlsQueueAndClear(System &system, ControlsQueue &controlsQueue)
+{
+    if (controlsQueue.size() == 0)
+    {
+        return;
+    }
+
+    ASSUME(system.GetKeyController());
+
+    system.GetKeyController()->Dispatch(controlsQueue.Enumerate());
+
+    controlsQueue.clear();
+}
+
+void SystemsManagerST::PassControlsToOtherSystemsAndClear(ControlsQueue &controlsQueue, System *systemToIgnore)
+{
+    if (controlsQueue.size() == 0)
+    {
+        return;
+    }
+
+    for (auto &pipeline : _pipelines)
+    {
+        for (auto &system : pipeline.directSystems)
+        {
+            if (system.system.get() != systemToIgnore && system.system->GetKeyController())
+            {
+                system.controlsReceivedQueue.Enqueue(controlsQueue.Actions());
+            }
+        }
+        for (auto &system : pipeline.indirectSystems)
+        {
+            if (system.system.get() != systemToIgnore && system.system->GetKeyController())
+            {
+                system.controlsReceivedQueue.Enqueue(controlsQueue.Actions());
+            }
+        }
+    }
+
+    controlsQueue.clear();
 }
 
 void SystemsManagerST::PatchComponentAddedMessages(MessageBuilder &messageBuilder)
@@ -1511,6 +1588,12 @@ void SystemsManagerST::PassMessagesToIndirectSystems(MessageBuilder &messageBuil
     }
 
     Funcs::Reinitialize(messageBuilder);
+}
+
+bool SystemsManagerST::SendControlActionToQueue(ControlsQueue &controlsQueue, const ControlAction &action)
+{
+    controlsQueue.push_back(action);
+    return false;
 }
 
 void SystemsManagerST::ManagedIndirectSystem::MessageQueue::clear()

@@ -41,6 +41,17 @@ public:
     
     virtual void ProcessMessages(Environment &env, const MessageStreamComponentAdded &stream) override
     {
+        if (stream.Type() == Camera::GetTypeId())
+        {
+            for (auto &entry : stream)
+            {
+                AddCamera(entry.entityID, entry.added.Cast<Camera>());
+            }
+        }
+        else
+        {
+            HARDBREAK;
+        }
     }
     
     virtual void ProcessMessages(Environment &env, const MessageStreamComponentChanged &stream) override
@@ -58,6 +69,10 @@ public:
         else if (stream.Type() == Rotation::GetTypeId())
         {
         }
+        else
+        {
+            HARDBREAK;
+        }
     }
     
     virtual void ProcessMessages(Environment &env, const MessageStreamComponentRemoved &stream) override
@@ -74,6 +89,10 @@ public:
         }
         else if (stream.Type() == Rotation::GetTypeId())
         {
+        }
+        else
+        {
+            HARDBREAK;
         }
     }
     

@@ -14,8 +14,8 @@
 #include <map>
 #include <cstdlib>
 #include <stack>
-//#include <experimental/coroutine>
-//#include <experimental/generator>
+#include <experimental/coroutine>
+#include <experimental/generator>
 
 #include <StdMiscellaneousLib.hpp>
 #include <MatrixMathTypes.hpp>
@@ -38,8 +38,9 @@ using std::swap;
 using std::make_pair;
 using std::make_shared;
 using std::make_unique;
-using namespace std::literals;
 using std::nullopt;
+using namespace std::literals;
+using namespace std::placeholders;
 
 //namespace std
 //{
