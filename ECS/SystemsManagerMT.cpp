@@ -924,6 +924,8 @@ void SystemsManagerMT::ExecutePipeline(PipelineData &pipeline)
 
         pipeline.systemsAtExecution->fetch_add(1);
 
+        MessageBuilder messageBuilder;
+
         System::Environment env =
         {
 			0,
@@ -932,7 +934,7 @@ void SystemsManagerMT::ExecutePipeline(PipelineData &pipeline)
             StableTypeId{},
             _entityIdGenerator,
             _componentIdGenerator,
-            MessageBuilder(),
+            messageBuilder,
 			LoggerWrapper(nullptr, "")
         };
 

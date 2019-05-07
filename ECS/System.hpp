@@ -20,7 +20,7 @@ namespace ECSTest
             const StableTypeId targetSystem; // useful when the same class used to implement different systems
             EntityIDGenerator &entityIdGenerator;
             ComponentIDGenerator &componentIdGenerator;
-            MessageBuilder messageBuilder;
+            MessageBuilder &messageBuilder;
 			LoggerWrapper logger;
             IKeyController *keyController;
         };

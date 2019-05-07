@@ -147,6 +147,8 @@ namespace ECSTest
 		vector<NonUnique<ui8>> _tempNonUniqueArgs{};
         vector<void *> _tempArgs{};
 
+        MessageBuilder _tempMessageBuilder{};
+
         static constexpr string_view selfName = "ECSSingleThreaded";
 
 	private:
@@ -162,8 +164,9 @@ namespace ECSTest
         static void ProcessControlsQueueAndClear(System &system, ControlsQueue &controlsQueue);
         void PassControlsToOtherSystemsAndClear(ControlsQueue &controlsQueue, System *systemToIgnore);
         void PatchComponentAddedMessages(MessageBuilder &messageBuilder);
+        void PatchEntityRemovedArchetypes(MessageBuilder &messageBuilder);
         void UpdateECSFromMessages(MessageBuilder &messageBuilder);
-        void PassMessagesToIndirectSystems(MessageBuilder &messageBuilder, System *systemToIgnore);
+        void PassMessagesToIndirectSystemsAndClear(MessageBuilder &messageBuilder, System *systemToIgnore);
         static bool SendControlActionToQueue(ControlsQueue &controlsQueue, const ControlAction &action);
 	};
 }

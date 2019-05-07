@@ -813,6 +813,8 @@ void SystemsManagerST::ExecutePipeline(PipelineData &pipeline, TimeDifference ti
 {
     for (auto &managed : pipeline.directSystems)
     {
+        ASSUME(_tempMessageBuilder.IsEmpty());
+
         System::Environment env =
         {
             timeSinceLastFrame.ToSec(),
@@ -821,7 +823,7 @@ void SystemsManagerST::ExecutePipeline(PipelineData &pipeline, TimeDifference ti
             managed.system->GetTypeId(),
             _entityIdGenerator,
             _componentIdGenerator,
-            MessageBuilder(),
+            _tempMessageBuilder,
             LoggerWrapper(_logger.get(), managed.system->GetTypeName()),
             managed.system->GetKeyController()
         };
@@ -846,16 +848,16 @@ void SystemsManagerST::ExecutePipeline(PipelineData &pipeline, TimeDifference ti
             managed.system->OnCreate(env);
             PassControlsToOtherSystemsAndClear(managed.controlsToSendQueue, managed.system.get());
             PatchComponentAddedMessages(env.messageBuilder);
+            PatchEntityRemovedArchetypes(env.messageBuilder);
             UpdateECSFromMessages(env.messageBuilder);
-            PassMessagesToIndirectSystems(env.messageBuilder, nullptr);
-			env.messageBuilder.SourceName(managed.system->GetTypeId().Name()); // the builder was reset, set the name again
+            PassMessagesToIndirectSystemsAndClear(env.messageBuilder, nullptr);
 
             managed.system->OnInitialized(env);
             PassControlsToOtherSystemsAndClear(managed.controlsToSendQueue, managed.system.get());
             PatchComponentAddedMessages(env.messageBuilder);
+            PatchEntityRemovedArchetypes(env.messageBuilder);
             UpdateECSFromMessages(env.messageBuilder);
-            PassMessagesToIndirectSystems(env.messageBuilder, nullptr);
-            env.messageBuilder.SourceName(managed.system->GetTypeId().Name()); // the builder was reset, set the name again
+            PassMessagesToIndirectSystemsAndClear(env.messageBuilder, nullptr);
         }
 
         ExecuteDirectSystem(*managed.system, managed.controlsReceivedQueue, managed.controlsToSendQueue, env);
@@ -865,6 +867,8 @@ void SystemsManagerST::ExecutePipeline(PipelineData &pipeline, TimeDifference ti
 
     for (auto &managed : pipeline.indirectSystems)
     {
+        ASSUME(_tempMessageBuilder.IsEmpty());
+
         System::Environment env =
         {
             timeSinceLastFrame.ToSec(),
@@ -873,7 +877,7 @@ void SystemsManagerST::ExecutePipeline(PipelineData &pipeline, TimeDifference ti
             managed.system->GetTypeId(),
             _entityIdGenerator,
             _componentIdGenerator,
-            MessageBuilder(),
+            _tempMessageBuilder,
             LoggerWrapper(_logger.get(), managed.system->GetTypeName()),
             managed.system->GetKeyController()
         };
@@ -898,9 +902,9 @@ void SystemsManagerST::ExecutePipeline(PipelineData &pipeline, TimeDifference ti
             managed.system->OnCreate(env);
             PassControlsToOtherSystemsAndClear(managed.controlsToSendQueue, managed.system.get());
             PatchComponentAddedMessages(env.messageBuilder);
+            PatchEntityRemovedArchetypes(env.messageBuilder);
             UpdateECSFromMessages(env.messageBuilder);
-            PassMessagesToIndirectSystems(env.messageBuilder, managed.system.get());
-			env.messageBuilder.SourceName(managed.system->GetTypeId().Name()); // the builder was reset, set the name again
+            PassMessagesToIndirectSystemsAndClear(env.messageBuilder, managed.system.get());
 
             auto before = TimeMoment::Now();
             ProcessMessagesAndClear(*managed.system, managed.messageQueue, env);
@@ -909,9 +913,9 @@ void SystemsManagerST::ExecutePipeline(PipelineData &pipeline, TimeDifference ti
             _logger->Message(LogLevels::Info, selfName, "Initializing %*s took %.2lfs\n", (i32)managed.system->GetTypeName().size(), managed.system->GetTypeName().data(), (after - before).ToSec_f64());
             PassControlsToOtherSystemsAndClear(managed.controlsToSendQueue, managed.system.get());
             PatchComponentAddedMessages(env.messageBuilder);
+            PatchEntityRemovedArchetypes(env.messageBuilder);
             UpdateECSFromMessages(env.messageBuilder);
-            PassMessagesToIndirectSystems(env.messageBuilder, managed.system.get());
-            env.messageBuilder.SourceName(managed.system->GetTypeId().Name()); // the builder was reset, set the name again
+            PassMessagesToIndirectSystemsAndClear(env.messageBuilder, managed.system.get());
         }
 
         ExecuteIndirectSystem(*managed.system, managed.messageQueue, managed.controlsReceivedQueue, managed.controlsToSendQueue, env);
@@ -972,8 +976,9 @@ void SystemsManagerST::ExecuteIndirectSystem(IndirectSystem &system, ManagedIndi
 
     PassControlsToOtherSystemsAndClear(controlsToSendQueue, &system);
     PatchComponentAddedMessages(env.messageBuilder);
+    PatchEntityRemovedArchetypes(env.messageBuilder);
     UpdateECSFromMessages(env.messageBuilder);
-    PassMessagesToIndirectSystems(env.messageBuilder, &system);
+    PassMessagesToIndirectSystemsAndClear(env.messageBuilder, &system);
 }
 
 void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, ControlsQueue &controlsReceivedQueue, ControlsQueue &controlsToSendQueue, System::Environment &env)
@@ -1147,8 +1152,9 @@ void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, ControlsQueue &
 
     PassControlsToOtherSystemsAndClear(controlsToSendQueue, &system);
     PatchComponentAddedMessages(env.messageBuilder);
+    PatchEntityRemovedArchetypes(env.messageBuilder);
     UpdateECSFromMessages(env.messageBuilder);
-    PassMessagesToIndirectSystems(env.messageBuilder, nullptr);
+    PassMessagesToIndirectSystemsAndClear(env.messageBuilder, nullptr);
 }
 
 void SystemsManagerST::ProcessControlsQueueAndClear(System &system, ControlsQueue &controlsQueue)
@@ -1234,7 +1240,7 @@ void SystemsManagerST::PatchComponentAddedMessages(MessageBuilder &messageBuilde
     }
 }
 
-void SystemsManagerST::UpdateECSFromMessages(MessageBuilder &messageBuilder)
+void SystemsManagerST::PatchEntityRemovedArchetypes(MessageBuilder &messageBuilder)
 {
     for (EntityID id : messageBuilder.EntityRemovedNoArchetype())
     {
@@ -1242,7 +1248,10 @@ void SystemsManagerST::UpdateECSFromMessages(MessageBuilder &messageBuilder)
         ASSUME(it != _entitiesLocations.end());
         messageBuilder.RemoveEntity(id, it->second.group->archetype.ToShort());
     }
+}
 
+void SystemsManagerST::UpdateECSFromMessages(MessageBuilder &messageBuilder)
+{
     auto removeEntity = [this](ArchetypeGroup &group, ui32 index, optional<decltype(_entitiesLocations)::iterator> entityLocation)
     {
         --group.entitiesCount;
@@ -1458,7 +1467,7 @@ void SystemsManagerST::UpdateECSFromMessages(MessageBuilder &messageBuilder)
     }
 }
 
-void SystemsManagerST::PassMessagesToIndirectSystems(MessageBuilder &messageBuilder, System *systemToIgnore)
+void SystemsManagerST::PassMessagesToIndirectSystemsAndClear(MessageBuilder &messageBuilder, System *systemToIgnore)
 {
     for (auto &[streamArchetype, streamPointer] : messageBuilder.EntityAddedStreams()._data)
     {
@@ -1587,7 +1596,7 @@ void SystemsManagerST::PassMessagesToIndirectSystems(MessageBuilder &messageBuil
         }
     }
 
-    Funcs::Reinitialize(messageBuilder);
+    messageBuilder.Clear();
 }
 
 bool SystemsManagerST::SendControlActionToQueue(ControlsQueue &controlsQueue, const ControlAction &action)
