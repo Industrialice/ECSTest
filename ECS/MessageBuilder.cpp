@@ -48,12 +48,21 @@ void MessageBuilder::Flush()
 	entry.entityID = _currentEntityId;
 	entry.components = move(_cab._components);
 	entry.componentsData = move(_cab._data);
-    auto &target = _entityAddedStreams._data[archetype];
-    if (!target)
+
+    const auto &target = [this](const Archetype &archetype) -> const shared_ptr<vector<MessageStreamEntityAdded::EntityWithComponents>> &
     {
-        target = make_shared<vector<MessageStreamEntityAdded::EntityWithComponents>>();
-    }
-	target->push_back(move(entry));
+        for (const auto &[key, value] : _entityAddedStreams._data)
+        {
+            if (key == archetype)
+            {
+                return value;
+            }
+        }
+        _entityAddedStreams._data.emplace_back(archetype, make_shared<vector<MessageStreamEntityAdded::EntityWithComponents>>());
+        return _entityAddedStreams._data.back().second;
+    } (archetype);
+
+    target->push_back(move(entry));
 
 	_currentEntityId = {};
 }
@@ -102,11 +111,18 @@ void MessageBuilder::AddComponent(EntityID entityID, const SerializedComponent &
 {
     ASSUME(sc.isUnique != sc.id.IsValid());
 
-    auto &entry = _componentAddedStreams._data[sc.type];
-    if (!entry)
+    const auto &entry = [this](StableTypeId type) -> const shared_ptr<vector<MessageStreamComponentAdded::EntityWithComponents>> &
     {
-        entry = make_shared<vector<MessageStreamComponentAdded::EntityWithComponents>>();
-    }
+        for (const auto &[key, value] : _componentAddedStreams._data)
+        {
+            if (key == type)
+            {
+                return value;
+            }
+        }
+        _componentAddedStreams._data.emplace_back(type, make_shared<vector<MessageStreamComponentAdded::EntityWithComponents>>());
+        return _componentAddedStreams._data.back().second;
+    } (sc.type);
 
     entry->emplace_back();
     auto &last = entry->back();
@@ -122,11 +138,18 @@ void MessageBuilder::ComponentChanged(EntityID entityID, const SerializedCompone
     ASSUME(sc.isUnique != sc.id.IsValid());
     ASSUME(sc.isTag == false);
 
-    auto &entry = _componentChangedStreams._data[sc.type];
-    if (!entry)
+    const auto &entry = [this](StableTypeId type) -> const shared_ptr<MessageStreamComponentChanged::InfoWithData> &
     {
-        entry = make_shared<MessageStreamComponentChanged::InfoWithData>();
-    }
+        for (const auto &[key, value] : _componentChangedStreams._data)
+        {
+            if (key == type)
+            {
+                return value;
+            }
+        }
+        _componentChangedStreams._data.emplace_back(type, make_shared<MessageStreamComponentChanged::InfoWithData>());
+        return _componentChangedStreams._data.back().second;
+    } (sc.type);
 
     uiw copyIndex = sc.sizeOf * entry->infos.size();
 
@@ -169,11 +192,18 @@ void MessageBuilder::ComponentChanged(EntityID entityID, const SerializedCompone
 
 void MessageBuilder::RemoveComponent(EntityID entityID, StableTypeId type, ComponentID componentID)
 {
-    auto &entry = _componentRemovedStreams._data[type];
-    if (!entry)
+    const auto &entry = [this](StableTypeId type) -> const shared_ptr<vector<MessageStreamComponentRemoved::ComponentInfo>> &
     {
-        entry = make_shared<vector<MessageStreamComponentRemoved::ComponentInfo>>();
-    }
+        for (const auto &[key, value] : _componentRemovedStreams._data)
+        {
+            if (key == type)
+            {
+                return value;
+            }
+        }
+        _componentRemovedStreams._data.emplace_back(type, make_shared<vector<MessageStreamComponentRemoved::ComponentInfo>>());
+        return _componentRemovedStreams._data.back().second;
+    } (type);
 
     entry->push_back({entityID, componentID});
 }
@@ -187,10 +217,19 @@ void MessageBuilder::RemoveEntity(EntityID entityID)
 void MessageBuilder::RemoveEntity(EntityID entityID, Archetype archetype)
 {
 	ASSUME(entityID.IsValid());
-    auto &target = _entityRemovedStreams._data[archetype];
-    if (!target)
+
+    const auto &entry = [this](const Archetype &archetype) -> const shared_ptr<vector<EntityID>> &
     {
-        target = make_shared<vector<EntityID>>();
-    }
-    target->push_back(entityID);
+        for (const auto &[key, value] : _entityRemovedStreams._data)
+        {
+            if (key == archetype)
+            {
+                return value;
+            }
+        }
+        _entityRemovedStreams._data.emplace_back(archetype, make_shared<vector<EntityID>>());
+        return _entityRemovedStreams._data.back().second;
+    } (archetype);
+
+    entry->push_back(entityID);
 }

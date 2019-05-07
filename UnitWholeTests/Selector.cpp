@@ -10,12 +10,12 @@ void InteractionTests();
 
 int main()
 {
-    printf("1. Benchmark\n");
-    printf("2. Benchmark2\n");
-    printf("3. KeyControllerTests\n");
-    printf("4. SyncTests\n");
+    printf("1. KeyControllerTests\n");
+    printf("2. InteractionTests\n");
+    printf("3. SyncTests\n");
+    printf("4. Benchmark\n");
     printf("5. Falling\n");
-    printf("6. InteractionTests\n");
+    printf("6. Benchmark2\n");
 
 restart:
     int choice = 0;
@@ -25,22 +25,22 @@ restart:
     switch (choice)
     {
     case 1:
-        Benchmark();
-        break;
-    case 2:
-        Benchmark2();
-        break;
-    case 3:
         KeyControllerTests();
         break;
-    case 4:
+    case 2:
+        InteractionTests();
+        break;
+    case 3:
         SyncTests();
+        break;
+    case 4:
+        Benchmark();
         break;
     case 5:
         Falling();
         break;
     case 6:
-        InteractionTests();
+        Benchmark2();
         break;
     default:
         printf("Incorrect input, try again\n");

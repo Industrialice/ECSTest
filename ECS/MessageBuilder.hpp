@@ -335,7 +335,7 @@ namespace ECSTest
         friend class MessageBuilder;
         friend UnitTests;
 
-        std::unordered_map<Archetype, shared_ptr<vector<MessageStreamEntityAdded::EntityWithComponents>>> _data{};
+        vector<pair<Archetype, shared_ptr<vector<MessageStreamEntityAdded::EntityWithComponents>>>> _data{};
     };
 
     class MessageStreamsBuilderComponentAdded
@@ -345,7 +345,7 @@ namespace ECSTest
         friend class MessageBuilder;
         friend UnitTests;
 
-        std::unordered_map<StableTypeId, shared_ptr<vector<MessageStreamComponentAdded::EntityWithComponents>>> _data{};
+        vector<pair<StableTypeId, shared_ptr<vector<MessageStreamComponentAdded::EntityWithComponents>>>> _data{};
     };
 
     class MessageStreamsBuilderComponentChanged
@@ -355,7 +355,7 @@ namespace ECSTest
         friend class MessageBuilder;
         friend UnitTests;
 
-        std::unordered_map<StableTypeId, shared_ptr<MessageStreamComponentChanged::InfoWithData>> _data{};
+        vector<pair<StableTypeId, shared_ptr<MessageStreamComponentChanged::InfoWithData>>> _data{};
     };
 
     class MessageStreamsBuilderComponentRemoved
@@ -365,7 +365,7 @@ namespace ECSTest
         friend class MessageBuilder;
         friend UnitTests;
 
-        std::unordered_map<StableTypeId, shared_ptr<vector<MessageStreamComponentRemoved::ComponentInfo>>> _data{};
+        vector<pair<StableTypeId, shared_ptr<vector<MessageStreamComponentRemoved::ComponentInfo>>>> _data{};
     };
 
     class MessageStreamsBuilderEntityRemoved
@@ -375,7 +375,7 @@ namespace ECSTest
 		friend class MessageBuilder;
         friend UnitTests;
 
-		std::unordered_map<Archetype, shared_ptr<vector<EntityID>>> _data{};
+		vector<pair<Archetype, shared_ptr<vector<EntityID>>>> _data{};
     };
 
     class MessageBuilder
