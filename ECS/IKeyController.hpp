@@ -98,6 +98,11 @@ namespace ECSTest
         };
         struct TouchZoomEnd
         {};
+        struct Custom
+        {
+            StableTypeId type{};
+            shared_ptr<void> data{};
+        };
 
         ControlAction() {}
         ControlAction(Key actionData, const TimeMoment &occuredAt, DeviceTypes::DeviceType device) : action{actionData}, occuredAt{occuredAt}, device{device} {}
@@ -112,6 +117,7 @@ namespace ECSTest
         ControlAction(TouchZoomStart actionData, const TimeMoment &occuredAt, DeviceTypes::DeviceType device) : action{actionData}, occuredAt{occuredAt}, device{device} {}
         ControlAction(TouchZoom actionData, const TimeMoment &occuredAt, DeviceTypes::DeviceType device) : action{actionData}, occuredAt{occuredAt}, device{device} {}
         ControlAction(TouchZoomEnd actionData, const TimeMoment &occuredAt, DeviceTypes::DeviceType device) : action{actionData}, occuredAt{occuredAt}, device{device} {}
+        ControlAction(const Custom &actionData, const TimeMoment &occuredAt, DeviceTypes::DeviceType device) : action{actionData}, occuredAt{occuredAt}, device{device} {}
 
         template <typename T> optional<T> Get() const
         {
@@ -127,7 +133,7 @@ namespace ECSTest
         DeviceTypes::DeviceTypes::DeviceType device = DeviceTypes::_None;
 
     private:
-        variant<Key, MouseSetPosition, MouseMove, MouseWheel, TouchDown, TouchMove, TouchUp, TouchLongPress, TouchDoubleTap, TouchZoomStart, TouchZoom, TouchZoomEnd> action{};
+        variant<Key, MouseSetPosition, MouseMove, MouseWheel, TouchDown, TouchMove, TouchUp, TouchLongPress, TouchDoubleTap, TouchZoomStart, TouchZoom, TouchZoomEnd, Custom> action{};
     };
 
     class ControlsQueue

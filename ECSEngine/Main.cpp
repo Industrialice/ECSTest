@@ -1,6 +1,7 @@
 #include "PreHeader.hpp"
 #include "RendererDX11.hpp"
 #include "Scene.hpp"
+#include "CustomControlActions.hpp"
 
 using namespace ECSEngine;
 
@@ -10,10 +11,13 @@ namespace
     shared_ptr<LoggerType> EngineLogger = make_shared<LoggerType>();
     LoggerType::ListenerHandle LoggerVSHandle{}, LoggerFileHandle{};
     File LogFile{};
+    KeyController::ListenerHandle InputHandle{};
+    std::atomic<bool> IsExiting{false};
 }
 
 static void LogRecipient(LogLevels::LogLevel logLevel, string_view nullTerminatedText, string_view senderName);
 static void FileLogRecipient(File &file, LogLevels::LogLevel logLevel, string_view nullTerminatedText, string_view senderName);
+static bool ReceiveInput(const ControlAction &action);
 
 int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 {
@@ -31,7 +35,11 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 
     auto manager = SystemsManager::New(false, EngineLogger);
 
+    auto keyController = KeyController::New();
+    InputHandle = keyController->OnControlAction(ReceiveInput);
+
     auto renderer = RendererDX11System::New();
+    renderer->SetKeyController(keyController);
 
     auto rendererPipeline = manager->CreatePipeline(nullopt, false);
     manager->Register(move(renderer), rendererPipeline);
@@ -45,7 +53,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
     for (;;)
     {
         auto info = manager->GetPipelineInfo(rendererPipeline);
-        if (info.executedTimes > 50000)
+        if (IsExiting)
         {
             break;
         }
@@ -147,4 +155,17 @@ void FileLogRecipient(File &file, LogLevels::LogLevel logLevel, string_view null
     file.Write(senderName.data(), (ui32)senderName.size());
     file.Write(": ", 2);
     file.Write(nullTerminatedText.data(), (ui32)nullTerminatedText.size());
+}
+
+bool ReceiveInput(const ControlAction &action)
+{
+    if (auto custom = action.Get<ControlAction::Custom>(); custom)
+    {
+        if (custom->type == CustomControlAction::WindowClosed::GetTypeId())
+        {
+            IsExiting = true;
+        }
+    }
+
+    return false;
 }

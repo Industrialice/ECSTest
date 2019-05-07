@@ -23,7 +23,7 @@ namespace ECSTest
         [[nodiscard]] virtual KeyInfo GetKeyInfo(KeyCode key, DeviceTypes::DeviceType device = DeviceTypes::MouseKeyboard) const override;
         [[nodiscard]] virtual optional<i32Vector2> GetPositionInfo(DeviceTypes::DeviceType device = DeviceTypes::MouseKeyboard) const override;
         [[nodiscard]] virtual const AllKeyStates &GetAllKeyStates(DeviceTypes::DeviceType device = DeviceTypes::MouseKeyboard) const override;
-        [[nodiscard]] virtual ListenerHandle OnControlAction(const ListenerCallbackType &callback, DeviceTypes::DeviceType deviceMask) override;
+        [[nodiscard]] virtual ListenerHandle OnControlAction(const ListenerCallbackType &callback, DeviceTypes::DeviceType deviceMask = DeviceTypes::_AllDevices) override;
         virtual void RemoveListener(ListenerHandle &handle) override;
 
 	private:

@@ -1,6 +1,7 @@
 #include "PreHeader.hpp"
 #include "RendererDX11.hpp"
 #include "Components.hpp"
+#include "CustomControlActions.hpp"
 
 using namespace ECSEngine;
 
@@ -27,6 +28,11 @@ struct DX11Camera
 class RendereDX11SystemImpl : public RendererDX11System
 {
 public:
+    virtual bool ControlInput(Environment &env, const ControlAction &input) override
+    {
+        return false;
+    }
+
     virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override
     {
         for (auto &entry : stream)
@@ -132,6 +138,12 @@ public:
         }
         if (msg.message == WM_QUIT)
         {
+            auto event = make_shared <CustomControlAction::WindowClosed>();
+            ControlAction::Custom custom;
+            custom.type = event->GetTypeId();
+            custom.data = move(event);
+            ControlAction action(custom, {}, {});
+            env.keyController->Dispatch(action);
         }
 
         for (auto &camera : _cameras)
