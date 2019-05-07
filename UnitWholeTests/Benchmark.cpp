@@ -6,145 +6,145 @@ namespace
 {
     constexpr bool IsMTECS = false;
     constexpr ui32 EntitiesToTest = 1000;
-}
 
-COMPONENT(CosineResultComponent)
-{
-    f32 value;
-};
-static_assert(sizeof(CosineResultComponent) == sizeof(f32), "Unexpected sizeof");
-
-COMPONENT(SinusResultComponent)
-{
-    f32 value;
-};
-static_assert(sizeof(SinusResultComponent) == sizeof(f32), "Unexpected sizeof");
-
-COMPONENT(SourceComponent)
-{
-    f32 value;
-};
-static_assert(sizeof(SourceComponent) == sizeof(f32), "Unexpected sizeof");
-
-TAG_COMPONENT(Group0Tag);
-TAG_COMPONENT(Group1Tag);
-TAG_COMPONENT(Group2Tag);
-TAG_COMPONENT(Group3Tag);
-
-DIRECT_SYSTEM(System0)
-{
-    DIRECT_ACCEPT_COMPONENTS(Array<CosineResultComponent> &cosine, Array<SinusResultComponent> &sinus, const Array<SourceComponent> &sources, RequiredComponent<Group0Tag>)
+    COMPONENT(CosineResultComponent)
     {
-        ASSUME(cosine.size() == sinus.size() && sinus.size() == sources.size());
-        for (uiw index = 0; index < cosine.size(); ++index)
-        {
-            cosine[index].value = cos(sources[index].value);
-            sinus[index].value = sin(sources[index].value);
-        }
-    }
-};
+        f32 value;
+    };
+    static_assert(sizeof(CosineResultComponent) == sizeof(f32), "Unexpected sizeof");
 
-DIRECT_SYSTEM(System1)
-{
-    DIRECT_ACCEPT_COMPONENTS(Array<CosineResultComponent> &cosine, Array<SinusResultComponent> &sinus, const Array<SourceComponent> &sources, RequiredComponent<Group1Tag>)
+    COMPONENT(SinusResultComponent)
     {
-        ASSUME(cosine.size() == sinus.size() && sinus.size() == sources.size());
-        for (uiw index = 0; index < cosine.size(); ++index)
-        {
-            cosine[index].value = cos(sources[index].value);
-            sinus[index].value = sin(sources[index].value);
-        }
-    }
-};
+        f32 value;
+    };
+    static_assert(sizeof(SinusResultComponent) == sizeof(f32), "Unexpected sizeof");
 
-DIRECT_SYSTEM(System2)
-{
-    DIRECT_ACCEPT_COMPONENTS(Array<CosineResultComponent> &cosine, Array<SinusResultComponent> &sinus, const Array<SourceComponent> &sources, RequiredComponent<Group2Tag>)
+    COMPONENT(SourceComponent)
     {
-        ASSUME(cosine.size() == sinus.size() && sinus.size() == sources.size());
-        for (uiw index = 0; index < cosine.size(); ++index)
-        {
-            cosine[index].value = cos(sources[index].value);
-            sinus[index].value = sin(sources[index].value);
-        }
-    }
-};
+        f32 value;
+    };
+    static_assert(sizeof(SourceComponent) == sizeof(f32), "Unexpected sizeof");
 
-DIRECT_SYSTEM(System3)
-{
-    DIRECT_ACCEPT_COMPONENTS(Array<CosineResultComponent> &cosine, Array<SinusResultComponent> &sinus, const Array<SourceComponent> &sources, RequiredComponent<Group3Tag>)
+    TAG_COMPONENT(Group0Tag);
+    TAG_COMPONENT(Group1Tag);
+    TAG_COMPONENT(Group2Tag);
+    TAG_COMPONENT(Group3Tag);
+
+    DIRECT_SYSTEM(System0)
     {
-        ASSUME(cosine.size() == sinus.size() && sinus.size() == sources.size());
-        for (uiw index = 0; index < cosine.size(); ++index)
+        DIRECT_ACCEPT_COMPONENTS(Array<CosineResultComponent> &cosine, Array<SinusResultComponent> &sinus, const Array<SourceComponent> &sources, RequiredComponent<Group0Tag>)
         {
-            cosine[index].value = cos(sources[index].value);
-            sinus[index].value = sin(sources[index].value);
-        }
-    }
-};
-
-static void GenerateScene(EntityIDGenerator &entityIdGenerator, SystemsManager &manager, EntitiesStream &stream)
-{
-    auto generate = [&stream, &entityIdGenerator](auto group)
-    {
-        for (uiw index = 0; index < EntitiesToTest; ++index)
-        {
-            EntitiesStream::EntityData entity;
-
-            SourceComponent source;
-            source.value = rand() % 4 - 2;
-
-            entity.AddComponent(source);
-            entity.AddComponent(CosineResultComponent{});
-            entity.AddComponent(SinusResultComponent{});
-            entity.AddComponent(group);
-
-            stream.AddEntity(entityIdGenerator.Generate(), move(entity));
+            ASSUME(cosine.size() == sinus.size() && sinus.size() == sources.size());
+            for (uiw index = 0; index < cosine.size(); ++index)
+            {
+                cosine[index].value = cos(sources[index].value);
+                sinus[index].value = sin(sources[index].value);
+            }
         }
     };
 
-    generate(Group0Tag{});
-    generate(Group1Tag{});
-    generate(Group2Tag{});
-    generate(Group3Tag{});
-}
-
-static void MesasureReference()
-{
-    auto entitiesToTest = EntitiesToTest;
-    auto cosine = make_unique<CosineResultComponent[]>(entitiesToTest);
-    auto sinus = make_unique<SinusResultComponent[]>(entitiesToTest);
-    auto sources = make_unique<SourceComponent[]>(entitiesToTest);
-    for (uiw index = 0; index < entitiesToTest; ++index)
+    DIRECT_SYSTEM(System1)
     {
-        sources[index].value = rand() % 4 - 2;
+        DIRECT_ACCEPT_COMPONENTS(Array<CosineResultComponent> &cosine, Array<SinusResultComponent> &sinus, const Array<SourceComponent> &sources, RequiredComponent<Group1Tag>)
+        {
+            ASSUME(cosine.size() == sinus.size() && sinus.size() == sources.size());
+            for (uiw index = 0; index < cosine.size(); ++index)
+            {
+                cosine[index].value = cos(sources[index].value);
+                sinus[index].value = sin(sources[index].value);
+            }
+        }
+    };
+
+    DIRECT_SYSTEM(System2)
+    {
+        DIRECT_ACCEPT_COMPONENTS(Array<CosineResultComponent> &cosine, Array<SinusResultComponent> &sinus, const Array<SourceComponent> &sources, RequiredComponent<Group2Tag>)
+        {
+            ASSUME(cosine.size() == sinus.size() && sinus.size() == sources.size());
+            for (uiw index = 0; index < cosine.size(); ++index)
+            {
+                cosine[index].value = cos(sources[index].value);
+                sinus[index].value = sin(sources[index].value);
+            }
+        }
+    };
+
+    DIRECT_SYSTEM(System3)
+    {
+        DIRECT_ACCEPT_COMPONENTS(Array<CosineResultComponent> &cosine, Array<SinusResultComponent> &sinus, const Array<SourceComponent> &sources, RequiredComponent<Group3Tag>)
+        {
+            ASSUME(cosine.size() == sinus.size() && sinus.size() == sources.size());
+            for (uiw index = 0; index < cosine.size(); ++index)
+            {
+                cosine[index].value = cos(sources[index].value);
+                sinus[index].value = sin(sources[index].value);
+            }
+        }
+    };
+
+    static void GenerateScene(EntityIDGenerator &entityIdGenerator, SystemsManager &manager, EntitiesStream &stream)
+    {
+        auto generate = [&stream, &entityIdGenerator](auto group)
+        {
+            for (uiw index = 0; index < EntitiesToTest; ++index)
+            {
+                EntitiesStream::EntityData entity;
+
+                SourceComponent source;
+                source.value = rand() % 4 - 2;
+
+                entity.AddComponent(source);
+                entity.AddComponent(CosineResultComponent{});
+                entity.AddComponent(SinusResultComponent{});
+                entity.AddComponent(group);
+
+                stream.AddEntity(entityIdGenerator.Generate(), move(entity));
+            }
+        };
+
+        generate(Group0Tag{});
+        generate(Group1Tag{});
+        generate(Group2Tag{});
+        generate(Group3Tag{});
     }
 
-    ui32 executedTimes = 0;
-    TimeMoment start = TimeMoment::Now();
-    TimeDifference diff{0_ms};
-    for (;;)
+    static void MesasureReference()
     {
+        auto entitiesToTest = EntitiesToTest;
+        auto cosine = make_unique<CosineResultComponent[]>(entitiesToTest);
+        auto sinus = make_unique<SinusResultComponent[]>(entitiesToTest);
+        auto sources = make_unique<SourceComponent[]>(entitiesToTest);
         for (uiw index = 0; index < entitiesToTest; ++index)
         {
-            cosine[index].value = cos(sources[index].value);
-            sinus[index].value = sin(sources[index].value);
+            sources[index].value = rand() % 4 - 2;
         }
 
-        ++executedTimes;
-        diff = TimeMoment::Now() - start;
-        if (diff >= 1_s)
+        ui32 executedTimes = 0;
+        TimeMoment start = TimeMoment::Now();
+        TimeDifference diff{0_ms};
+        for (;;)
         {
-            break;
-        }
-    }
+            for (uiw index = 0; index < entitiesToTest; ++index)
+            {
+                cosine[index].value = cos(sources[index].value);
+                sinus[index].value = sin(sources[index].value);
+            }
 
-    auto computed = executedTimes * entitiesToTest;
-    auto time = diff.ToSec_f64();
-    printf("%.2lfkk sin/cos per second (reference 1 thread)\n", (computed / time) / 1000 / 1000);
+            ++executedTimes;
+            diff = TimeMoment::Now() - start;
+            if (diff >= 1_s)
+            {
+                break;
+            }
+        }
+
+        auto computed = executedTimes * entitiesToTest;
+        auto time = diff.ToSec_f64();
+        printf("%.2lfkk sin/cos per second (reference 1 thread)\n", (computed / time) / 1000 / 1000);
+    }
 }
 
-int main()
+void Benchmark()
 {
     StdLib::Initialization::Initialize({});
 
@@ -191,6 +191,4 @@ int main()
     auto computed = pipelineInfo.executedTimes * 4 * EntitiesToTest;
     auto time = managerInfo.timeSinceStart.ToSec_f64();
     printf("%.2lfkk sin/cos per second (ECS %s)\n", (computed / time) / 1000 / 1000, IsMTECS ? "multithreaded" : "singlethreaded");
-
-    system("pause");
 }

@@ -7,7 +7,7 @@
 
 namespace ECSTest
 {
-    class PURE SystemsManager
+    class NOVTABLE SystemsManager
     {
         SystemsManager(SystemsManager &&) = delete;
         SystemsManager &operator = (SystemsManager &&) = delete;

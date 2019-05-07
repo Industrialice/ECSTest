@@ -16,16 +16,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Source.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="PreHeader.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Source1.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="Source2.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Benchmark.cpp">
@@ -35,6 +26,18 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="KeyControllerTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Selector.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SyncTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Falling.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="InteractionTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

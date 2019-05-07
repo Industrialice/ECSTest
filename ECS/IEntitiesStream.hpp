@@ -5,7 +5,7 @@
 
 namespace ECSTest
 {
-    class PURE IEntitiesStream
+    class NOVTABLE IEntitiesStream
     {
     public:
         struct ComponentDesc

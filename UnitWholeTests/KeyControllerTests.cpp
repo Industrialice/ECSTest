@@ -14,139 +14,139 @@ namespace
     ui32 RendererSentKeys = 0;
     ui32 RendererReceivedRendererKeys = 0;
     ui32 RendererReceivedPhysicsKeys = 0;
-}
 
-#define PHYSICS_INDIRECT
-#define RENDERER_INDIRECT
+    #define PHYSICS_INDIRECT
+    #define RENDERER_INDIRECT
 
-#ifdef PHYSICS_INDIRECT
-    #define PHYSICS_DECLARE INDIRECT_SYSTEM
-    #define PHYSICS_ACCEPT INDIRECT_ACCEPT_COMPONENTS
-#else
-    #define PHYSICS_DECLARE DIRECT_SYSTEM
-    #define PHYSICS_ACCEPT DIRECT_ACCEPT_COMPONENTS
-#endif
+    #ifdef PHYSICS_INDIRECT
+        #define PHYSICS_DECLARE INDIRECT_SYSTEM
+        #define PHYSICS_ACCEPT INDIRECT_ACCEPT_COMPONENTS
+    #else
+        #define PHYSICS_DECLARE DIRECT_SYSTEM
+        #define PHYSICS_ACCEPT DIRECT_ACCEPT_COMPONENTS
+    #endif
 
-COMPONENT(Position)
-{
-    Vector3 position;
-};
-
-PHYSICS_DECLARE(PhysicsSystem)
-{
-    PHYSICS_ACCEPT(Array<Position> &);
-
-    virtual bool ControlInput(Environment &env, const ControlAction &input) override
+    COMPONENT(Position)
     {
-        if (auto key = input.Get<ControlAction::Key>(); key)
+        Vector3 position;
+    };
+
+    PHYSICS_DECLARE(PhysicsSystem)
+    {
+        PHYSICS_ACCEPT(Array<Position> &);
+
+        virtual bool ControlInput(Environment &env, const ControlAction &input) override
         {
-            if (key->key == KeyCode::B)
+            if (auto key = input.Get<ControlAction::Key>(); key)
             {
-                ASSUME(key->keyState == ControlAction::Key::KeyState::Repeated);
-                ++PhysicsReceivedRendererKeys;
-            }
-            else if (key->key == KeyCode::C)
-            {
-                ASSUME(key->keyState == ControlAction::Key::KeyState::Pressed);
-                ++PhysicsReceivedPhysicsKeys;
+                if (key->key == KeyCode::B)
+                {
+                    ASSUME(key->keyState == ControlAction::Key::KeyState::Repeated);
+                    ++PhysicsReceivedRendererKeys;
+                }
+                else if (key->key == KeyCode::C)
+                {
+                    ASSUME(key->keyState == ControlAction::Key::KeyState::Pressed);
+                    ++PhysicsReceivedPhysicsKeys;
+                }
+                else
+                {
+                    SOFTBREAK;
+                }
+                //env.logger.Message(LogLevels::Info, "Received key %u\n", key->key);
             }
             else
             {
                 SOFTBREAK;
             }
-            //env.logger.Message(LogLevels::Info, "Received key %u\n", key->key);
-        }
-        else
-        {
-            SOFTBREAK;
+
+            return false;
         }
 
-        return false;
-    }
-
-#ifdef PHYSICS_INDIRECT
-    virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override {}
-    virtual void Update(Environment &env) override;
-#endif
-};
+    #ifdef PHYSICS_INDIRECT
+        virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override {}
+        virtual void Update(Environment &env) override;
+    #endif
+    };
 
 #ifdef PHYSICS_INDIRECT
     void PhysicsSystem::Update(Environment &env)
-#else
+    #else
     void PhysicsSystem::Update(Environment &env, Array<Position> &)
-#endif
-{
-    ControlAction::Key key;
-    key.key = KeyCode::C;
-    key.keyState = ControlAction::Key::KeyState::Pressed;
-
-    env.keyController->Dispatch({key, {}, DeviceTypes::MouseKeyboard});
-
-    ++PhysicsSentKeys;
-}
-
-INDIRECT_SYSTEM(RendererSystem)
-{
-    INDIRECT_ACCEPT_COMPONENTS(const Array<Position> &);
-
-    virtual bool ControlInput(Environment &env, const ControlAction &input) override
+    #endif
     {
-        if (auto key = input.Get<ControlAction::Key>(); key)
+        ControlAction::Key key;
+        key.key = KeyCode::C;
+        key.keyState = ControlAction::Key::KeyState::Pressed;
+
+        env.keyController->Dispatch({key, {}, DeviceTypes::MouseKeyboard});
+
+        ++PhysicsSentKeys;
+    }
+
+    INDIRECT_SYSTEM(RendererSystem)
+    {
+        INDIRECT_ACCEPT_COMPONENTS(const Array<Position> &);
+
+        virtual bool ControlInput(Environment &env, const ControlAction &input) override
         {
-            if (key->key == KeyCode::B)
+            if (auto key = input.Get<ControlAction::Key>(); key)
             {
-                ASSUME(key->keyState == ControlAction::Key::KeyState::Repeated);
-                ++RendererReceivedRendererKeys;
-            }
-            else if (key->key == KeyCode::C)
-            {
-                ASSUME(key->keyState == ControlAction::Key::KeyState::Pressed);
-                ++RendererReceivedPhysicsKeys;
+                if (key->key == KeyCode::B)
+                {
+                    ASSUME(key->keyState == ControlAction::Key::KeyState::Repeated);
+                    ++RendererReceivedRendererKeys;
+                }
+                else if (key->key == KeyCode::C)
+                {
+                    ASSUME(key->keyState == ControlAction::Key::KeyState::Pressed);
+                    ++RendererReceivedPhysicsKeys;
+                }
+                else
+                {
+                    SOFTBREAK;
+                }
+                //env.logger.Message(LogLevels::Info, "Received key %u\n", key->key);
             }
             else
             {
                 SOFTBREAK;
             }
-            //env.logger.Message(LogLevels::Info, "Received key %u\n", key->key);
+
+            return false;
         }
-        else
+
+        virtual void Update(Environment &env) override
         {
-            SOFTBREAK;
+            ControlAction::Key key;
+            key.key = KeyCode::B;
+            key.keyState = ControlAction::Key::KeyState::Repeated;
+
+            env.keyController->Dispatch({key, {}, DeviceTypes::MouseKeyboard});
+
+            ++RendererSentKeys;
         }
 
-        return false;
-    }
+        virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override {}
+        virtual void ProcessMessages(Environment &env, const MessageStreamComponentChanged &stream) override {}
+    };
 
-    virtual void Update(Environment &env) override
+    static void GenerateScene(EntityIDGenerator &entityIdGenerator, SystemsManager &manager, EntitiesStream &stream)
     {
-        ControlAction::Key key;
-        key.key = KeyCode::B;
-        key.keyState = ControlAction::Key::KeyState::Repeated;
+        for (uiw index = 0; index < 10; ++index)
+        {
+            EntitiesStream::EntityData entity;
 
-        env.keyController->Dispatch({key, {}, DeviceTypes::MouseKeyboard});
+            Position pos;
+            pos.position = {(f32)rand(), (f32)rand(), (f32)rand()};
+            entity.AddComponent(pos);
 
-        ++RendererSentKeys;
-    }
-
-    virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override {}
-    virtual void ProcessMessages(Environment &env, const MessageStreamComponentChanged &stream) override {}
-};
-
-static void GenerateScene(EntityIDGenerator &entityIdGenerator, SystemsManager &manager, EntitiesStream &stream)
-{
-    for (uiw index = 0; index < 10; ++index)
-    {
-        EntitiesStream::EntityData entity;
-
-        Position pos;
-        pos.position = {(f32)rand(), (f32)rand(), (f32)rand()};
-        entity.AddComponent(pos);
-
-        stream.AddEntity(entityIdGenerator.Generate(), move(entity));
+            stream.AddEntity(entityIdGenerator.Generate(), move(entity));
+        }
     }
 }
 
-int main()
+void KeyControllerTests()
 {
     StdLib::Initialization::Initialize({});
 
@@ -194,7 +194,4 @@ int main()
     ASSUME(PhysicsReceivedPhysicsKeys == PhysicsSentKeys);
     ASSUME(RendererReceivedRendererKeys == RendererSentKeys);
     ASSUME(RendererReceivedPhysicsKeys >= PhysicsSentKeys - 1);
-
-    printf("Tests complete\n");
-    system("pause");
 }

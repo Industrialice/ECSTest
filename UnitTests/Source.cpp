@@ -321,8 +321,8 @@ public:
         {
             ComponentFirstName name;
             name.name.fill(0);
-            uiw len = rand() % 10 + 5;
-            for (auto index = 0; index < len; ++index)
+            uiw len = (uiw)rand() % 10 + 5;
+            for (uiw index = 0; index < len; ++index)
             {
                 name.name[index] = 'a' + rand() % 24;
             }
