@@ -39,6 +39,10 @@ using std::make_pair;
 using std::make_shared;
 using std::make_unique;
 using std::nullopt;
+using std::enable_if_t;
+using std::conditional_t;
+using std::is_base_of_v;
+using std::is_same_v;
 using namespace std::literals;
 using namespace std::placeholders;
 

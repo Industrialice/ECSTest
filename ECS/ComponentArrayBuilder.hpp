@@ -24,7 +24,7 @@ namespace ECSTest
         ComponentArrayBuilder &AddComponent(const IEntitiesStream::ComponentDesc &desc, ComponentID id); // the data will be copied over
         ComponentArrayBuilder &AddComponent(const SerializedComponent &sc); // the data will be copied over
 
-        template <typename T, typename = std::enable_if_t<T::IsUnique()>> ComponentArrayBuilder &AddComponent(const T &component)
+        template <typename T, typename = enable_if_t<T::IsUnique()>> ComponentArrayBuilder &AddComponent(const T &component)
         {
             SerializedComponent sc;
             sc.isUnique = true;
@@ -39,12 +39,12 @@ namespace ECSTest
             return AddComponent(sc);
         }
 
-        template <typename T, typename = std::enable_if_t<std::is_base_of_v<Component, T> == false>, typename = void> ComponentArrayBuilder &AddComponent(const T &)
+        template <typename T, typename = enable_if_t<is_base_of_v<Component, T> == false>, typename = void> ComponentArrayBuilder &AddComponent(const T &)
         {
             static_assert(false, "Passed value is not a component");
         }
 
-        template <typename T, typename = std::enable_if_t<T::IsUnique() == false && T::IsTag() == false>> ComponentArrayBuilder &AddComponent(const T &component, ComponentID id = {})
+        template <typename T, typename = enable_if_t<T::IsUnique() == false && T::IsTag() == false>> ComponentArrayBuilder &AddComponent(const T &component, ComponentID id = {})
         {
             SerializedComponent sc;
             sc.alignmentOf = alignof(T);
@@ -57,7 +57,7 @@ namespace ECSTest
             return AddComponent(sc);
         }
 
-        template <typename T, typename = std::enable_if_t<std::is_base_of_v<Component, T> == false>, typename = void> ComponentArrayBuilder &AddComponent(const T &, ComponentID = {})
+        template <typename T, typename = enable_if_t<is_base_of_v<Component, T> == false>, typename = void> ComponentArrayBuilder &AddComponent(const T &, ComponentID = {})
         {
             static_assert(false, "Passed value is not a component");
         }

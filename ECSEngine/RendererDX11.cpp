@@ -2,6 +2,8 @@
 #include "RendererDX11.hpp"
 #include "Components.hpp"
 #include "CustomControlActions.hpp"
+#include "WinHIDInput.hpp"
+#include "WinVKInput.hpp"
 
 using namespace ECSEngine;
 
@@ -15,6 +17,9 @@ struct DX11Camera
     Camera data{};
     optional<HWND> hwnd{};
     bool isChanged = false;
+    ControlsQueue controlsQueue{};
+    optional<HIDInput> hidInput{};
+    optional<VKInput> vkInput{};
 
     ~DX11Camera()
     {
@@ -117,7 +122,7 @@ public:
             if (!camera.hwnd)
             {
                 string title = "RendererDX11: ";
-                auto window = std::get<Window>(camera.data.rts[0].target);
+                auto window = std::get<Window>(camera.data.rt[0].target);
                 title += string_view(window.title.data(), window.title.size());
 
                 RECT dim;
@@ -127,6 +132,17 @@ public:
                 dim.bottom = window.y + window.height;
 
                 camera.hwnd = CreateSystemWindow(env.logger, title, window.isFullscreen, window.isNoBorders, window.isMaximized, dim, window.cursorType, &camera);
+
+                if (camera.hwnd)
+                {
+                    camera.hidInput = HIDInput();
+                    if (!camera.hidInput->Register(*camera.hwnd))
+                    {
+                        env.logger.Message(LogLevels::Error, "Failed to registed HID, using VK\n");
+                        camera.hidInput = {};
+                        camera.vkInput = VKInput();
+                    }
+                }
             }
         }
 
@@ -136,15 +152,6 @@ public:
             TranslateMessage(&msg);
             DispatchMessageA(&msg);
         }
-        if (msg.message == WM_QUIT)
-        {
-            auto event = make_shared <CustomControlAction::WindowClosed>();
-            ControlAction::Custom custom;
-            custom.type = event->GetTypeId();
-            custom.data = move(event);
-            ControlAction action(custom, {}, {});
-            env.keyController->Dispatch(action);
-        }
 
         for (auto &camera : _cameras)
         {
@@ -153,6 +160,18 @@ public:
                 env.messageBuilder.ComponentChanged(camera.id, camera.data);
                 camera.isChanged = false;
             }
+            env.keyController->Dispatch(camera.controlsQueue.Enumerate());
+            camera.controlsQueue.clear();
+        }
+
+        if (msg.message == WM_QUIT)
+        {
+            auto event = make_shared <CustomControlAction::WindowClosed>();
+            ControlAction::Custom custom;
+            custom.type = event->GetTypeId();
+            custom.data = move(event);
+            ControlAction action(custom, {}, {});
+            env.keyController->Dispatch(action);
         }
     }
 
@@ -180,8 +199,8 @@ private:
                     camera.isChanged = false;
                 }
 
-                auto &current = std::get<Window>(camera.data.rts[0].target);
-                const auto &source = std::get<Window>(data.rts[0].target);
+                auto &current = std::get<Window>(camera.data.rt[0].target);
+                const auto &source = std::get<Window>(data.rt[0].target);
 
                 if (camera.hwnd)
                 {
@@ -287,20 +306,26 @@ LRESULT WINAPI MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
     switch (msg)
     {
     case WM_INPUT:
-        // handle HID input
+        if (data->hidInput)
+        {
+            data->hidInput->Dispatch(data->controlsQueue, hwnd, wParam, lParam);
+        }
         break;
     case WM_SETCURSOR:
     case WM_MOUSEMOVE:
     case WM_KEYDOWN:
     case WM_KEYUP:
-        // handle VK input
+        if (data->vkInput)
+        {
+            data->vkInput->Dispatch(data->controlsQueue, hwnd, msg, wParam, lParam);
+        }
         break;
     case WM_ACTIVATE:
         //  switching window's active state
         break;
     case WM_SIZE:
         {
-            auto &window = std::get<Window>(data->data.rts[0].target);
+            auto &window = std::get<Window>(data->data.rt[0].target);
             window.width = LOWORD(lParam);
             window.height = HIWORD(lParam);
             data->isChanged = true;

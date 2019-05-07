@@ -131,7 +131,7 @@ namespace ECSTest
             return std::count_if(begin(), end(), predicate);
         }
 
-		template <typename E, typename = std::enable_if_t<std::is_base_of_v<E, T>>> operator Array<E>() const
+		template <typename E, typename = enable_if_t<is_base_of_v<E, T>>> operator Array<E>() const
 		{
 			return {_items, _count};
 		}

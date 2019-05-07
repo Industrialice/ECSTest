@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Color.hpp"
+
 namespace ECSEngine
 {
     COMPONENT(Position)
@@ -45,6 +47,11 @@ namespace ECSEngine
         std::array<char, 64> title{};
     };
 
+    struct ClearColor
+    {
+        ColorR8G8B8A8 color{};
+    };
+
     struct RT
     {
         variant<std::monostate, Window> target{};
@@ -57,7 +64,8 @@ namespace ECSEngine
         bool isClearDepth;
         f32 nearPlane;
         f32 farPlane;
-        RT rts[8];
+        variant<std::monostate, ClearColor> clearWith;
+        RT rt[8];
         enum class ProjectionType : ui8 { Perspective, Orthographic } projectionType;
     };
 }

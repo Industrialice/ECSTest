@@ -8,7 +8,6 @@ using namespace ECSEngine;
 namespace
 {
     using LoggerType = Logger<string_view, true>;
-    shared_ptr<LoggerType> EngineLogger = make_shared<LoggerType>();
     LoggerType::ListenerHandle LoggerVSHandle{}, LoggerFileHandle{};
     File LogFile{};
     KeyController::ListenerHandle InputHandle{};
@@ -23,6 +22,8 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 {
     StdLib::Initialization::Initialize({});
 
+    EngineLogger = make_shared<LoggerType>();
+
     LogFile = File(L"log.txt", FileOpenMode::CreateAlways, FileProcModes::Write);
     if (LogFile)
     {
@@ -31,7 +32,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 
     LoggerVSHandle = EngineLogger->OnMessage(LogRecipient);
 
-    EngineLogger->Message(LogLevels::Info, "WinMain", "Engine has started\n");
+    SENDLOG(Info, WinMain, "Engine has started\n");
 
     auto manager = SystemsManager::New(false, EngineLogger);
 
@@ -62,7 +63,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 
     manager->Stop(true);
 
-    EngineLogger->Message(LogLevels::Info, "WinMain", "Engine has finished\n");
+    SENDLOG(Info, WinMain, "Engine has finished\n");
 
     return 0;
 }
@@ -163,6 +164,15 @@ bool ReceiveInput(const ControlAction &action)
     {
         if (custom->type == CustomControlAction::WindowClosed::GetTypeId())
         {
+            SENDLOG(Info, ReceiveInput, "Received WindowClosed event, stopping application\n");
+            IsExiting = true;
+        }
+    }
+    else if (auto key = action.Get<ControlAction::Key>(); key)
+    {
+        if (key->key == KeyCode::Escape)
+        {
+            SENDLOG(Info, ReceiveInput, "Received escape key, stopping application\n");
             IsExiting = true;
         }
     }

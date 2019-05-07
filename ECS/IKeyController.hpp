@@ -119,13 +119,22 @@ namespace ECSTest
         ControlAction(TouchZoomEnd actionData, const TimeMoment &occuredAt, DeviceTypes::DeviceType device) : action{actionData}, occuredAt{occuredAt}, device{device} {}
         ControlAction(const Custom &actionData, const TimeMoment &occuredAt, DeviceTypes::DeviceType device) : action{actionData}, occuredAt{occuredAt}, device{device} {}
 
-        template <typename T> optional<T> Get() const
+        template <typename T> const T *Get() const
         {
             if (auto *typed = std::get_if<T>(&action); typed)
             {
-                return *typed;
+                return typed;
             }
-            return nullopt;
+            return nullptr;
+        }
+
+        template <typename T> T *Get()
+        {
+            if (auto *typed = std::get_if<T>(&action); typed)
+            {
+                return typed;
+            }
+            return nullptr;
         }
 
     public:

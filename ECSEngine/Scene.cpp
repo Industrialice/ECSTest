@@ -26,7 +26,7 @@ unique_ptr<IEntitiesStream> Scene::Create(EntityIDGenerator &idGenerator)
     rt.target = window;
 
     Camera camera;
-    camera.rts[0] = rt;
+    camera.rt[0] = rt;
     camera.farPlane = 1000.0f;
     camera.nearPlane = 0.1f;
     camera.fov = 75.0f;

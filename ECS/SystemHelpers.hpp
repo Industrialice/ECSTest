@@ -138,9 +138,9 @@ namespace ECSTest
             constexpr bool isRequired = GetComponentType<pureType>::isRequired;
             constexpr bool isNonUnique = GetComponentType<pureType>::isNonUnique;
             constexpr bool isArray = GetComponentType<pureType>::isArray;
-            constexpr auto isComponent = std::is_base_of_v<Component, componentType>;
-            constexpr auto isEntityID = std::is_same_v<EntityID, componentType>;
-			if constexpr (std::is_base_of_v<Component, componentType>)
+            constexpr auto isComponent = is_base_of_v<Component, componentType>;
+            constexpr auto isEntityID = is_same_v<EntityID, componentType>;
+			if constexpr (is_base_of_v<Component, componentType>)
 			{
 				static_assert((componentType::IsUnique() != isNonUnique) || (isSubtractive || isRequired), "NonUnique objects must be used for non unique components");
 			}
@@ -160,23 +160,23 @@ namespace ECSTest
         {
             using TPure = std::remove_pointer_t<std::remove_reference_t<T>>;
             using componentType = typename GetComponentType<std::remove_cv_t<TPure>>::type;
-            if constexpr (std::is_base_of_v<_SubtractiveComponentBase, componentType>)
+            if constexpr (is_base_of_v<_SubtractiveComponentBase, componentType>)
             {
                 return componentType::ComponentType::GetTypeId();
             }
-            else if constexpr (std::is_base_of_v<_RequiredComponentBase, componentType>)
+            else if constexpr (is_base_of_v<_RequiredComponentBase, componentType>)
             {
                 return componentType::ComponentType::GetTypeId();
             }
-			else if constexpr (std::is_base_of_v<_NonUniqueBase, componentType>)
+			else if constexpr (is_base_of_v<_NonUniqueBase, componentType>)
 			{
 				return componentType::ComponentType::GetTypeId();
 			}
-            else if constexpr (std::is_base_of_v<Component, componentType>)
+            else if constexpr (is_base_of_v<Component, componentType>)
             {
                 return componentType::GetTypeId();
             }
-            else if constexpr (std::is_same_v<EntityID, componentType>)
+            else if constexpr (is_same_v<EntityID, componentType>)
             {
                 static_assert(std::is_const_v<TPure>, "EntityID array must be read-only");
                 return NAME_TO_STABLE_ID(EntityID)::GetTypeId();
@@ -214,7 +214,7 @@ namespace ECSTest
         {
             using TPure = std::remove_pointer_t<std::remove_reference_t<T>>;
             using componentType = typename GetComponentType<std::remove_cv_t<TPure>>::type;
-            if constexpr (std::is_same_v<EntityID, componentType>)
+            if constexpr (is_same_v<EntityID, componentType>)
             {
                 return {{}, false, (RequirementForComponent)i8_max};
             }
@@ -225,9 +225,9 @@ namespace ECSTest
                     RequirementForComponent::RequiredWithData :
                     (std::is_pointer_v<T> ?
                         RequirementForComponent::Optional :
-                        (std::is_base_of_v<_SubtractiveComponentBase, T> ?
+                        (is_base_of_v<_SubtractiveComponentBase, T> ?
                             RequirementForComponent::Subtractive :
-                            (std::is_base_of_v<_RequiredComponentBase, T> ?
+                            (is_base_of_v<_RequiredComponentBase, T> ?
                                 RequirementForComponent::Required :
                                 (RequirementForComponent)i8_max)));
                 static_assert(availability != (RequirementForComponent)i8_max, "Invalid type");

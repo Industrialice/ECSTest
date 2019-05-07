@@ -87,12 +87,12 @@ template <ui32 N = 0, typename... CompanyComponents> bool IsMatching(const std::
     {
         auto companyComponent = std::get<N>(tuple);
         using componentType = decltype(companyComponent);
-        if constexpr (std::is_same_v<componentType, ComponentProgrammer> || std::is_same_v<componentType, ComponentDesigner> || std::is_same_v<componentType, ComponentArtist>)
+        if constexpr (is_same_v<componentType, ComponentProgrammer> || is_same_v<componentType, ComponentDesigner> || is_same_v<componentType, ComponentArtist>)
         {
             auto employeeComponent = std::get_if<componentType>(&profession);
             if (employeeComponent)
             {
-                if constexpr (std::is_same_v<componentType, ComponentProgrammer>)
+                if constexpr (is_same_v<componentType, ComponentProgrammer>)
                 {
                     if (companyComponent.language == employeeComponent->language)
                     {
@@ -102,14 +102,14 @@ template <ui32 N = 0, typename... CompanyComponents> bool IsMatching(const std::
                         }
                     }
                 }
-                else if constexpr (std::is_same_v<componentType, ComponentDesigner>)
+                else if constexpr (is_same_v<componentType, ComponentDesigner>)
                 {
                     if (companyComponent.area == employeeComponent->area)
                     {
                         return true;
                     }
                 }
-                else if constexpr (std::is_same_v<componentType, ComponentArtist>)
+                else if constexpr (is_same_v<componentType, ComponentArtist>)
                 {
                     if (companyComponent.area == employeeComponent->area)
                     {
