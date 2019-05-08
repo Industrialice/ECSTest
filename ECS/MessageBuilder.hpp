@@ -111,7 +111,7 @@ namespace ECSTest
             std::remove_reference_t<SerializedComponent> added;
             vector<SerializedComponent> components;
 
-            template <typename T> const T *FindComponent() const
+            template <typename T> [[nodiscard]] const T *FindComponent() const
             {
                 static_assert(T::IsTag() == false, "Passed component type is a tag component, use FindTag() instead");
 
@@ -125,14 +125,14 @@ namespace ECSTest
                 return nullptr;
             }
 
-            template <typename T> const T &GetComponent() const
+            template <typename T> [[nodiscard]] const T &GetComponent() const
             {
                 auto *c = FindComponent<T>();
                 ASSUME(c);
                 return *c;
             }
 
-            template <typename T> bool FindTag() const
+            template <typename T> [[nodiscard]] bool FindTag() const
             {
                 static_assert(T::IsTag(), "Passed component type is not a tag component");
 
@@ -193,15 +193,20 @@ namespace ECSTest
         friend class MessageStreamsBuilderComponentChanged;
 
     public:
-        struct ComponentInfo
-        {
-            friend class MessageBuilder;
-
-            EntityID entityID;
-            SerializedComponent component; // TODO: huge overkill, the only fields that differ between different components are data and id
-        };
+		struct EntityWithComponent
+		{
+			EntityID entityID;
+			const SerializedComponent &component;
+		};
 
     private:
+		struct ComponentInfo
+		{
+			const ui8 *data{};
+			EntityID entityID;
+			ComponentID componentID{};
+		};
+
         struct InfoWithData
         {
             vector<ComponentInfo> infos;
@@ -210,13 +215,13 @@ namespace ECSTest
         };
 
         shared_ptr<const InfoWithData> _source{};
-        StableTypeId _type{};
         string_view _sourceName{};
+		ComponentDescription _componentDesc{};
 
-        MessageStreamComponentChanged(StableTypeId type, const shared_ptr<const InfoWithData> &source, string_view sourceName) : _type(type), _source(source), _sourceName(sourceName)
+        MessageStreamComponentChanged(const shared_ptr<const InfoWithData> &source, ComponentDescription componentDesc, string_view sourceName) : _source(source), _componentDesc(componentDesc), _sourceName(sourceName)
         {
             ASSUME(_source->infos.size());
-			ASSUME(_type != StableTypeId{});
+			ASSUME(componentDesc.type != StableTypeId{});
         }
 
         [[nodiscard]] string_view SourceName() const
@@ -235,9 +240,26 @@ namespace ECSTest
             return _source->infos.data() + _source->infos.size();
         }
 
-        [[nodiscard]] StableTypeId Type() const
+		[[nodiscard]] std::experimental::generator<EntityWithComponent> Enumerate() const
+		{
+			SerializedComponent component;
+			(ComponentDescription &)component = _componentDesc;
+			for (const auto &info : _source->infos)
+			{
+				component.data = info.data;
+				component.id = info.componentID;
+				co_yield {info.entityID, component};
+			}
+		}
+
+		[[nodiscard]] StableTypeId Type() const
+		{
+			return _componentDesc.type;
+		}
+
+        [[nodiscard]] const ComponentDescription &ComponentDesc() const
         {
-            return _type;
+            return _componentDesc;
         }
     };
 
@@ -355,7 +377,7 @@ namespace ECSTest
         friend class MessageBuilder;
         friend UnitTests;
 
-        vector<pair<StableTypeId, shared_ptr<MessageStreamComponentChanged::InfoWithData>>> _data{};
+        vector<pair<StableTypeId, pair<ComponentDescription, shared_ptr<MessageStreamComponentChanged::InfoWithData>>>> _data{};
     };
 
     class MessageStreamsBuilderComponentRemoved
@@ -385,8 +407,8 @@ namespace ECSTest
         friend UnitTests;
 
         void SourceName(string_view name);
-        string_view SourceName() const;
-        bool IsEmpty() const;
+		[[nodiscard]] string_view SourceName() const;
+		[[nodiscard]] bool IsEmpty() const;
         void Clear();
 		void Flush();
         [[nodiscard]] MessageStreamsBuilderEntityAdded &EntityAddedStreams();

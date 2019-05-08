@@ -9,6 +9,7 @@ namespace ECSEngine
     struct ColorA8;
 
     // TODO: HDR colors
+	// TODO: other comparison operators
 
     // for non-HDR colors
     template <ui32 rBitsT, ui32 gBitsT, ui32 bBitsT, ui32 aBitsT = 0> struct TColor
@@ -49,7 +50,7 @@ namespace ECSEngine
             ConvertFromHDR(source);
         }
 
-        ui32 R() const
+		[[nodiscard]] ui32 R() const
         {
             return value >> (gBits + bBits + aBits);
         }
@@ -62,7 +63,7 @@ namespace ECSEngine
             value |= r << (bitsSum - rBits);
         }
 
-        ui32 G() const
+		[[nodiscard]] ui32 G() const
         {
             return (value >> (bBits + aBits)) & gMax;
         }
@@ -74,7 +75,7 @@ namespace ECSEngine
             value |= g << (bBits + aBits);
         }
 
-        ui32 B() const
+		[[nodiscard]] ui32 B() const
         {
             return (value >> aBits) & bMax;
         }
@@ -86,7 +87,7 @@ namespace ECSEngine
             value |= b << aBits;
         }
 
-        ui32 A() const
+		[[nodiscard]] ui32 A() const
         {
             return value & aMax;
         }
@@ -114,12 +115,12 @@ namespace ECSEngine
             }
         }
 
-        template <typename T> T ConvertTo() const
+        template <typename T> [[nodiscard]] T ConvertTo() const
         {
             return {R(), G(), B(), A()};
         }
 
-        array<f32, 4> ConvertToHDR() const
+		[[nodiscard]] array<f32, 4> ConvertToHDR() const
         {
             constexpr f32 rdiv256 = 0.003921568628f;
 
@@ -128,16 +129,17 @@ namespace ECSEngine
             f32 b = bBits == 8 ? B() * rdiv256 : B() / (f32)bMax;
 
             f32 a;
-            if (aBits == 8)
+            if constexpr (aBits == 8)
             {
                 a = A() * rdiv256;
             }
-            else if (aBits == 0)
+            else if constexpr (aBits == 0)
             {
                 a = 1.0f;
             }
             else
             {
+				static_assert(aMax > 0);
                 a = A() / (f32)aMax;
             }
 
@@ -165,18 +167,18 @@ namespace ECSEngine
             A(convert(source[3], aMax));
         }
 
-        bool operator == (const TColor &other) const
+		[[nodiscard]] bool operator == (const TColor &other) const
         {
             return this->value == other.value;
         }
 
-        bool operator != (const TColor &other) const
+		[[nodiscard]] bool operator != (const TColor &other) const
         {
             return this->value != other.value;
         }
 
     protected:
-        template <typename T, ui32 targetBits, ui32 sourceBits, typename U> T ConvertColor(U sourceColor)
+        template <typename T, ui32 targetBits, ui32 sourceBits, typename U> [[nodiscard]]T ConvertColor(U sourceColor)
         {
             if constexpr(sourceBits < targetBits)
             {

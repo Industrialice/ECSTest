@@ -26,7 +26,7 @@ namespace ECSTest
     #endif
 
     public:
-        template <typename T, StableTypeId T::*type = nullptr> [[nodiscard]] static Archetype Create(Array<const T> types)
+        template <typename T, typename E = T, StableTypeId E::*type = nullptr> [[nodiscard]] static Archetype Create(Array<const T> types)
         {
             Archetype result;
 
@@ -102,11 +102,11 @@ namespace ECSTest
     #endif
 
     public:
-        template <typename T, StableTypeId T::*type, ComponentID T::*id> [[nodiscard]] static ArchetypeFull Create(Array<const T> types)
+        template <typename T, typename E, StableTypeId E::*type, ComponentID T::*id> [[nodiscard]] static ArchetypeFull Create(Array<const T> types)
         {
             ArchetypeFull result;
             
-            auto shor = Archetype::Create<T, type>(types);
+            auto shor = Archetype::Create<T, E, type>(types);
             result._u.typePart = shor._u.typePart;
 
         #ifdef DEBUG

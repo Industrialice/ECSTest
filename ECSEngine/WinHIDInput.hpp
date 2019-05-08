@@ -10,7 +10,7 @@ namespace ECSEngine
 
 	public:
 		~HIDInput();
-		bool Register(HWND hwnd);
+		[[nodiscard]] bool Register(HWND hwnd);
 		void Unregister();
 		void Dispatch(ControlsQueue &controlsQueue, HWND hwnd, WPARAM wParam, LPARAM lParam);
 	};

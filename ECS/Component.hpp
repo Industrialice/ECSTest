@@ -23,11 +23,11 @@ namespace ECSTest
 	public:
 		ComponentID() = default;
         explicit ComponentID(ui32 id);
-        ui32 ID() const;
-        bool IsValid() const;
-        bool operator == (const ComponentID &other) const;
-        bool operator != (const ComponentID &other) const;
-        bool operator < (const ComponentID &other) const;
+		[[nodiscard]] ui32 ID() const;
+		[[nodiscard]] bool IsValid() const;
+		[[nodiscard]] bool operator == (const ComponentID &other) const;
+		[[nodiscard]] bool operator != (const ComponentID &other) const;
+		[[nodiscard]] bool operator < (const ComponentID &other) const;
 	};
 
     class ComponentIDGenerator

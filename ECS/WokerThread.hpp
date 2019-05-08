@@ -23,10 +23,10 @@ namespace ECSTest
         WorkerThread &operator = (WorkerThread &&source);
         void AddWork(std::function<void()> &&work);
         void Start();
-        bool IsRunning() const;
+		[[nodiscard]] bool IsRunning() const;
         void Stop();
         void Join();
-        uiw WorkInProgressCount() const;
+		[[nodiscard]] uiw WorkInProgressCount() const;
         void SetOnWorkDoneNotifier(const shared_ptr<pair<std::mutex, std::condition_variable>> &notifier);
 
     private:

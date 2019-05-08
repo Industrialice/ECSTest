@@ -351,7 +351,7 @@ static ArchetypeFull ComputeArchetype(Array<const SerializedComponent> component
 	{
 		ASSUME(component.isUnique || component.id.IsValid());
 	}
-	return ArchetypeFull::Create<SerializedComponent, &SerializedComponent::type, &SerializedComponent::id>(components);
+	return ArchetypeFull::Create<SerializedComponent, ComponentDescription, &SerializedComponent::type, &SerializedComponent::id>(components);
 }
 
 static void AssignComponentIDs(Array<SerializedComponent> components, ComponentIDGenerator &idGenerator)
@@ -1414,11 +1414,13 @@ void SystemsManagerST::UpdateECSFromMessages(MessageBuilder &messageBuilder)
         }
     }
 
-    for (const auto &[componentType, stream] : messageBuilder.ComponentChangedStreams()._data)
+    for (const auto &[componentType, descWithStream] : messageBuilder.ComponentChangedStreams()._data)
     {
+		const auto &[desc, stream] = descWithStream;
+
         for (const auto &info : stream->infos)
         {
-            ASSUME(!info.component.isTag); // tag components cannot be changed
+            ASSUME(!desc.isTag); // tag components cannot be changed
 
             auto entityLocation = _entitiesLocations.find(info.entityID);
             ASSUME(entityLocation != _entitiesLocations.end());
@@ -1437,25 +1439,25 @@ void SystemsManagerST::UpdateECSFromMessages(MessageBuilder &messageBuilder)
 
             auto &componentArray = group->components[componentIndex];
 
-            ASSUME(info.component.alignmentOf == componentArray.alignmentOf);
-            ASSUME(info.component.isUnique == componentArray.isUnique);
-            ASSUME(info.component.sizeOf == componentArray.sizeOf);
-            ASSUME(info.component.type == componentArray.type);
+            ASSUME(desc.alignmentOf == componentArray.alignmentOf);
+            ASSUME(desc.isUnique == componentArray.isUnique);
+            ASSUME(desc.sizeOf == componentArray.sizeOf);
+            ASSUME(desc.type == componentArray.type);
 
             uiw offset = 0;
-            if (!info.component.isUnique)
+            if (!desc.isUnique)
             {
                 for (; ; ++offset)
                 {
                     ASSUME(offset < componentArray.stride);
-                    if (info.component.id == componentArray.ids[entityIndex * componentArray.stride + offset])
+                    if (info.componentID == componentArray.ids[entityIndex * componentArray.stride + offset])
                     {
                         break;
                     }
                 }
             }
 
-            memcpy(componentArray.data.get() + componentArray.sizeOf * componentArray.stride * entityIndex + componentArray.sizeOf * offset, info.component.data, info.component.sizeOf);
+            memcpy(componentArray.data.get() + componentArray.sizeOf * componentArray.stride * entityIndex + componentArray.sizeOf * offset, info.data, desc.sizeOf);
         }
     }
 
@@ -1531,7 +1533,7 @@ void SystemsManagerST::PassMessagesToIndirectSystemsAndClear(MessageBuilder &mes
 
     for (const auto &[componentType, streamPointer] : messageBuilder.ComponentChangedStreams()._data)
     {
-        auto stream = MessageStreamComponentChanged(componentType, streamPointer, messageBuilder.SourceName());
+        auto stream = MessageStreamComponentChanged(streamPointer.second, streamPointer.first, messageBuilder.SourceName());
 
         for (auto &pipeline : _pipelines)
         {

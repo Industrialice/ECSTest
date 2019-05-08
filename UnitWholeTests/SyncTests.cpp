@@ -160,7 +160,7 @@ namespace
 
         virtual void ProcessMessages(Environment &env, const MessageStreamComponentChanged &stream) override
         {
-            for (auto &entry : stream)
+            for (auto &entry : stream.Enumerate())
             {
                 ++MonitoringStats::receivedComponentChangedCount;
 

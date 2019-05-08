@@ -4,29 +4,33 @@
 
 namespace ECSTest
 {
-    struct SerializedComponent
+	struct ComponentDescription
+	{
+		StableTypeId type{};
+		ui16 sizeOf{};
+		ui16 alignmentOf{};
+		bool isUnique{};
+		bool isTag{};
+	};
+
+    struct SerializedComponent : ComponentDescription
     {
-        StableTypeId type{};
-        ui16 sizeOf{};
-        ui16 alignmentOf{};
         const ui8 *data{}; // aigned by alignmentOf
-        bool isUnique{};
-        bool isTag{};
         ComponentID id{};
 
-        template <typename T, typename = enable_if_t<T::IsTag() == false>> T &Cast()
+        template <typename T, typename = enable_if_t<T::IsTag() == false>> [[nodiscard]] T &Cast()
         {
             ASSUME(T::GetTypeId() == type);
             return *(T *)data;
         }
 
-        template <typename T, typename = enable_if_t<T::IsTag() == false>> const T &Cast() const
+        template <typename T, typename = enable_if_t<T::IsTag() == false>> [[nodiscard]] const T &Cast() const
         {
             ASSUME(T::GetTypeId() == type);
             return *(T *)data;
         }
 
-        template <typename T, typename = enable_if_t<T::IsTag() == false>> T *TryCast()
+        template <typename T, typename = enable_if_t<T::IsTag() == false>> [[nodiscard]] T *TryCast()
         {
             if (T::GetTypeId() == type)
             {
@@ -35,7 +39,7 @@ namespace ECSTest
             return nullptr;
         }
 
-        template <typename T, typename = enable_if_t<T::IsTag() == false>> const T *TryCast() const
+        template <typename T, typename = enable_if_t<T::IsTag() == false>> [[nodiscard]] const T *TryCast() const
         {
             if (T::GetTypeId() == type)
             {
@@ -44,7 +48,7 @@ namespace ECSTest
             return nullptr;
         }
 
-        template <typename T, typename = enable_if_t<T::IsTag()>> bool TryCast() const
+        template <typename T, typename = enable_if_t<T::IsTag()>> [[nodiscard]] bool TryCast() const
         {
             if (T::GetTypeId() == type)
             {

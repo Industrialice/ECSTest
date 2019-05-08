@@ -33,7 +33,7 @@ namespace ECSTest
             _AllDevices = MouseKeyboard.Combined(_AllTouches).Combined(_AllJoysticks);
     };
 
-    inline ui32 DeviceIndex(DeviceTypes::DeviceTypes::DeviceType device)
+	[[nodiscard]] inline ui32 DeviceIndex(DeviceTypes::DeviceTypes::DeviceType device)
     {
         ASSUME(Funcs::IndexOfMostSignificantNonZeroBit(device.AsInteger()) == Funcs::IndexOfLeastSignificantNonZeroBit(device.AsInteger()));
         if (device >= DeviceTypes::Touch0 && device <= DeviceTypes::Touch9)
@@ -119,7 +119,7 @@ namespace ECSTest
         ControlAction(TouchZoomEnd actionData, const TimeMoment &occuredAt, DeviceTypes::DeviceType device) : action{actionData}, occuredAt{occuredAt}, device{device} {}
         ControlAction(const Custom &actionData, const TimeMoment &occuredAt, DeviceTypes::DeviceType device) : action{actionData}, occuredAt{occuredAt}, device{device} {}
 
-        template <typename T> const T *Get() const
+        template <typename T> [[nodiscard]] const T *Get() const
         {
             if (auto *typed = std::get_if<T>(&action); typed)
             {
@@ -128,7 +128,7 @@ namespace ECSTest
             return nullptr;
         }
 
-        template <typename T> T *Get()
+        template <typename T> [[nodiscard]] T *Get()
         {
             if (auto *typed = std::get_if<T>(&action); typed)
             {
@@ -156,7 +156,7 @@ namespace ECSTest
             _actions.clear();
         }
 
-        uiw size() const
+		[[nodiscard]] uiw size() const
         {
             return _actions.size();
         }
@@ -182,7 +182,7 @@ namespace ECSTest
             _actions.insert(_actions.end(), actions.begin(), actions.end());
         }
 
-        std::experimental::generator<ControlAction> Enumerate() const
+		[[nodiscard]] std::experimental::generator<ControlAction> Enumerate() const
         {
             for (const auto &action : _actions)
             {
@@ -190,7 +190,7 @@ namespace ECSTest
             }
         }
 
-        Array<const ControlAction> Actions() const
+		[[nodiscard]] Array<const ControlAction> Actions() const
         {
             return {_actions.data(), _actions.size()};
         }

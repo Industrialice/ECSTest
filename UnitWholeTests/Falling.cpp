@@ -199,7 +199,7 @@ namespace
 
         virtual void ProcessMessages(Environment &env, const MessageStreamComponentChanged &stream) override
         {
-            for (auto &entity : stream)
+            for (auto &entity : stream.Enumerate())
             {
                 if (entity.component.type == Transform::GetTypeId())
                 {
@@ -305,7 +305,7 @@ namespace
 
         virtual void ProcessMessages(Environment &env, const MessageStreamComponentChanged &stream) override
         {
-            for (auto &entity : stream)
+            for (auto &entity : stream.Enumerate())
             {
                 auto &target = _entities[entity.entityID];
                 if (auto transform = entity.component.TryCast<Transform>(); transform)
@@ -436,7 +436,7 @@ namespace
 
         virtual void ProcessMessages(Environment &env, const MessageStreamComponentChanged &stream) override
         {
-            for (auto &entity : stream)
+            for (auto &entity : stream.Enumerate())
             {
                 _entities[entity.entityID] = entity.component.Cast<Transform>().position.y;
             }
@@ -510,7 +510,7 @@ namespace
         virtual void ProcessMessages(Environment &env, const MessageStreamComponentChanged &stream) override
         {
             SOFTBREAK;
-            for (auto &entity : stream)
+            for (auto &entity : stream.Enumerate())
             {
                 _cooldowns[entity.entityID] = entity.component.Cast<NegativeHeightCooldown>();
             }

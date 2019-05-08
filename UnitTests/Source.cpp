@@ -102,18 +102,18 @@ static void ArchetypeTests()
 
     using typeId = pair<StableTypeId, ComponentID>;
     typeId types2[] = {{ComponentArtist::GetTypeId(), ComponentID(0)}, {ComponentArtist::GetTypeId(), ComponentID(1)}};
-    auto arc = ArchetypeFull::Create<typeId, &typeId::first, &typeId::second>(ToArray(types2));
+    auto arc = ArchetypeFull::Create<typeId, typeId, &typeId::first, &typeId::second>(ToArray(types2));
 
     typeId types3[] = {{ComponentArtist::GetTypeId(), ComponentID(0)}, {ComponentArtist::GetTypeId(), ComponentID(1)}, {ComponentArtist::GetTypeId(), ComponentID(2)}};
-    auto arc2 = ArchetypeFull::Create<typeId, &typeId::first, &typeId::second>(ToArray(types3));
+    auto arc2 = ArchetypeFull::Create<typeId, typeId, &typeId::first, &typeId::second>(ToArray(types3));
     ASSUME(arc != arc2);
 
     shor = arc.ToShort();
     shor2 = arc2.ToShort();
     ASSUME(shor == shor2);
 
-    shor = Archetype::Create<typeId, &typeId::first>(ToArray(types2));
-    shor2 = Archetype::Create<typeId, &typeId::first>(ToArray(types3));
+    shor = Archetype::Create<typeId, typeId, &typeId::first>(ToArray(types2));
+    shor2 = Archetype::Create<typeId, typeId, &typeId::first>(ToArray(types3));
     ASSUME(shor == shor2);
 
     printf("finished archetype tests\n");
@@ -430,15 +430,15 @@ public:
         ASSUME(checked == entitiesRemoved.size());
 
         checked = 0;
-        for (const auto &streamSource : builder.ComponentChangedStreams()._data)
+        for (const auto &[type, streamSource] : builder.ComponentChangedStreams()._data)
         {
-            MessageStreamComponentChanged changed(streamSource.first, streamSource.second, "MessageBuilderTests");
+            MessageStreamComponentChanged changed(streamSource.second, streamSource.first, "MessageBuilderTests");
 
-            for (const auto &component : changed)
+            for (const auto &component : changed.Enumerate())
             {
                 ++checked;
-                ComponentFirstName *casted = (ComponentFirstName *)component.component.data;
-                ASSUME(!memcmp(entityAfterChangeNames[component.entityID].name.data(), casted->name.data(), casted->name.size()));
+				auto &casted = component.component.Cast<ComponentFirstName>();
+                ASSUME(!memcmp(entityAfterChangeNames[component.entityID].name.data(), casted.name.data(), casted.name.size()));
             }
         }
         ASSUME(checked == entityAfterChangeNames.size());

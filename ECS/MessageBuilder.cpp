@@ -42,9 +42,9 @@ void MessageBuilder::Flush()
 	{
 		return;
 	}
-
+	
 	MessageStreamEntityAdded::EntityWithComponents entry;
-    Archetype archetype = Archetype::Create<SerializedComponent, &SerializedComponent::type>(ToArray(_cab._components));
+    Archetype archetype = Archetype::Create<SerializedComponent, ComponentDescription, &SerializedComponent::type>(ToArray(_cab._components));
 	entry.entityID = _currentEntityId;
 	entry.components = move(_cab._components);
 	entry.componentsData = move(_cab._data);
@@ -138,18 +138,18 @@ void MessageBuilder::ComponentChanged(EntityID entityID, const SerializedCompone
     ASSUME(sc.isUnique != sc.id.IsValid());
     ASSUME(sc.isTag == false);
 
-    const auto &entry = [this](StableTypeId type) -> const shared_ptr<MessageStreamComponentChanged::InfoWithData> &
+    const auto &entry = [this](const SerializedComponent &sc) -> const shared_ptr<MessageStreamComponentChanged::InfoWithData> &
     {
         for (const auto &[key, value] : _componentChangedStreams._data)
         {
-            if (key == type)
+            if (key == sc.type)
             {
-                return value;
+                return value.second;
             }
         }
-        _componentChangedStreams._data.emplace_back(type, make_shared<MessageStreamComponentChanged::InfoWithData>());
-        return _componentChangedStreams._data.back().second;
-    } (sc.type);
+        _componentChangedStreams._data.emplace_back(sc.type, pair<ComponentDescription, shared_ptr<MessageStreamComponentChanged::InfoWithData>>(sc, make_shared<MessageStreamComponentChanged::InfoWithData>()));
+        return _componentChangedStreams._data.back().second.second;
+    } (sc);
 
     uiw copyIndex = sc.sizeOf * entry->infos.size();
 
@@ -168,23 +168,22 @@ void MessageBuilder::ComponentChanged(EntityID entityID, const SerializedCompone
         {
             for (auto &stored : entry->infos)
             {
-                if (stored.component.data)
+                if (stored.data)
                 {
                     if (newPtr > oldPtr)
                     {
-                        stored.component.data += newPtr - oldPtr;
+                        stored.data += newPtr - oldPtr;
                     }
                     else
                     {
-                        stored.component.data -= oldPtr - newPtr;
+                        stored.data -= oldPtr - newPtr;
                     }
                 }
             }
         }
     }
 
-    entry->infos.push_back({entityID, sc});
-    entry->infos.back().component.data = entry->data.get() + copyIndex;
+    entry->infos.push_back({entry->data.get() + copyIndex, entityID, sc.id});
     memcpy(entry->data.get() + copyIndex, sc.data, sc.sizeOf);
 }
 

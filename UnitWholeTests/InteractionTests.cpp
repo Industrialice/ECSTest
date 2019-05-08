@@ -288,7 +288,7 @@ namespace
         {
             if (stream.Type() == GeneratedComponent::GetTypeId())
             {
-                for (auto &entity : stream)
+                for (auto &entity : stream.Enumerate())
                 {
                     const auto &c = entity.component.Cast<GeneratedComponent>();
                     auto it = _entityInfos.find(entity.entityID);
@@ -310,7 +310,7 @@ namespace
             }
             else if (stream.Type() == TagComponent::GetTypeId())
             {
-                for (auto &entity : stream)
+                for (auto &entity : stream.Enumerate())
                 {
                     const auto &c = entity.component.Cast<TagComponent>();
                     ASSUME(c.connectedTo == TagComponent::ConnectedTo::Germany || c.connectedTo == TagComponent::ConnectedTo::China);
@@ -455,7 +455,7 @@ namespace
 
         virtual void ProcessMessages(Environment &env, const MessageStreamComponentChanged &stream) override
         {
-            for (auto &entry : stream)
+            for (auto &entry : stream.Enumerate())
             {
                 CurrentData[entry.entityID] = entry.component.Cast<OtherComponent>();
                 _localData[entry.entityID] = entry.component.Cast<OtherComponent>();

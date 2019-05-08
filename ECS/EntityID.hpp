@@ -28,8 +28,8 @@ namespace ECSTest
         std::atomic<ui32> _current = 0;
 
     public:
-        EntityID Generate();
-        EntityID LastGenerated() const;
+		[[nodiscard]] EntityID Generate();
+		[[nodiscard]] EntityID LastGenerated() const;
         EntityIDGenerator() = default;
         EntityIDGenerator(EntityIDGenerator &&source);
         EntityIDGenerator &operator = (EntityIDGenerator &&source);

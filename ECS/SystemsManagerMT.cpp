@@ -370,7 +370,7 @@ static ArchetypeFull ComputeArchetype(Array<const SerializedComponent> component
     {
         ASSUME(component.isUnique || component.id.IsValid());
     }
-    return ArchetypeFull::Create<SerializedComponent, &SerializedComponent::type, &SerializedComponent::id>(components);
+    return ArchetypeFull::Create<SerializedComponent, ComponentDescription, &SerializedComponent::type, &SerializedComponent::id>(components);
 }
 
 static void AssignComponentIDs(Array<SerializedComponent> components, ComponentIDGenerator &idGenerator)

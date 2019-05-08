@@ -5,8 +5,9 @@ using namespace ECSTest;
 namespace
 {
     constexpr bool IsMTECS = false;
+	constexpr bool IsPhysicsFPSRestricted = false;
     constexpr ui32 EntitiesToTest = 32768;
-    constexpr ui32 PhysicsUpdatesPerFrame = 100;
+    constexpr ui32 PhysicsUpdatesPerFrame = 32768;
     constexpr ui32 RendererDrawPerFrame = 100;
 
     COMPONENT(Physics)
@@ -119,21 +120,21 @@ namespace
             {
                 for (auto &entry : stream)
                 {
-                    _entities[entry.entityID].pos = entry.component.Cast<Position>().position;
+                    _entities[entry.entityID].pos = ((Position *)entry.data)->position;
                 }
             }
             else if (stream.Type() == Rotation::GetTypeId())
             {
                 for (auto &entry : stream)
                 {
-                    _entities[entry.entityID].rot = entry.component.Cast<Rotation>().rotation;
+                    _entities[entry.entityID].rot = ((Rotation *)entry.data)->rotation;
                 }
             }
             else if (stream.Type() == Physics::GetTypeId())
             {
                 for (auto &entry : stream)
                 {
-                    _entities[entry.entityID].properties = entry.component.Cast<Physics>();
+                    _entities[entry.entityID].properties = *((Physics *)entry.data);
                 }
             }
             else if (stream.Type() == MeshCollider::GetTypeId())
@@ -222,23 +223,23 @@ namespace
         {
             if (stream.Type() == Position::GetTypeId())
             {
-                for (auto &entry : stream)
-                {
-					_linear[_entities[entry.entityID]].pos = entry.component.Cast<Position>().position;
-                }
+				for (auto &entry : stream)
+				{
+					_linear[_entities[entry.entityID]].pos = ((Position *)entry.data)->position;
+				}
             }
             else if (stream.Type() == Rotation::GetTypeId())
             {
-                for (auto &entry : stream)
-                {
-					_linear[_entities[entry.entityID]].rot = entry.component.Cast<Rotation>().rotation;
-                }
+				for (auto &entry : stream)
+				{
+					_linear[_entities[entry.entityID]].rot = ((Rotation *)entry.data)->rotation;
+				}
             }
             else if (stream.Type() == MeshRenderer::GetTypeId())
             {
                 for (auto &entry : stream)
                 {
-					_linear[_entities[entry.entityID]].mesh = entry.component.Cast<MeshRenderer>();
+					_linear[_entities[entry.entityID]].mesh = *((MeshRenderer *)entry.data);
                 }
             }
             else
@@ -314,6 +315,7 @@ void Benchmark2()
     StdLib::Initialization::Initialize({});
 
 	printf("ECS multithreaded: %s\n", IsMTECS ? "yes" : "no");
+	printf("IsPhysicsFPSRestricted: %s\n", IsPhysicsFPSRestricted ? "yes" : "no");
 	printf("EntitiesToTest: %u\n", EntitiesToTest);
 	printf("PhysicsUpdatesPerFrame: %u\n", PhysicsUpdatesPerFrame);
 	printf("RendererDrawPerFrame: %u\n", RendererDrawPerFrame);
@@ -330,7 +332,7 @@ void Benchmark2()
     auto after = TimeMoment::Now();
     printf("Generating scene took %.2lfs\n", (after - before).ToSec());
 
-    auto physicsPipeline = manager->CreatePipeline(SecondsFP64(1.0 / 60.0), false);
+    auto physicsPipeline = manager->CreatePipeline(IsPhysicsFPSRestricted ? optional(SecondsFP64(1.0 / 60.0)) : nullopt, false);
     auto rendererPipeline = manager->CreatePipeline(nullopt, false);
 
     manager->Register<PhysicsSystem>(physicsPipeline);
@@ -375,7 +377,7 @@ void Benchmark2()
 
 			backBuf[lastPrinted + 1] = '\0';
 			printf(backBuf);
-			int printed = printf("renderer %.2f fps (%.2lfms, %.2lfms), physics %.2f fps (%.2lfms, %.2lfms)", rfps, rendererSpent, rendererSpent / rfps, pfps, physicsSpent, physicsSpent / pfps);
+			int printed = printf("renderer %.2ffps (%.2lfms, %.2lfms), physics %.2ffps (%.2lfms, %.2lfms)", rfps, rendererSpent, rendererSpent / rfps, pfps, physicsSpent, physicsSpent / pfps);
 			backBuf[lastPrinted + 1] = '\b';
 			lastPrinted = printed;
             
