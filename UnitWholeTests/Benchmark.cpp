@@ -121,7 +121,7 @@ namespace
 
         ui32 executedTimes = 0;
         TimeMoment start = TimeMoment::Now();
-        TimeDifference diff{0_ms};
+        TimeDifference diff{};
         for (;;)
         {
             for (uiw index = 0; index < entitiesToTest; ++index)

@@ -130,6 +130,7 @@ auto SystemsManagerST::GetPipelineInfo(Pipeline pipeline) const -> PipelineInfo
     info.directSystems = (ui32)pipelineData.directSystems.size();
     info.indirectSystems = (ui32)pipelineData.indirectSystems.size();
     info.executionStep = pipelineData.executionStep;
+	info.timeSpentExecuting = pipelineData.timeSpentExecuting;
 
     return info;
 }
@@ -737,10 +738,15 @@ void SystemsManagerST::StartScheduler(vector<unique_ptr<IEntitiesStream>> &strea
 
 void SystemsManagerST::SchedulerLoop()
 {
-    auto updateTimes = [this]() -> TimeMoment
+    auto updateTimes = [this](MovableAtomic<TimeDifference> *timeSpentExecuting) -> TimeMoment
     {
         auto currentTime = TimeMoment::Now();
-        _timeSinceStart += (currentTime - _currentTime);
+		auto delta = currentTime - _currentTime;
+        _timeSinceStart += delta;
+		if (timeSpentExecuting)
+		{
+			timeSpentExecuting->store(timeSpentExecuting->load() + delta);
+		}
         _currentTime = currentTime;
         return currentTime;
     };
@@ -763,7 +769,7 @@ void SystemsManagerST::SchedulerLoop()
             }
         }
 
-		TimeDifference timeSinceLastFrame = 0_s;
+		TimeDifference timeSinceLastFrame;
 		if (pipeline.lastExecutedTime.HasValue())
 		{
 			timeSinceLastFrame = TimeMoment::Now() - pipeline.lastExecutedTime;
@@ -771,7 +777,7 @@ void SystemsManagerST::SchedulerLoop()
 
         ExecutePipeline(pipeline, timeSinceLastFrame);
 
-        auto currentTime = updateTimes();
+        auto currentTime = updateTimes(&pipeline.timeSpentExecuting);
         isTimeUpToData = true;
 
         if (pipeline.executionStep)
@@ -809,7 +815,7 @@ void SystemsManagerST::SchedulerLoop()
 
     if (!isTimeUpToData)
     {
-        updateTimes();
+        updateTimes(nullptr);
     }
     _timeSinceStartAtomic = _timeSinceStart;
 }

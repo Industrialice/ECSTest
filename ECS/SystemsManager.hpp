@@ -34,12 +34,13 @@ namespace ECSTest
             ui32 directSystems{};
             ui32 indirectSystems{};
             optional<TimeDifference> executionStep{};
+			TimeDifference timeSpentExecuting{};
         };
 
         struct ManagerInfo
         {
             bool isMultiThreaded{};
-            TimeDifference timeSinceStart{0_ms};
+            TimeDifference timeSinceStart{};
         };
 
         template <typename T> void Register(Pipeline pipeline)

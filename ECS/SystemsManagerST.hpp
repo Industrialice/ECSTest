@@ -100,8 +100,9 @@ namespace ECSTest
 			vector<ManagedDirectSystem> directSystems{};
 			vector<ManagedIndirectSystem> indirectSystems{};
 			optional<TimeDifference> executionStep{};
-			vector<StableTypeId> writeComponents{};
+			MovableAtomic<TimeDifference> timeSpentExecuting{};
             TimeMoment lastExecutedTime{};
+			vector<StableTypeId> writeComponents{}; // list of components requested for write by the systems of this pipeline
 		};
 
 		// used by all pipelines to perform execution
@@ -136,8 +137,8 @@ namespace ECSTest
 		EntityIDGenerator _entityIdGenerator{};
         ComponentIDGenerator _componentIdGenerator{};
 
-        std::atomic<TimeDifference> _timeSinceStartAtomic{0_ms};
-        TimeDifference _timeSinceStart{0_ms};
+        std::atomic<TimeDifference> _timeSinceStartAtomic{};
+        TimeDifference _timeSinceStart{};
         TimeMoment _currentTime{};
 
         shared_ptr<LoggerType> _logger = make_shared<LoggerType>();

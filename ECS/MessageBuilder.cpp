@@ -184,10 +184,8 @@ void MessageBuilder::ComponentChanged(EntityID entityID, const SerializedCompone
     }
 
     entry->infos.push_back({entityID, sc});
-    SerializedComponent &added = entry->infos.back().component;
+    entry->infos.back().component.data = entry->data.get() + copyIndex;
     memcpy(entry->data.get() + copyIndex, sc.data, sc.sizeOf);
-
-    added.data = entry->data.get() + copyIndex;
 }
 
 void MessageBuilder::RemoveComponent(EntityID entityID, StableTypeId type, ComponentID componentID)

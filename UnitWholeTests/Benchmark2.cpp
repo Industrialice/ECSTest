@@ -309,11 +309,14 @@ namespace
     }
 }
 
-#define PRINT_BACK "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b"
-
 void Benchmark2()
 {
     StdLib::Initialization::Initialize({});
+
+	printf("ECS multithreaded: %s\n", IsMTECS ? "yes" : "no");
+	printf("EntitiesToTest: %u\n", EntitiesToTest);
+	printf("PhysicsUpdatesPerFrame: %u\n", PhysicsUpdatesPerFrame);
+	printf("RendererDrawPerFrame: %u\n", RendererDrawPerFrame);
 
     auto logger = make_shared<Logger<string_view, true>>();
     auto handle0 = logger->OnMessage(LogRecipient);
@@ -341,10 +344,14 @@ void Benchmark2()
 
     manager->Start(move(idGenerator), move(workers), move(stream));
 
-    TimeDifference lastDifference = 0_s;
+    TimeDifference lastDifference;
     ui32 lastExecutedRenderer = 0, lastExecutedPhysics = 0;
+	TimeDifference rendererLastSpent, physicsLastSpent;
 
     std::vector<f32> fpsHistory{};
+	char backBuf[512];
+	memset(backBuf, '\b', sizeof(backBuf));
+	int lastPrinted = 510;
 
     for (;;)
     {
@@ -358,13 +365,25 @@ void Benchmark2()
             auto physicsInfo = manager->GetPipelineInfo(physicsPipeline);
             ui32 pexecDiff = physicsInfo.executedTimes - lastExecutedPhysics;
 
-            f32 rfps = (f32)rexecDiff / timeDiff.ToSec();
-            f32 pfps = (f32)pexecDiff / timeDiff.ToSec();
-            printf(PRINT_BACK "renderer %.2f fps, physics %.2f fps   ", rfps, pfps);
+			f32 diffRev = 1.0f / timeDiff.ToSec();
+
+            f32 rfps = (f32)rexecDiff * diffRev;
+            f32 pfps = (f32)pexecDiff * diffRev;
+
+			f32 rendererSpent = (rendererInfo.timeSpentExecuting - rendererLastSpent).ToMSec() * diffRev;
+			f32 physicsSpent = (physicsInfo.timeSpentExecuting - physicsLastSpent).ToMSec() * diffRev;
+
+			backBuf[lastPrinted + 1] = '\0';
+			printf(backBuf);
+			int printed = printf("renderer %.2f fps (%.2lfms, %.2lfms), physics %.2f fps (%.2lfms, %.2lfms)", rfps, rendererSpent, rendererSpent / rfps, pfps, physicsSpent, physicsSpent / pfps);
+			backBuf[lastPrinted + 1] = '\b';
+			lastPrinted = printed;
             
             fpsHistory.push_back(rfps);
             lastExecutedRenderer = rendererInfo.executedTimes;
+			rendererLastSpent = rendererInfo.timeSpentExecuting;
             lastExecutedPhysics = physicsInfo.executedTimes;
+			physicsLastSpent = physicsInfo.timeSpentExecuting;
             lastDifference = managerInfo.timeSinceStart;
         }
 		std::this_thread::sleep_for(1ms);
