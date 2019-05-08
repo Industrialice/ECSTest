@@ -504,6 +504,8 @@ LRESULT WINAPI MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             window.width = LOWORD(lParam);
             window.height = HIWORD(lParam);
             data->isChanged = true;
+			LoggerWrapper logger;
+			data->NotifyWindowResized(logger);
         } break;
         // WM_EXITSIZEMOVE is sent when the user grabs the resize bars.
     case WM_ENTERSIZEMOVE:

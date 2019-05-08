@@ -185,8 +185,9 @@ namespace
 
         virtual void Update(Environment &env) override
         {
+			//std::this_thread::sleep_for(1ms);
             ui32 count = 0;
-            for (auto it = _entities.begin(); count < RendererDrawPerFrame && it != _entities.end(); ++it, ++count)
+            for (auto it = _linear.begin(); count < RendererDrawPerFrame && it != _linear.end(); ++it, ++count)
             {
             }
         }
@@ -199,7 +200,8 @@ namespace
                 data.pos = entry.GetComponent<Position>().position;
                 data.rot = entry.GetComponent<Rotation>().rotation;
                 data.mesh = entry.GetComponent<MeshRenderer>();
-                _entities[entry.entityID] = data;
+				_entities[entry.entityID] = (ui32)_linear.size();
+				_linear.emplace_back(data);
             }
         }
 
@@ -211,7 +213,8 @@ namespace
                 data.pos = entry.GetComponent<Position>().position;
                 data.rot = entry.GetComponent<Rotation>().rotation;
                 data.mesh = entry.GetComponent<MeshRenderer>();
-                _entities[entry.entityID] = data;
+				_entities[entry.entityID] = (ui32)_linear.size();
+				_linear.emplace_back(data);
             }
         }
 
@@ -221,21 +224,21 @@ namespace
             {
                 for (auto &entry : stream)
                 {
-                    _entities[entry.entityID].pos = entry.component.Cast<Position>().position;
+					_linear[_entities[entry.entityID]].pos = entry.component.Cast<Position>().position;
                 }
             }
             else if (stream.Type() == Rotation::GetTypeId())
             {
                 for (auto &entry : stream)
                 {
-                    _entities[entry.entityID].rot = entry.component.Cast<Rotation>().rotation;
+					_linear[_entities[entry.entityID]].rot = entry.component.Cast<Rotation>().rotation;
                 }
             }
             else if (stream.Type() == MeshRenderer::GetTypeId())
             {
                 for (auto &entry : stream)
                 {
-                    _entities[entry.entityID].mesh = entry.component.Cast<MeshRenderer>();
+					_linear[_entities[entry.entityID]].mesh = entry.component.Cast<MeshRenderer>();
                 }
             }
             else
@@ -250,7 +253,7 @@ namespace
             {
                 for (auto &entry : stream)
                 {
-                    _entities.erase(entry.entityID);
+					RemoveEntity(entry.entityID);
                 }
             }
         }
@@ -259,12 +262,24 @@ namespace
         {
             for (auto &entry : stream)
             {
-                _entities.erase(entry);
+				RemoveEntity(entry);
             }
         }
 
+	private:
+		void RemoveEntity(EntityID id)
+		{
+			auto it = _entities.find(id);
+			ASSUME(it != _entities.end());
+			EntityID idToPatch = _linear.back().id;
+			_linear[it->second] = _linear.back();
+			_linear.pop_back();
+			_entities[idToPatch] = it->second;
+			_entities.erase(it);
+		}
+
     private:
-        std::unordered_map<EntityID, Data> _entities{};
+        std::unordered_map<EntityID, ui32> _entities{};
         vector<Data> _linear{};
     };
 
@@ -294,7 +309,7 @@ namespace
     }
 }
 
-#define PRINT_BACK "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b"
+#define PRINT_BACK "\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b"
 
 void Benchmark2()
 {
