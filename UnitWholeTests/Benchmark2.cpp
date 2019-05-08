@@ -352,7 +352,7 @@ void Benchmark2()
             lastExecutedPhysics = physicsInfo.executedTimes;
             lastDifference = managerInfo.timeSinceStart;
         }
-        std::this_thread::yield();
+		std::this_thread::sleep_for(1ms);
     }
 
     manager->Stop(true);

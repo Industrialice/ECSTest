@@ -90,7 +90,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
         {
             break;
         }
-        std::this_thread::yield();
+		std::this_thread::sleep_for(1ms);
     }
 
     manager->Stop(true);
