@@ -46,7 +46,7 @@ namespace
                 }
                 else if (key->key == KeyCode::C)
                 {
-                    ASSUME(key->keyState == ControlAction::Key::KeyState::Pressed);
+                    ASSUME(key->keyState == ControlAction::Key::KeyState::Released);
                     ++PhysicsReceivedPhysicsKeys;
                 }
                 else
@@ -77,7 +77,7 @@ namespace
     {
         ControlAction::Key key;
         key.key = KeyCode::C;
-        key.keyState = ControlAction::Key::KeyState::Pressed;
+        key.keyState = ControlAction::Key::KeyState::Released;
 
         env.keyController->Dispatch({key, {}, DeviceTypes::MouseKeyboard});
 
@@ -99,7 +99,7 @@ namespace
                 }
                 else if (key->key == KeyCode::C)
                 {
-                    ASSUME(key->keyState == ControlAction::Key::KeyState::Pressed);
+                    ASSUME(key->keyState == ControlAction::Key::KeyState::Released);
                     ++RendererReceivedPhysicsKeys;
                 }
                 else
