@@ -91,7 +91,7 @@ namespace
                 EntitiesStream::EntityData entity;
 
                 SourceComponent source;
-                source.value = rand() % 4 - 2;
+                source.value = (f32)(rand() % 4 - 2);
 
                 entity.AddComponent(source);
                 entity.AddComponent(CosineResultComponent{});
@@ -116,7 +116,7 @@ namespace
         auto sources = make_unique<SourceComponent[]>(entitiesToTest);
         for (uiw index = 0; index < entitiesToTest; ++index)
         {
-            sources[index].value = rand() % 4 - 2;
+            sources[index].value = (f32)(rand() % 4 - 2);
         }
 
         ui32 executedTimes = 0;

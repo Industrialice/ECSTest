@@ -72,7 +72,7 @@ namespace
                 if (rand() % 2)
                 {
                     SpeedOfFall speed;
-                    speed.speed = rand() % 25;
+                    speed.speed = (f32)(rand() % 25);
                     env.messageBuilder.AddComponent(id, speed);
                 }
             }
@@ -553,7 +553,7 @@ namespace
                 if (rand() % 2)
                 {
                     SpeedOfFall speed;
-                    speed.speed = rand() % 25;
+                    speed.speed = (f32)(rand() % 25);
                     entity.AddComponent(speed);
                 }
             }

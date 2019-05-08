@@ -177,6 +177,7 @@ namespace
 
         struct Data
         {
+            EntityID id;
             Vector3 pos;
             Quaternion rot;
             MeshRenderer mesh;
@@ -185,13 +186,8 @@ namespace
         virtual void Update(Environment &env) override
         {
             ui32 count = 0;
-            for (const auto &[id, data] : _entities)
+            for (auto it = _entities.begin(); count < RendererDrawPerFrame && it != _entities.end(); ++it, ++count)
             {
-                ++count;
-                if (count == RendererDrawPerFrame)
-                {
-                    break;
-                }
             }
         }
 
@@ -269,6 +265,7 @@ namespace
 
     private:
         std::unordered_map<EntityID, Data> _entities{};
+        vector<Data> _linear{};
     };
 
     static void GenerateScene(EntityIDGenerator &entityIdGenerator, SystemsManager &manager, EntitiesStream &stream)
@@ -360,6 +357,6 @@ void Benchmark2()
 
     manager->Stop(true);
 
-    f32 avg = std::accumulate(fpsHistory.begin(), fpsHistory.end(), 0);
+    f32 avg = std::accumulate(fpsHistory.begin(), fpsHistory.end(), 0.0f);
     printf("\nAverage FPS: %.2lf\n", avg / fpsHistory.size());
 }

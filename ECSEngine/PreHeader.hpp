@@ -4,7 +4,11 @@
 #include <forward_list>
 #include <SystemsManager.hpp>
 #include <KeyController.hpp>
-#include "WinAPI.hpp"
+
+#ifdef PLATFORM_WINDOWS
+    #include "WinAPI.hpp"
+    #include <d3d11.h>
+#endif
 
 using namespace ECSTest;
 

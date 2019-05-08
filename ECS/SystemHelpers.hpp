@@ -235,9 +235,9 @@ namespace ECSTest
             }
         }
 
-        template <uiw size> static constexpr optional<ui32> FindEntityIDIndex(const std::array<StableTypeId, size> &types)
+        template <ui32 size> static constexpr optional<ui32> FindEntityIDIndex(const std::array<StableTypeId, size> &types)
         {
-            for (uiw index = 0; index < size; ++index)
+            for (ui32 index = 0; index < size; ++index)
             {
                 if (types[index] == NAME_TO_STABLE_ID(EntityID)::GetTypeId())
                 {

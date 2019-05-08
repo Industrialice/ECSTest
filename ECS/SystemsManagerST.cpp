@@ -747,6 +747,7 @@ void SystemsManagerST::SchedulerLoop()
 
     uiw repeatedIndex = uiw_max;
     ui32 repeadedCount = 0;
+    bool isTimeUpToData = false;
 
     for (uiw index = 0, size = _pipelines.size(); index < size; )
     {
@@ -771,6 +772,7 @@ void SystemsManagerST::SchedulerLoop()
         ExecutePipeline(pipeline, timeSinceLastFrame);
 
         auto currentTime = updateTimes();
+        isTimeUpToData = true;
 
         if (pipeline.executionStep)
         {
@@ -805,7 +807,10 @@ void SystemsManagerST::SchedulerLoop()
         }
     }
 
-    updateTimes();
+    if (!isTimeUpToData)
+    {
+        updateTimes();
+    }
     _timeSinceStartAtomic = _timeSinceStart;
 }
 

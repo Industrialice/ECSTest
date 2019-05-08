@@ -18,6 +18,33 @@ static void LogRecipient(LogLevels::LogLevel logLevel, string_view nullTerminate
 static void FileLogRecipient(File &file, LogLevels::LogLevel logLevel, string_view nullTerminatedText, string_view senderName);
 static bool ReceiveInput(const ControlAction &action);
 
+DIRECT_SYSTEM(ScreenColorSystem)
+{
+	DIRECT_ACCEPT_COMPONENTS(Array<Camera> &cameras, const Array<EntityID> &ids)
+	{
+		for (auto &camera : cameras)
+		{
+			ClearColor clearColor;
+			clearColor.color = ColorR8G8B8((ui32)intensity, (ui32)intensity, (ui32)intensity);
+			camera.clearWith = clearColor;
+		}
+	}
+
+	virtual bool ControlInput(Environment &env, const ControlAction &action) override
+	{
+		if (auto wheel = action.Get<ControlAction::MouseWheel>(); wheel)
+		{
+			intensity -= wheel->delta * 10;
+			intensity = std::clamp(intensity, 0, 255);
+		}
+
+		return false;
+	}
+
+private:
+	i32 intensity = 0;
+};
+
 int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 {
     StdLib::Initialization::Initialize({});
@@ -27,6 +54,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
     LogFile = File(L"log.txt", FileOpenMode::CreateAlways, FileProcModes::Write);
     if (LogFile)
     {
+        LogFile.BufferSet(16384);
         LoggerFileHandle = EngineLogger->OnMessage(std::bind(FileLogRecipient, std::ref(LogFile), _1, _2, _3));
     }
 
@@ -42,8 +70,12 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
     auto renderer = RendererDX11System::New();
     renderer->SetKeyController(keyController);
 
+	auto screenColorSystem = make_unique<ScreenColorSystem>();
+	screenColorSystem->SetKeyController(KeyController::New());
+
     auto rendererPipeline = manager->CreatePipeline(nullopt, false);
     manager->Register(move(renderer), rendererPipeline);
+	manager->Register(move(screenColorSystem), rendererPipeline);
 
     vector<WorkerThread> workers;
     EntityIDGenerator idGenerator;
@@ -64,6 +96,9 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
     manager->Stop(true);
 
     SENDLOG(Info, WinMain, "Engine has finished\n");
+
+    EngineLogger = {};
+    LogFile = {};
 
     return 0;
 }
@@ -98,7 +133,7 @@ static const char *LogLevelToTag(LogLevels::LogLevel logLevel)
 
 void LogRecipient(LogLevels::LogLevel logLevel, string_view nullTerminatedText, string_view senderName)
 {
-    if (logLevel == LogLevels::Critical || logLevel == LogLevels::Debug || logLevel == LogLevels::Error) // TODO: cancel breaking
+    if (logLevel == LogLevels::Critical || logLevel == LogLevels::Debug || logLevel == LogLevels::Error)
     {
         SOFTBREAK;
     }

@@ -9,6 +9,6 @@ namespace ECSTest
 
 	public:
 		LoggerWrapper(decltype(_logger) logger, string_view name);
-		void Message(LogLevels::LogLevel level, const char *format, ...);
+		void Message(LogLevels::LogLevel level, PRINTF_VERIFY_FRONT const char *format, ...) PRINTF_VERIFY_BACK(2, 3);
 	};
 }

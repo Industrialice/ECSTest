@@ -12,18 +12,21 @@ unique_ptr<IEntitiesStream> Scene::Create(EntityIDGenerator &idGenerator)
     EntitiesStream::EntityData entity;
 
     Window window;
-    window.height = 600;
-    window.width = 800;
+    window.height = 480;
+    window.width = 640;
     window.isFullscreen = false;
     window.isMaximized = false;
     window.isNoBorders = false;
     strcpy_s(window.title.data(), window.title.size(), "Industrialice ECS test engine");
-    window.x = 500;
-    window.y = 500;
+    window.x = (GetSystemMetrics(SM_CXSCREEN) - window.width) / 2;
+    window.y = (GetSystemMetrics(SM_CYSCREEN) - window.height) / 2;
     window.cursorType = Window::CursorTypet::Normal;
 
     RT rt;
     rt.target = window;
+
+	ClearColor clearColor;
+	clearColor.color = ColorR8G8B8(0, 0, 0);
 
     Camera camera;
     camera.rt[0] = rt;
@@ -32,6 +35,7 @@ unique_ptr<IEntitiesStream> Scene::Create(EntityIDGenerator &idGenerator)
     camera.fov = 75.0f;
     camera.isClearDepth = false;
     camera.projectionType = Camera::ProjectionType::Perspective;
+	camera.clearWith = clearColor;
     entity.AddComponent(camera);
 
     Position position;

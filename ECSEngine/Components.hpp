@@ -49,7 +49,7 @@ namespace ECSEngine
 
     struct ClearColor
     {
-        ColorR8G8B8A8 color{};
+        ColorR8G8B8 color{};
     };
 
     struct RT
