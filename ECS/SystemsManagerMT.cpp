@@ -199,8 +199,8 @@ void SystemsManagerMT::Register(unique_ptr<System> system, Pipeline pipeline)
 
     if (isDirectSystem)
     {
-        uiw requiredCount = requestedComponents.required.size();
-        uiw optionalCount = requestedComponents.optional.size();
+        uiw requiredCount = requestedComponents.requiredWithoutData.size() + requestedComponents.requiredWithData.size();
+        uiw optionalCount = requestedComponents.optionalWithData.size();
 
         if (requiredCount == 0 && optionalCount == 0)
         {
@@ -839,7 +839,7 @@ void SystemsManagerMT::ExecutePipeline(PipelineData &pipeline)
                         }
 
                         // try to locate and add any optionally requested components
-                        for (System::RequestedComponent opt : requested.optional)
+                        for (System::RequestedComponent opt : requested.optionalWithData)
                         {
                             for (uiw index = 0; index < group.uniqueTypedComponentsCount; ++index)
                             {
@@ -870,8 +870,8 @@ void SystemsManagerMT::ExecutePipeline(PipelineData &pipeline)
                             const auto &component = group.components[index];
                             bool isWriteAccess = false;
 
-                            auto req = requested.optional.find_if([&component](const System::RequestedComponent &req) { return req.type == component.type; });
-                            if (req != requested.optional.end())
+                            auto req = requested.optionalWithData.find_if([&component](const System::RequestedComponent &req) { return req.type == component.type; });
+                            if (req != requested.optionalWithData.end())
                             {
                                 ASSUME(req->requirement == RequirementForComponent::Optional);
                                 isWriteAccess = req->isWriteAccess;

@@ -174,11 +174,7 @@ void SystemsManagerST::Register(unique_ptr<System> system, Pipeline pipeline)
 
 	if (isDirectSystem)
 	{
-		uiw requiredCount = requestedComponents.required.size();
-        uiw requiredWithDataCount = requestedComponents.requiredWithData.size();
-		uiw optionalCount = requestedComponents.optional.size();
-
-		if (requiredCount == 0 && requiredWithDataCount == 0 && optionalCount == 0)
+		if (requestedComponents.withData.empty())
 		{
             _logger->Message(LogLevels::Error, selfName, "The system will never be executed with such configuration");
 			return;
@@ -1004,7 +1000,7 @@ void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, ControlsQueue &
 
     auto &reqested = system.RequestedComponents();
 
-    uiw maxArgs = reqested.requiredWithData.size() + reqested.optional.size() + (reqested.idsArgumentNumber != nullopt) + reqested.required.size();
+    uiw maxArgs = reqested.withData.size() + (reqested.idsArgumentNumber != nullopt) + reqested.requiredWithoutData.size();
 
 	_tempNonUniqueArgs.reserve(maxArgs);
     _tempArrayArgs.reserve(maxArgs);
@@ -1520,9 +1516,8 @@ void SystemsManagerST::PassMessagesToIndirectSystemsAndClear(MessageBuilder &mes
                         continue;
                     }
 
-                    if (requested.requiredWithData.empty() ||
-                        requested.requiredWithData.find_if(searchPredicate) != requested.requiredWithData.end() ||
-                        requested.optional.find_if(searchPredicate) != requested.optional.end())
+                    if (requested.required.empty() ||
+                        requested.requiredOrOptional.count_if(searchPredicate))
                     {
                         managed.messageQueue.componentAddedStreams.emplace_back(stream);
                     }
@@ -1549,9 +1544,8 @@ void SystemsManagerST::PassMessagesToIndirectSystemsAndClear(MessageBuilder &mes
                         continue;
                     }
 
-                    if (requested.requiredWithData.empty() ||
-                        requested.requiredWithData.find_if(searchPredicate) != requested.requiredWithData.end() ||
-                        requested.optional.find_if(searchPredicate) != requested.optional.end())
+                    if (requested.required.empty() ||
+                        requested.requiredOrOptional.count_if(searchPredicate))
                     {
                         managed.messageQueue.componentChangedStreams.emplace_back(stream);
                     }
@@ -1578,9 +1572,8 @@ void SystemsManagerST::PassMessagesToIndirectSystemsAndClear(MessageBuilder &mes
                         continue;
                     }
 
-                    if (requested.requiredWithData.empty() ||
-                        requested.requiredWithData.find_if(searchPredicate) != requested.requiredWithData.end() ||
-                        requested.optional.find_if(searchPredicate) != requested.optional.end())
+                    if (requested.required.empty() ||
+                        requested.requiredOrOptional.count_if(searchPredicate))
                     {
                         managed.messageQueue.componentRemovedStreams.emplace_back(stream);
                     }

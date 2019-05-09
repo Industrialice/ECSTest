@@ -7,7 +7,7 @@ namespace
     constexpr bool IsMTECS = false;
 	constexpr bool IsPhysicsFPSRestricted = false;
     constexpr ui32 EntitiesToTest = 32768;
-    constexpr ui32 PhysicsUpdatesPerFrame = 32768;
+    constexpr ui32 PhysicsUpdatesPerFrame = 100;
     constexpr ui32 RendererDrawPerFrame = 100;
 
     COMPONENT(Physics)
@@ -120,21 +120,21 @@ namespace
             {
                 for (auto &entry : stream)
                 {
-                    _entities[entry.entityID].pos = ((Position *)entry.data)->position;
+                    _entities[entry.entityID].pos = entry.Cast<Position>(stream.Type()).position;
                 }
             }
             else if (stream.Type() == Rotation::GetTypeId())
             {
                 for (auto &entry : stream)
                 {
-                    _entities[entry.entityID].rot = ((Rotation *)entry.data)->rotation;
+                    _entities[entry.entityID].rot = entry.Cast<Rotation>(stream.Type()).rotation;
                 }
             }
             else if (stream.Type() == Physics::GetTypeId())
             {
                 for (auto &entry : stream)
                 {
-                    _entities[entry.entityID].properties = *((Physics *)entry.data);
+                    _entities[entry.entityID].properties = entry.Cast<Physics>(stream.Type());
                 }
             }
             else if (stream.Type() == MeshCollider::GetTypeId())
@@ -225,21 +225,21 @@ namespace
             {
 				for (auto &entry : stream)
 				{
-					_linear[_entities[entry.entityID]].pos = ((Position *)entry.data)->position;
+					_linear[_entities[entry.entityID]].pos = entry.Cast<Position>(stream.Type()).position;
 				}
             }
             else if (stream.Type() == Rotation::GetTypeId())
             {
 				for (auto &entry : stream)
 				{
-					_linear[_entities[entry.entityID]].rot = ((Rotation *)entry.data)->rotation;
+					_linear[_entities[entry.entityID]].rot = entry.Cast<Rotation>(stream.Type()).rotation;
 				}
             }
             else if (stream.Type() == MeshRenderer::GetTypeId())
             {
                 for (auto &entry : stream)
                 {
-					_linear[_entities[entry.entityID]].mesh = *((MeshRenderer *)entry.data);
+					_linear[_entities[entry.entityID]].mesh = entry.Cast<MeshRenderer>(stream.Type());
                 }
             }
             else

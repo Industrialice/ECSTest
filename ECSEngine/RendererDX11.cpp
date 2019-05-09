@@ -125,9 +125,9 @@ public:
     {
         if (stream.Type() == Camera::GetTypeId())
         {
-            for (auto &entry : stream.Enumerate())
+            for (auto &entry : stream)
             {
-                CameraChanged(entry.entityID, entry.component.Cast<Camera>());
+                CameraChanged(entry.entityID, entry.Cast<Camera>(stream.Type()));
             }
         }
         else if (stream.Type() == Position::GetTypeId())

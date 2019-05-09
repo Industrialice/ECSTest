@@ -447,6 +447,27 @@ public:
     }
 };
 
+DIRECT_SYSTEM(TestSystem)
+{
+	DIRECT_ACCEPT_COMPONENTS(NonUnique<ComponentArtist> &, const NonUnique<ComponentProgrammer> &, Array<ComponentSpouse> &, const Array<EntityID> &, const Array<ComponentCompany> &, Array<ComponentEmployee> *, const Array<ComponentGender> *, RequiredComponent<ComponentDateOfBirth>, SubtractiveComponent<ComponentDesigner>);
+};
+
+static void ArgumentPropertiesTests()
+{
+	static_assert(TestSystem::_RequestedComponents().requiredWithoutData.size() == 1);
+	static_assert(TestSystem::_RequestedComponents().requiredWithData.size() == 4);
+	static_assert(TestSystem::_RequestedComponents().required.size() == 5);
+	static_assert(TestSystem::_RequestedComponents().requiredOrOptional.size() == 7);
+	static_assert(TestSystem::_RequestedComponents().withData.size() == 6);
+	static_assert(TestSystem::_RequestedComponents().optionalWithData.size() == 2);
+	static_assert(TestSystem::_RequestedComponents().subtractive.size() == 1);
+	static_assert(TestSystem::_RequestedComponents().writeAccess.size() == 3);
+	static_assert(TestSystem::_RequestedComponents().archetypeDefining.size() == 6);
+	static_assert(TestSystem::_RequestedComponents().all.size() == 8);
+	static_assert(TestSystem::_RequestedComponents().allOriginalOrder.size() == 8);
+	static_assert(TestSystem::_RequestedComponents().idsArgumentNumber == 3);
+}
+
 int main()
 {
     Initialization::Initialize({});
@@ -454,6 +475,7 @@ int main()
     ArchetypeTests();
     ReflectorTests();
     UnitTests::MessageBuilderTests();
+	ArgumentPropertiesTests();
 
     system("pause");
 }

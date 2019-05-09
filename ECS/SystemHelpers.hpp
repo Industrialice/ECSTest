@@ -16,6 +16,7 @@ namespace ECSTest
             static constexpr bool isArray = false;
 			static constexpr bool isNonUnique = false;
             static constexpr bool isRequired = false;
+			static constexpr bool isEntityID = false;
         };
 
         template <typename T> struct GetComponentType<SubtractiveComponent<T>>
@@ -25,6 +26,7 @@ namespace ECSTest
             static constexpr bool isArray = false;
 			static constexpr bool isNonUnique = false;
             static constexpr bool isRequired = false;
+			static constexpr bool isEntityID = false;
         };
 
         template <typename T> struct GetComponentType<RequiredComponent<T>>
@@ -34,6 +36,7 @@ namespace ECSTest
             static constexpr bool isArray = false;
             static constexpr bool isNonUnique = false;
             static constexpr bool isRequired = true;
+			static constexpr bool isEntityID = false;
         };
 
 		template <typename T> struct GetComponentType<NonUnique<T>>
@@ -43,6 +46,7 @@ namespace ECSTest
 			static constexpr bool isArray = false;
 			static constexpr bool isNonUnique = true;
             static constexpr bool isRequired = false;
+			static constexpr bool isEntityID = false;
         };
 
         template <typename T> struct GetComponentType<Array<T>>
@@ -52,6 +56,7 @@ namespace ECSTest
             static constexpr bool isArray = true;
 			static constexpr bool isNonUnique = false;
             static constexpr bool isRequired = false;
+			static constexpr bool isEntityID = false;
         };
 
         template <typename T> struct GetComponentType<Array<SubtractiveComponent<T>>>
@@ -61,6 +66,7 @@ namespace ECSTest
             static constexpr bool isArray = true;
 			static constexpr bool isNonUnique = false;
             static constexpr bool isRequired = false;
+			static constexpr bool isEntityID = false;
         };
 
         template <typename T> struct GetComponentType<Array<RequiredComponent<T>>>
@@ -70,6 +76,7 @@ namespace ECSTest
             static constexpr bool isArray = true;
             static constexpr bool isNonUnique = false;
             static constexpr bool isRequired = true;
+			static constexpr bool isEntityID = false;
         };
 
 		template <typename T> struct GetComponentType<Array<NonUnique<T>>>
@@ -79,6 +86,7 @@ namespace ECSTest
 			static constexpr bool isArray = true;
 			static constexpr bool isNonUnique = true;
             static constexpr bool isRequired = false;
+			static constexpr bool isEntityID = false;
         };
 
         // converts void * into a properly typed T argument - a pointer or a reference
@@ -99,7 +107,7 @@ namespace ECSTest
 			static_assert(!isRefOrPtr || !isSubtractive, "SubtractiveComponent cannot be passed by reference or pointer");
             static_assert(!isRefOrPtr || !isRequired, "RequiredComponent cannot be passed by reference or pointer");
 
-            if constexpr (std::is_reference_v<T>)
+			if constexpr (std::is_reference_v<T>)
             {
                 using bare = std::remove_reference_t<T>;
                 static_assert(!std::is_pointer_v<bare>, "Type cannot be reference to pointer");
@@ -113,13 +121,18 @@ namespace ECSTest
             }
             else if constexpr (isRequired)
             {
+				ASSUME(arg == nullptr);
                 return RequiredComponent<componentType>{};
             }
-            else
+            else if constexpr (isSubtractive)
             {
                 ASSUME(arg == nullptr);
-                return nullptr;
+				return SubtractiveComponent<componentType>{};
             }
+			else
+			{
+				static_assert(false, "Unrecognized argument type");
+			}
         }
 
         // used by direct systems to convert void **array into proper function argument types
@@ -279,23 +292,60 @@ namespace ECSTest
             return std::pair{ConvertToComponents<T, entityIDIndex != nullopt, Indexes...>(), entityIDIndex};
         }
 
-        template <uiw size>[[nodiscard]] static constexpr pair<std::array<System::RequestedComponent, size>, uiw> FindMatchingComponents(const std::array<System::RequestedComponent, size> &arr, RequirementForComponent requirement)
+		template <uiw size, uiw requirementSize> [[nodiscard]] static constexpr uiw FindMatchingComponentsCount(const std::array<System::RequestedComponent, size> &arr, const std::array<RequirementForComponent, requirementSize> &requirements)
+		{
+			uiw target = 0;
+			for (uiw source = 0; source < arr.size(); ++source)
+			{
+				for (uiw reqIndex = 0; reqIndex < requirements.size(); ++reqIndex)
+				{
+					if (arr[source].requirement == requirements[reqIndex])
+					{
+						++target;
+						break;
+					}
+				}
+			}
+			return target;
+		}
+
+        template <uiw outputSize, uiw size, uiw requirementSize> [[nodiscard]] static constexpr std::array<System::RequestedComponent, outputSize> FindMatchingComponents(const std::array<System::RequestedComponent, size> &arr, const std::array<RequirementForComponent, requirementSize> &requirements)
         {
-            std::array<System::RequestedComponent, size> components{};
-            uiw target = 0;
-            for (uiw source = 0; source < arr.size(); ++source)
-            {
-                if (arr[source].requirement == requirement)
-                {
-                    components[target++] = arr[source];
-                }
-            }
-            return {components, target};
+			std::array<System::RequestedComponent, outputSize> components{};
+			uiw target = 0;
+			for (uiw source = 0; source < arr.size(); ++source)
+			{
+				for (uiw reqIndex = 0; reqIndex < requirements.size(); ++reqIndex)
+				{
+					if (arr[source].requirement == requirements[reqIndex])
+					{
+						components[target++] = arr[source];
+						break;
+					}
+				}
+			}
+			return components;
         }
 
-        template <bool IsRequireWriteAccess, uiw size>[[nodiscard]] static constexpr pair<std::array<System::RequestedComponent, size>, uiw> FindComponentsWithData(const std::array<System::RequestedComponent, size> &arr)
+		template <bool IsRequireWriteAccess, uiw size>[[nodiscard]] static constexpr uiw FindComponentsWithDataCount(const std::array<System::RequestedComponent, size> &arr)
+		{
+			uiw target = 0;
+			for (uiw source = 0; source < arr.size(); ++source)
+			{
+				if (arr[source].requirement == RequirementForComponent::RequiredWithData || arr[source].requirement == RequirementForComponent::Optional)
+				{
+					if (IsRequireWriteAccess == false || arr[source].isWriteAccess)
+					{
+						++target;
+					}
+				}
+			}
+			return target;
+		}
+
+        template <uiw outputSize, bool IsRequireWriteAccess, uiw size> [[nodiscard]] static constexpr std::array<System::RequestedComponent, outputSize> FindComponentsWithData(const std::array<System::RequestedComponent, size> &arr)
         {
-            std::array<System::RequestedComponent, size> components{};
+            std::array<System::RequestedComponent, outputSize> components{};
             uiw target = 0;
             for (uiw source = 0; source < arr.size(); ++source)
             {
@@ -307,12 +357,25 @@ namespace ECSTest
                     }
                 }
             }
-            return {components, target};
+			return components;
         }
 
-        template <uiw size>[[nodiscard]] static constexpr pair<std::array<pair<StableTypeId, RequirementForComponent>, size>, uiw> FindArchetypeDefiningComponents(const std::array<System::RequestedComponent, size> &arr)
+		template <uiw size> [[nodiscard]] static constexpr uiw FindArchetypeDefiningComponentsCount(const std::array<System::RequestedComponent, size> &arr)
+		{
+			uiw target = 0;
+			for (uiw source = 0; source < arr.size(); ++source)
+			{
+				if (arr[source].requirement == RequirementForComponent::RequiredWithData || arr[source].requirement == RequirementForComponent::Subtractive || arr[source].requirement == RequirementForComponent::Required)
+				{
+					++target;
+				}
+			}
+			return target;
+		}
+
+        template <uiw outputSize, uiw size> [[nodiscard]] static constexpr std::array<pair<StableTypeId, RequirementForComponent>, outputSize> FindArchetypeDefiningComponents(const std::array<System::RequestedComponent, size> &arr)
         {
-            std::array<pair<StableTypeId, RequirementForComponent>, size> components{};
+            std::array<pair<StableTypeId, RequirementForComponent>, outputSize> components{};
             uiw target = 0;
             for (uiw source = 0; source < arr.size(); ++source)
             {
@@ -323,44 +386,49 @@ namespace ECSTest
                     ++target;
                 }
             }
-            return {components, target};
+			return components;
         }
     };
 }
 
-// TODO: optimize it so std::arrays use only as much space as they actually need
-
 #define DIRECT_ACCEPT_COMPONENTS(...) \
-    virtual const Requests &RequestedComponents() const override final \
+    static constexpr const Requests &_RequestedComponents() \
     { \
-        using thisType = std::remove_reference_t<std::remove_cv_t<decltype(*this)>>; \
 		struct Local { static void Temp(__VA_ARGS__); }; \
 		using types = typename FunctionInfo::Info<decltype(Local::Temp)>::args; \
         static constexpr auto converted = _SystemHelperFuncs::TupleToComponentsArray<types>(std::make_index_sequence<std::tuple_size_v<types>>()); \
         static constexpr auto arr = converted.first; \
         static constexpr auto arrSorted = Funcs::SortCompileTime(arr); \
-        static constexpr auto required = _SystemHelperFuncs::FindMatchingComponents(arrSorted, RequirementForComponent::Required); \
-        static constexpr auto requiredWithData = _SystemHelperFuncs::FindMatchingComponents(arrSorted, RequirementForComponent::RequiredWithData); \
-        static constexpr auto withData = _SystemHelperFuncs::FindComponentsWithData<false>(arrSorted); \
-        static constexpr auto opt = _SystemHelperFuncs::FindMatchingComponents(arrSorted, RequirementForComponent::Optional); \
-        static constexpr auto subtractive = _SystemHelperFuncs::FindMatchingComponents(arrSorted, RequirementForComponent::Subtractive); \
-        static constexpr auto writeAccess = _SystemHelperFuncs::FindComponentsWithData<true>(arrSorted); \
-        static constexpr auto archetypeDefining = _SystemHelperFuncs::FindArchetypeDefiningComponents(arrSorted); \
+        static constexpr auto requiredWithoutData = _SystemHelperFuncs::FindMatchingComponents<_SystemHelperFuncs::FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::Required))>(arrSorted, make_array(RequirementForComponent::Required)); \
+        static constexpr auto requiredWithData = _SystemHelperFuncs::FindMatchingComponents<_SystemHelperFuncs::FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::RequiredWithData))>(arrSorted, make_array(RequirementForComponent::RequiredWithData)); \
+		static constexpr auto required = _SystemHelperFuncs::FindMatchingComponents<_SystemHelperFuncs::FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::RequiredWithData, RequirementForComponent::Required))>(arrSorted, make_array(RequirementForComponent::RequiredWithData, RequirementForComponent::Required)); \
+		static constexpr auto requiredOrOptional = _SystemHelperFuncs::FindMatchingComponents<_SystemHelperFuncs::FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::RequiredWithData, RequirementForComponent::Required, RequirementForComponent::Optional))>(arrSorted, make_array(RequirementForComponent::RequiredWithData, RequirementForComponent::Required, RequirementForComponent::Optional)); \
+        static constexpr auto withData = _SystemHelperFuncs::FindComponentsWithData<_SystemHelperFuncs::FindComponentsWithDataCount<false>(arrSorted), false>(arrSorted); \
+        static constexpr auto optionalWithData = _SystemHelperFuncs::FindMatchingComponents<_SystemHelperFuncs::FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::Optional))>(arrSorted, make_array(RequirementForComponent::Optional)); \
+        static constexpr auto subtractive = _SystemHelperFuncs::FindMatchingComponents<_SystemHelperFuncs::FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::Subtractive))>(arrSorted, make_array(RequirementForComponent::Subtractive)); \
+        static constexpr auto writeAccess = _SystemHelperFuncs::FindComponentsWithData<_SystemHelperFuncs::FindComponentsWithDataCount<true>(arrSorted), true>(arrSorted); \
+        static constexpr auto archetypeDefining = _SystemHelperFuncs::FindArchetypeDefiningComponents<_SystemHelperFuncs::FindArchetypeDefiningComponentsCount(arrSorted)>(arrSorted); \
         static constexpr Requests requests = \
         { \
-            ToArray(required.first.data(), required.second), \
-            ToArray(requiredWithData.first.data(), requiredWithData.second), \
-            ToArray(withData.first.data(), withData.second), \
-            ToArray(opt.first.data(), opt.second), \
-            ToArray(subtractive.first.data(), subtractive.second), \
-            ToArray(writeAccess.first.data(), writeAccess.second), \
-            ToArray(archetypeDefining.first.data(), archetypeDefining.second), \
+            ToArray(requiredWithoutData.data(), requiredWithoutData.size()), \
+            ToArray(requiredWithData.data(), requiredWithData.size()), \
+            ToArray(required.data(), required.size()), \
+            ToArray(requiredOrOptional.data(), requiredOrOptional.size()), \
+            ToArray(withData.data(), withData.size()), \
+            ToArray(optionalWithData.data(), optionalWithData.size()), \
+            ToArray(subtractive.data(), subtractive.size()), \
+            ToArray(writeAccess.data(), writeAccess.size()), \
+            ToArray(archetypeDefining.data(), archetypeDefining.size()), \
             ToArray(arrSorted), \
             ToArray(arr), \
             converted.second \
         }; \
         return requests; \
     } \
+    virtual const Requests &RequestedComponents() const override final \
+	{ \
+		return _RequestedComponents(); \
+	} \
     \
     virtual void Accept(Environment &env, void **array) override \
     { \
@@ -373,36 +441,43 @@ namespace ECSTest
     void Update(Environment &env, __VA_ARGS__)
 
 #define INDIRECT_ACCEPT_COMPONENTS(...) \
-    virtual const Requests &RequestedComponents() const override final \
+    static constexpr const Requests &_RequestedComponents() \
     { \
-        using thisType = std::remove_reference_t<std::remove_cv_t<decltype(*this)>>; \
 		struct Local { static void Temp(__VA_ARGS__); }; \
 		using types = typename FunctionInfo::Info<decltype(Local::Temp)>::args; \
         static constexpr auto converted = _SystemHelperFuncs::TupleToComponentsArray<types>(std::make_index_sequence<std::tuple_size_v<types>>()); \
         static_assert(converted.second == nullopt, "Indirect systems can't request EntityID"); \
         static constexpr auto arr = converted.first; \
         static constexpr auto arrSorted = Funcs::SortCompileTime(arr); \
-        static constexpr auto required = _SystemHelperFuncs::FindMatchingComponents(arrSorted, RequirementForComponent::Required); \
-        static constexpr auto requiredWithData = _SystemHelperFuncs::FindMatchingComponents(arrSorted, RequirementForComponent::RequiredWithData); \
-        static constexpr auto withData = _SystemHelperFuncs::FindComponentsWithData<false>(arrSorted); \
-        static constexpr auto opt = _SystemHelperFuncs::FindMatchingComponents(arrSorted, RequirementForComponent::Optional); \
-        static constexpr auto subtractive = _SystemHelperFuncs::FindMatchingComponents(arrSorted, RequirementForComponent::Subtractive); \
-        static constexpr auto writeAccess = _SystemHelperFuncs::FindComponentsWithData<true>(arrSorted); \
-        static constexpr auto archetypeDefining = _SystemHelperFuncs::FindArchetypeDefiningComponents(arrSorted); \
+        static constexpr auto requiredWithoutData = _SystemHelperFuncs::FindMatchingComponents<_SystemHelperFuncs::FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::Required))>(arrSorted, make_array(RequirementForComponent::Required)); \
+        static constexpr auto requiredWithData = _SystemHelperFuncs::FindMatchingComponents<_SystemHelperFuncs::FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::RequiredWithData))>(arrSorted, make_array(RequirementForComponent::RequiredWithData)); \
+		static constexpr auto required = _SystemHelperFuncs::FindMatchingComponents<_SystemHelperFuncs::FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::RequiredWithData, RequirementForComponent::Required))>(arrSorted, make_array(RequirementForComponent::RequiredWithData, RequirementForComponent::Required)); \
+		static constexpr auto requiredOrOptional = _SystemHelperFuncs::FindMatchingComponents<_SystemHelperFuncs::FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::RequiredWithData, RequirementForComponent::Required, RequirementForComponent::Optional))>(arrSorted, make_array(RequirementForComponent::RequiredWithData, RequirementForComponent::Required, RequirementForComponent::Optional)); \
+        static constexpr auto withData = _SystemHelperFuncs::FindComponentsWithData<_SystemHelperFuncs::FindComponentsWithDataCount<false>(arrSorted), false>(arrSorted); \
+        static constexpr auto optionalWithData = _SystemHelperFuncs::FindMatchingComponents<_SystemHelperFuncs::FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::Optional))>(arrSorted, make_array(RequirementForComponent::Optional)); \
+        static constexpr auto subtractive = _SystemHelperFuncs::FindMatchingComponents<_SystemHelperFuncs::FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::Subtractive))>(arrSorted, make_array(RequirementForComponent::Subtractive)); \
+        static constexpr auto writeAccess = _SystemHelperFuncs::FindComponentsWithData<_SystemHelperFuncs::FindComponentsWithDataCount<true>(arrSorted), true>(arrSorted); \
+        static constexpr auto archetypeDefining = _SystemHelperFuncs::FindArchetypeDefiningComponents<_SystemHelperFuncs::FindArchetypeDefiningComponentsCount(arrSorted)>(arrSorted); \
         static constexpr Requests requests = \
         { \
-            ToArray(required.first.data(), required.second), \
-            ToArray(requiredWithData.first.data(), requiredWithData.second), \
-            ToArray(withData.first.data(), withData.second), \
-            ToArray(opt.first.data(), opt.second), \
-            ToArray(subtractive.first.data(), subtractive.second), \
-            ToArray(writeAccess.first.data(), writeAccess.second), \
-            ToArray(archetypeDefining.first.data(), archetypeDefining.second), \
+            ToArray(requiredWithoutData.data(), requiredWithoutData.size()), \
+            ToArray(requiredWithData.data(), requiredWithData.size()), \
+            ToArray(required.data(), required.size()), \
+            ToArray(requiredOrOptional.data(), requiredOrOptional.size()), \
+            ToArray(withData.data(), withData.size()), \
+            ToArray(optionalWithData.data(), optionalWithData.size()), \
+            ToArray(subtractive.data(), subtractive.size()), \
+            ToArray(writeAccess.data(), writeAccess.size()), \
+            ToArray(archetypeDefining.data(), archetypeDefining.size()), \
             ToArray(arrSorted), \
             ToArray(arr), \
             nullopt \
         }; \
         return requests; \
     } \
+    virtual const Requests &RequestedComponents() const override final \
+	{ \
+		return _RequestedComponents(); \
+	} \
     using IndirectSystem::Update; \
     using IndirectSystem::ProcessMessages

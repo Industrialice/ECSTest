@@ -205,6 +205,12 @@ namespace ECSTest
 			const ui8 *data{};
 			EntityID entityID;
 			ComponentID componentID{};
+
+			template <typename T> [[nodiscard]] const T &Cast(StableTypeId typeToCheck) const
+			{
+				ASSUME(typeToCheck == T::GetTypeId());
+				return *(T *)data;
+			}
 		};
 
         struct InfoWithData
