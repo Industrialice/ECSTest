@@ -262,7 +262,7 @@ void SystemsManagerMT::Register(unique_ptr<System> system, Pipeline pipeline)
         }
     }
 
-    _archetypeReflector.StartTrackingMatchingArchetypes((uiw)system.get(), requestedComponents.archetypeDefining);
+    _archetypeReflector.StartTrackingMatchingArchetypes((uiw)system.get(), requestedComponents.archetypeDefiningInfoOnly);
 
     if (isDirectSystem)
     {
@@ -683,7 +683,7 @@ void SystemsManagerMT::StartScheduler(vector<unique_ptr<IEntitiesStream>> &&stre
         {
             for (auto &managed : pipeline.indirectSystems)
             {
-                if (ArchetypeReflector::Satisfies(reflected, managed.system->RequestedComponents().archetypeDefining))
+                if (ArchetypeReflector::Satisfies(reflected, managed.system->RequestedComponents().archetypeDefiningInfoOnly))
                 {
                     managed.messageQueue.entityAddedStreams.push_back(stream);
                 }
@@ -1239,7 +1239,7 @@ void SystemsManagerMT::TaskExecuteIndirectSystem(IndirectSystem &system, Managed
     //    {
     //        for (auto &managed : pipeline.indirectSystems)
     //        {
-    //            if (managed.system.get() != &system && ArchetypeReflector::Satisfies(reflected, managed.system->RequestedComponents().archetypeDefining))
+    //            if (managed.system.get() != &system && ArchetypeReflector::Satisfies(reflected, managed.system->RequestedComponents().archetypeDefiningInfoOnly))
     //            {
     //                auto messageQueueLock = managed.messageQueueLock.Lock(DIWRSpinLock::LockType::Exclusive);
     //                managed.messageQueue.entityAddedStreams.emplace_back(stream);
@@ -1289,7 +1289,7 @@ void SystemsManagerMT::TaskExecuteIndirectSystem(IndirectSystem &system, Managed
     //    {
     //        for (auto &managed : pipeline.indirectSystems)
     //        {
-    //            if (managed.system.get() != &system && ArchetypeReflector::Satisfies(reflected, managed.system->RequestedComponents().archetypeDefining))
+    //            if (managed.system.get() != &system && ArchetypeReflector::Satisfies(reflected, managed.system->RequestedComponents().archetypeDefiningInfoOnly))
     //            {
     //                auto messageQueueLock = managed.messageQueueLock.Lock(DIWRSpinLock::LockType::Exclusive);
     //                managed.messageQueue.entityRemovedStreams.emplace_back(stream);

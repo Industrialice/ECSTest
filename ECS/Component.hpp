@@ -93,17 +93,17 @@ namespace ECSTest
 	struct _SubtractiveComponentBase
 	{};
 
-	template <typename T> struct EMPTY_BASES SubtractiveComponent : _SubtractiveComponentBase
+	template <typename... Types> struct EMPTY_BASES SubtractiveComponent : _SubtractiveComponentBase
 	{
-		using ComponentType = T;
+		using ComponentTypes = std::tuple<Types...>;
 	};
 
     struct _RequiredComponentBase
     {};
 
-    template <typename T> struct EMPTY_BASES RequiredComponent : _RequiredComponentBase
+    template <typename... Types> struct EMPTY_BASES RequiredComponent : _RequiredComponentBase
     {
-        using ComponentType = T;
+        using ComponentTypes = std::tuple<Types...>;
     };
 
 	struct _NonUniqueBase

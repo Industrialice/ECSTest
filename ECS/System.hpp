@@ -42,10 +42,11 @@ namespace ECSTest
             Array<const RequestedComponent> optionalWithData; // contains only optional components
             Array<const RequestedComponent> subtractive; // contains only subtractive components
             Array<const RequestedComponent> writeAccess; // contains only components with write access (write access is ignored for subtractive components)
-            Array<const pair<StableTypeId, RequirementForComponent>> archetypeDefining; // contains only required and subtractive components
+            Array<const RequestedComponent> archetypeDefining; // contains only required and subtractive components
             Array<const RequestedComponent> all; // contains all reqested components
             Array<const RequestedComponent> allOriginalOrder; // contains all reqested components in the order they are declared
             std::optional<ui32> idsArgumentNumber; // direct systems only; indicates whether EntityID array was also requested and if it was, contains its argument index
+			Array<const pair<StableTypeId, RequirementForComponent>> archetypeDefiningInfoOnly; // contains elements from archetypeDefining, but without the access information
         };
 
 		[[nodiscard]] virtual const Requests &RequestedComponents() const = 0;

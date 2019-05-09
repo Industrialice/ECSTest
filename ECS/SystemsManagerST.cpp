@@ -234,7 +234,7 @@ void SystemsManagerST::Register(unique_ptr<System> system, Pipeline pipeline)
 		}
 	}
 
-	_archetypeReflector.StartTrackingMatchingArchetypes((uiw)system.get(), requestedComponents.archetypeDefining);
+	_archetypeReflector.StartTrackingMatchingArchetypes((uiw)system.get(), requestedComponents.archetypeDefiningInfoOnly);
 
     auto addSystem = [&pipelineData](auto &managed, auto *system)
     {
@@ -694,7 +694,7 @@ void SystemsManagerST::StartScheduler(vector<unique_ptr<IEntitiesStream>> &strea
 		{
 			for (auto &managed : pipeline.indirectSystems)
 			{
-				if (ArchetypeReflector::Satisfies(reflected, managed.system->RequestedComponents().archetypeDefining))
+				if (ArchetypeReflector::Satisfies(reflected, managed.system->RequestedComponents().archetypeDefiningInfoOnly))
 				{
 					managed.messageQueue.entityAddedStreams.push_back(stream);
 				}
@@ -1489,7 +1489,7 @@ void SystemsManagerST::PassMessagesToIndirectSystemsAndClear(MessageBuilder &mes
             {
                 if (managed.system.get() != systemToIgnore)
                 {
-                    if (ArchetypeReflector::Satisfies(reflected, managed.system->RequestedComponents().archetypeDefining))
+                    if (ArchetypeReflector::Satisfies(reflected, managed.system->RequestedComponents().archetypeDefiningInfoOnly))
                     {
                         managed.messageQueue.entityAddedStreams.emplace_back(stream);
                     }
@@ -1593,7 +1593,7 @@ void SystemsManagerST::PassMessagesToIndirectSystemsAndClear(MessageBuilder &mes
             {
                 if (managed.system.get() != systemToIgnore)
                 {
-                    if (ArchetypeReflector::Satisfies(reflected, managed.system->RequestedComponents().archetypeDefining))
+                    if (ArchetypeReflector::Satisfies(reflected, managed.system->RequestedComponents().archetypeDefiningInfoOnly))
                     {
                         managed.messageQueue.entityRemovedStreams.emplace_back(stream);
                     }

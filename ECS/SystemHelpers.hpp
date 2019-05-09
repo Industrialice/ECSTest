@@ -4,7 +4,7 @@ namespace ECSTest
 {
     constexpr bool operator < (const System::RequestedComponent &left, const System::RequestedComponent &right)
     {
-        return std::tie(left.isWriteAccess, left.requirement, left.type) < std::tie(right.isWriteAccess, right.requirement, right.type);
+        return left.type < right.type;
     }
 
     struct _SystemHelperFuncs
@@ -360,34 +360,16 @@ namespace ECSTest
 			return components;
         }
 
-		template <uiw size> [[nodiscard]] static constexpr uiw FindArchetypeDefiningComponentsCount(const std::array<System::RequestedComponent, size> &arr)
+		template <uiw size> [[nodiscard]] static constexpr std::array<pair<StableTypeId, RequirementForComponent>, size> StripAccessData(const std::array<System::RequestedComponent, size> &arr)
 		{
-			uiw target = 0;
-			for (uiw source = 0; source < arr.size(); ++source)
+			std::array<pair<StableTypeId, RequirementForComponent>, size> output{};
+			for (uiw index = 0; index < size; ++index)
 			{
-				if (arr[source].requirement == RequirementForComponent::RequiredWithData || arr[source].requirement == RequirementForComponent::Subtractive || arr[source].requirement == RequirementForComponent::Required)
-				{
-					++target;
-				}
+				output[index].first = arr[index].type;
+				output[index].second = arr[index].requirement;
 			}
-			return target;
+			return output;
 		}
-
-        template <uiw outputSize, uiw size> [[nodiscard]] static constexpr std::array<pair<StableTypeId, RequirementForComponent>, outputSize> FindArchetypeDefiningComponents(const std::array<System::RequestedComponent, size> &arr)
-        {
-            std::array<pair<StableTypeId, RequirementForComponent>, outputSize> components{};
-            uiw target = 0;
-            for (uiw source = 0; source < arr.size(); ++source)
-            {
-                if (arr[source].requirement == RequirementForComponent::RequiredWithData || arr[source].requirement == RequirementForComponent::Subtractive || arr[source].requirement == RequirementForComponent::Required)
-                {
-                    components[target].first = arr[source].type;
-                    components[target].second = arr[source].requirement;
-                    ++target;
-                }
-            }
-			return components;
-        }
     };
 }
 
@@ -407,21 +389,23 @@ namespace ECSTest
         static constexpr auto optionalWithData = _SystemHelperFuncs::FindMatchingComponents<_SystemHelperFuncs::FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::Optional))>(arrSorted, make_array(RequirementForComponent::Optional)); \
         static constexpr auto subtractive = _SystemHelperFuncs::FindMatchingComponents<_SystemHelperFuncs::FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::Subtractive))>(arrSorted, make_array(RequirementForComponent::Subtractive)); \
         static constexpr auto writeAccess = _SystemHelperFuncs::FindComponentsWithData<_SystemHelperFuncs::FindComponentsWithDataCount<true>(arrSorted), true>(arrSorted); \
-        static constexpr auto archetypeDefining = _SystemHelperFuncs::FindArchetypeDefiningComponents<_SystemHelperFuncs::FindArchetypeDefiningComponentsCount(arrSorted)>(arrSorted); \
+        static constexpr auto archetypeDefining = _SystemHelperFuncs::FindMatchingComponents<_SystemHelperFuncs::FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::RequiredWithData, RequirementForComponent::Required, RequirementForComponent::Subtractive))>(arrSorted, make_array(RequirementForComponent::RequiredWithData, RequirementForComponent::Required, RequirementForComponent::Subtractive)); \
+		static constexpr auto archetypeDefiningInfoOnly = _SystemHelperFuncs::StripAccessData(archetypeDefining); \
         static constexpr Requests requests = \
         { \
-            ToArray(requiredWithoutData.data(), requiredWithoutData.size()), \
-            ToArray(requiredWithData.data(), requiredWithData.size()), \
-            ToArray(required.data(), required.size()), \
-            ToArray(requiredOrOptional.data(), requiredOrOptional.size()), \
-            ToArray(withData.data(), withData.size()), \
-            ToArray(optionalWithData.data(), optionalWithData.size()), \
-            ToArray(subtractive.data(), subtractive.size()), \
-            ToArray(writeAccess.data(), writeAccess.size()), \
-            ToArray(archetypeDefining.data(), archetypeDefining.size()), \
+            ToArray(requiredWithoutData), \
+            ToArray(requiredWithData), \
+            ToArray(required), \
+            ToArray(requiredOrOptional), \
+            ToArray(withData), \
+            ToArray(optionalWithData), \
+            ToArray(subtractive), \
+            ToArray(writeAccess), \
+            ToArray(archetypeDefining), \
             ToArray(arrSorted), \
             ToArray(arr), \
-            converted.second \
+            converted.second, \
+			ToArray(archetypeDefiningInfoOnly) \
         }; \
         return requests; \
     } \
@@ -457,21 +441,23 @@ namespace ECSTest
         static constexpr auto optionalWithData = _SystemHelperFuncs::FindMatchingComponents<_SystemHelperFuncs::FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::Optional))>(arrSorted, make_array(RequirementForComponent::Optional)); \
         static constexpr auto subtractive = _SystemHelperFuncs::FindMatchingComponents<_SystemHelperFuncs::FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::Subtractive))>(arrSorted, make_array(RequirementForComponent::Subtractive)); \
         static constexpr auto writeAccess = _SystemHelperFuncs::FindComponentsWithData<_SystemHelperFuncs::FindComponentsWithDataCount<true>(arrSorted), true>(arrSorted); \
-        static constexpr auto archetypeDefining = _SystemHelperFuncs::FindArchetypeDefiningComponents<_SystemHelperFuncs::FindArchetypeDefiningComponentsCount(arrSorted)>(arrSorted); \
+        static constexpr auto archetypeDefining = _SystemHelperFuncs::FindMatchingComponents<_SystemHelperFuncs::FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::RequiredWithData, RequirementForComponent::Required, RequirementForComponent::Subtractive))>(arrSorted, make_array(RequirementForComponent::RequiredWithData, RequirementForComponent::Required, RequirementForComponent::Subtractive)); \
+		static constexpr auto archetypeDefiningInfoOnly = _SystemHelperFuncs::StripAccessData(archetypeDefining); \
         static constexpr Requests requests = \
         { \
-            ToArray(requiredWithoutData.data(), requiredWithoutData.size()), \
-            ToArray(requiredWithData.data(), requiredWithData.size()), \
-            ToArray(required.data(), required.size()), \
-            ToArray(requiredOrOptional.data(), requiredOrOptional.size()), \
-            ToArray(withData.data(), withData.size()), \
-            ToArray(optionalWithData.data(), optionalWithData.size()), \
-            ToArray(subtractive.data(), subtractive.size()), \
-            ToArray(writeAccess.data(), writeAccess.size()), \
-            ToArray(archetypeDefining.data(), archetypeDefining.size()), \
+            ToArray(requiredWithoutData), \
+            ToArray(requiredWithData), \
+            ToArray(required), \
+            ToArray(requiredOrOptional), \
+            ToArray(withData), \
+            ToArray(optionalWithData), \
+            ToArray(subtractive), \
+            ToArray(writeAccess), \
+            ToArray(archetypeDefining), \
             ToArray(arrSorted), \
             ToArray(arr), \
-            nullopt \
+            nullopt, \
+			ToArray(archetypeDefiningInfoOnly) \
         }; \
         return requests; \
     } \

@@ -5,7 +5,7 @@ using namespace ECSTest;
 namespace
 {
     constexpr bool IsMTECS = false;
-	constexpr bool IsPhysicsFPSRestricted = false;
+	constexpr bool IsPhysicsFPSRestricted = true;
 	constexpr bool IsPhysicsUsingComponentChangedHints = true;
     constexpr ui32 EntitiesToTest = 32768;
     constexpr ui32 PhysicsUpdatesPerFrame = 100;
@@ -398,7 +398,7 @@ void Benchmark2()
 
 			backBuf[lastPrinted + 1] = '\0';
 			printf(backBuf);
-			int printed = printf("renderer %.1ffps (%.2lfms, %.2lfms), physics %.1ffps (%.2lfms, %.2lfms)", rfps, rendererSpent, rendererSpent / rfps, pfps, physicsSpent, physicsSpent / pfps);
+			int printed = printf("renderer %.1ffps (%.2lfms, %.2lfms), physics %.1ffps (%.2lfms, %.2lfms)  ", rfps, rendererSpent, rendererSpent / rfps, pfps, physicsSpent, physicsSpent / pfps);
 			backBuf[lastPrinted + 1] = '\b';
 			lastPrinted = printed;
             
