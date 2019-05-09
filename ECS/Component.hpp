@@ -12,6 +12,15 @@ namespace ECSTest
         Subtractive
     };
 
+	struct ComponentDescription
+	{
+		StableTypeId type{};
+		ui16 sizeOf{};
+		ui16 alignmentOf{};
+		bool isUnique{};
+		bool isTag{};
+	};
+
 	class ComponentID
 	{
     public:
@@ -46,7 +55,7 @@ namespace ECSTest
     class Component
     {};
 
-    template <bool isUnique, bool isTag, typename Type> class EMPTY_BASES _BaseComponent : public Component, public Type
+    template <bool isUnique, bool isTag, typename Type, typename FinalType> class EMPTY_BASES _BaseComponent : public Component, public Type
     {
     public:
         using Type::GetTypeId;
@@ -61,9 +70,20 @@ namespace ECSTest
         {
             return isTag;
         }
+
+		[[nodiscard]] static constexpr ComponentDescription Description()
+		{
+			ComponentDescription desc;
+			desc.alignmentOf = alignof(FinalType);
+			desc.isTag = isTag;
+			desc.isUnique = isUnique;
+			desc.sizeOf = sizeof(FinalType);
+			desc.type = GetTypeId();
+			return desc;
+		}
     };
 
-	#define _CREATE_COMPONENT(name, isUnique, isTag) struct name final : public _BaseComponent<isUnique, isTag, NAME_TO_STABLE_ID(name)>
+	#define _CREATE_COMPONENT(name, isUnique, isTag) struct name final : public _BaseComponent<isUnique, isTag, NAME_TO_STABLE_ID(name), name>
 
     // TODO: replace it with a single COMPONENT macro that optionally accepts properties?
     #define COMPONENT(name) _CREATE_COMPONENT(name, true, false)

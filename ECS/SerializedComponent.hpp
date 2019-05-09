@@ -4,15 +4,6 @@
 
 namespace ECSTest
 {
-	struct ComponentDescription
-	{
-		StableTypeId type{};
-		ui16 sizeOf{};
-		ui16 alignmentOf{};
-		bool isUnique{};
-		bool isTag{};
-	};
-
     struct SerializedComponent : ComponentDescription
     {
         const ui8 *data{}; // aigned by alignmentOf

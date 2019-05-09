@@ -523,6 +523,7 @@ namespace ECSTest
         ComponentArrayBuilder &AddEntity(EntityID entityID); // archetype will be computed after all the components were added, you can ignore the returned value if you don't want to add any components
         void AddComponent(EntityID entityID, const SerializedComponent &sc);
         void ComponentChanged(EntityID entityID, const SerializedComponent &sc);
+		void ComponentChangedHint(const ComponentDescription &desc, uiw count);
         void RemoveComponent(EntityID entityID, StableTypeId type, ComponentID componentID);
         void RemoveEntity(EntityID entityID);
         void RemoveEntity(EntityID entityID, Archetype archetype);

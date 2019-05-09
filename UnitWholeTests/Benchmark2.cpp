@@ -6,6 +6,7 @@ namespace
 {
     constexpr bool IsMTECS = false;
 	constexpr bool IsPhysicsFPSRestricted = false;
+	constexpr bool IsPhysicsUsingComponentChangedHints = true;
     constexpr ui32 EntitiesToTest = 32768;
     constexpr ui32 PhysicsUpdatesPerFrame = 100;
     constexpr ui32 RendererDrawPerFrame = 100;
@@ -82,6 +83,12 @@ namespace
                     }
                 }
             }
+
+			if (IsPhysicsUsingComponentChangedHints)
+			{
+				env.messageBuilder.ComponentChangedHint(Position::Description(), _updateList.size());
+				env.messageBuilder.ComponentChangedHint(Rotation::Description(), _updateList.size());
+			}
 
             for (const auto &[id, data] : _updateList)
             {
@@ -316,6 +323,7 @@ void Benchmark2()
 
 	printf("ECS multithreaded: %s\n", IsMTECS ? "yes" : "no");
 	printf("IsPhysicsFPSRestricted: %s\n", IsPhysicsFPSRestricted ? "yes" : "no");
+	printf("IsPhysicsUsingComponentChangedHints: %s\n", IsPhysicsUsingComponentChangedHints ? "yes" : "no");
 	printf("EntitiesToTest: %u\n", EntitiesToTest);
 	printf("PhysicsUpdatesPerFrame: %u\n", PhysicsUpdatesPerFrame);
 	printf("RendererDrawPerFrame: %u\n", RendererDrawPerFrame);
@@ -377,7 +385,7 @@ void Benchmark2()
 
 			backBuf[lastPrinted + 1] = '\0';
 			printf(backBuf);
-			int printed = printf("renderer %.2ffps (%.2lfms, %.2lfms), physics %.2ffps (%.2lfms, %.2lfms)", rfps, rendererSpent, rendererSpent / rfps, pfps, physicsSpent, physicsSpent / pfps);
+			int printed = printf("renderer %.1ffps (%.2lfms, %.2lfms), physics %.1ffps (%.2lfms, %.2lfms)", rfps, rendererSpent, rendererSpent / rfps, pfps, physicsSpent, physicsSpent / pfps);
 			backBuf[lastPrinted + 1] = '\b';
 			lastPrinted = printed;
             

@@ -187,6 +187,53 @@ void MessageBuilder::ComponentChanged(EntityID entityID, const SerializedCompone
     memcpy(entry->data.get() + copyIndex, sc.data, sc.sizeOf);
 }
 
+void MessageBuilder::ComponentChangedHint(const ComponentDescription &desc, uiw count)
+{
+	const auto &entry = [this](const ComponentDescription &desc) -> const shared_ptr<MessageStreamComponentChanged::InfoWithData> &
+	{
+		for (const auto &[key, value] : _componentChangedStreams._data)
+		{
+			if (key == desc.type)
+			{
+				return value.second;
+			}
+		}
+		_componentChangedStreams._data.emplace_back(desc.type, pair<ComponentDescription, shared_ptr<MessageStreamComponentChanged::InfoWithData>>(desc, make_shared<MessageStreamComponentChanged::InfoWithData>()));
+		return _componentChangedStreams._data.back().second.second;
+	} (desc);
+
+	entry->infos.reserve(count);
+
+	uiw memSize = count * desc.sizeOf;
+
+	if (memSize > entry->dataReserved)
+	{
+		entry->dataReserved = memSize;
+
+		ui8 *oldPtr = entry->data.release();
+		ui8 *newPtr = (ui8 *)_aligned_realloc(oldPtr, entry->dataReserved, desc.alignmentOf);
+		entry->data.reset(newPtr);
+
+		if (oldPtr != newPtr)
+		{
+			for (auto &stored : entry->infos)
+			{
+				if (stored.data)
+				{
+					if (newPtr > oldPtr)
+					{
+						stored.data += newPtr - oldPtr;
+					}
+					else
+					{
+						stored.data -= oldPtr - newPtr;
+					}
+				}
+			}
+		}
+	}
+}
+
 void MessageBuilder::RemoveComponent(EntityID entityID, StableTypeId type, ComponentID componentID)
 {
     const auto &entry = [this](StableTypeId type) -> const shared_ptr<vector<MessageStreamComponentRemoved::ComponentInfo>> &
