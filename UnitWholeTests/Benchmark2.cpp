@@ -70,12 +70,14 @@ namespace
 
         virtual void Update(Environment &env) override
         {
-            if (_updateList.empty())
+            if (_updateIdsList.empty())
             {
                 ui32 count = 0;
                 for (const auto &[id, data] : _entities)
                 {
-                    _updateList.push_back({id, std::cref(data)});
+					_updateIdsList.push_back(id);
+					_updatePositionsList.push_back(data.pos);
+					_updateRotationsList.push_back(data.rot);
 
                     if (++count == PhysicsUpdatesPerFrame)
                     {
@@ -84,17 +86,22 @@ namespace
                 }
             }
 
+			uiw updateCount = _updateIdsList.size();
+
 			if (IsPhysicsUsingComponentChangedHints)
 			{
-				env.messageBuilder.ComponentChangedHint(Position::Description(), _updateList.size());
-				env.messageBuilder.ComponentChangedHint(Rotation::Description(), _updateList.size());
+				env.messageBuilder.ComponentChangedHint(Position::Description(), updateCount);
+				env.messageBuilder.ComponentChangedHint(Rotation::Description(), updateCount);
 			}
 
-            for (const auto &[id, data] : _updateList)
-            {
-                env.messageBuilder.ComponentChanged(id, Position{data.pos});
-                env.messageBuilder.ComponentChanged(id, Rotation{data.rot});
-            }
+			for (uiw index = 0; index < updateCount; ++index)
+			{
+				env.messageBuilder.ComponentChanged(_updateIdsList[index], Position{_updatePositionsList[index]});
+			}
+			for (uiw index = 0; index < updateCount; ++index)
+			{
+				env.messageBuilder.ComponentChanged(_updateIdsList[index], Rotation{_updateRotationsList[index]});
+			}
         }
 
         virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override
@@ -161,7 +168,9 @@ namespace
                 {
                     _entities.erase(entry.entityID);
                 }
-                _updateList.clear();
+				_updatePositionsList.clear();
+				_updateRotationsList.clear();
+				_updateIdsList.clear();
             }
         }
 
@@ -171,12 +180,16 @@ namespace
             {
                 _entities.erase(entry);
             }
-            _updateList.clear();
+			_updatePositionsList.clear();
+			_updateRotationsList.clear();
+			_updateIdsList.clear();
         }
 
     private:
         std::unordered_map<EntityID, Data> _entities{};
-        std::vector<std::pair<EntityID, std::remove_reference_t<Data>>> _updateList{};
+        std::vector<Vector3> _updatePositionsList{};
+		std::vector<Quaternion> _updateRotationsList{};
+		std::vector<EntityID> _updateIdsList{};
     };
 
     INDIRECT_SYSTEM(RendererSystem)
