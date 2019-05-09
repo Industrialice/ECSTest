@@ -81,7 +81,7 @@ namespace ECSTest
 	{
 		[[nodiscard]] virtual DirectSystem *AsDirectSystem() override final;
 		[[nodiscard]] virtual const DirectSystem *AsDirectSystem() const override final;
-		virtual void Accept(Environment &env, void **array) = 0;
+		virtual void AcceptUntyped(Environment &env, void **array) = 0;
 	};
 }
 

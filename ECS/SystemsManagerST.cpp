@@ -1085,7 +1085,7 @@ void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, ControlsQueue &
 
             ASSUME(_tempArgs.size() <= maxArgs);
 
-            system.Accept(env, _tempArgs.data());
+            system.AcceptUntyped(env, _tempArgs.data());
 
 			for (const System::RequestedComponent &arg : system.RequestedComponents().writeAccess)
 			{

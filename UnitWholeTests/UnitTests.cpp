@@ -313,7 +313,7 @@ namespace
 
 	DIRECT_SYSTEM(TestSystem)
 	{
-		void Update(Environment &env, NonUnique<ComponentArtist> &, const NonUnique<ComponentProgrammer> &, Array<ComponentSpouse> &, const Array<EntityID> &, const Array<ComponentCompany> &, Array<ComponentEmployee> *, const Array<ComponentGender> *, RequiredComponent<ComponentDateOfBirth>, SubtractiveComponent<ComponentDesigner>);
+		void Accept(Environment &env, NonUnique<ComponentArtist> &, const NonUnique<ComponentProgrammer> &, Array<ComponentSpouse> &, const Array<EntityID> &, const Array<ComponentCompany> &, Array<ComponentEmployee> *, const Array<ComponentGender> *, RequiredComponent<ComponentDateOfBirth>, SubtractiveComponent<ComponentDesigner>);
 	};
 
 	template <typename... Types> constexpr std::array<StableTypeId, sizeof...(Types)> MakeArray()

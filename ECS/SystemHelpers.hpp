@@ -136,9 +136,9 @@ namespace ECSTest
         }
 
         // used by direct systems to convert void **array into proper function argument types
-        template <auto Method, typename types, typename T, uiw... Indexes> static FORCEINLINE void CallUpdate(T *object, System::Environment &env, void **array, std::index_sequence<Indexes...>)
+        template <typename types, typename T, uiw... Indexes> static FORCEINLINE void CallAccept(T *object, System::Environment &env, void **array, std::index_sequence<Indexes...>)
         {
-			object->Update(env, ConvertArgument<types, Indexes>(array)...);
+			object->Accept(env, ConvertArgument<types, Indexes>(array)...);
         }
 
         // make sure the argument type is correct
@@ -425,9 +425,6 @@ namespace ECSTest
 		{
 			return AcquireRequestedComponents();
 		}
-		
-		using IndirectSystem::Update;
-		using IndirectSystem::ProcessMessages;
 	};
 
 	template <typename Type, typename SystemType> struct _DirectSystemTypeIdentifiable : public DirectSystem, public Type
@@ -445,7 +442,7 @@ namespace ECSTest
 
 		static constexpr const Requests &AcquireRequestedComponents()
 		{
-			using typesFull = typename FunctionInfo::Info<decltype(&SystemType::Update)>::args;
+			using typesFull = typename FunctionInfo::Info<decltype(&SystemType::Accept)>::args;
 			static_assert(is_same_v<std::remove_reference_t<std::tuple_element_t<0, typesFull>>, Environment>, "First argument in Update must be Environment &");
 			using types = typename Funcs::RemoveTupleElement<0, typesFull>;
 			static constexpr auto converted = _SystemHelperFuncs::TupleToComponentsArray<types>(std::make_index_sequence<std::tuple_size_v<types>>());
@@ -485,11 +482,11 @@ namespace ECSTest
 			return AcquireRequestedComponents();
 		}
 
-		virtual void Accept(Environment &env, void **array) override final
+		virtual void AcceptUntyped(Environment &env, void **array) override final
 		{
-			using types = typename Funcs::RemoveTupleElement<0, typename FunctionInfo::Info<decltype(&SystemType::Update)>::args>;
+			using types = typename Funcs::RemoveTupleElement<0, typename FunctionInfo::Info<decltype(&SystemType::Accept)>::args>;
 			static constexpr uiw count = std::tuple_size_v<types>;
-			_SystemHelperFuncs::CallUpdate<&SystemType::Update, types>((SystemType *)this, env, array, std::make_index_sequence<count>());
+			_SystemHelperFuncs::CallAccept<types>((SystemType *)this, env, array, std::make_index_sequence<count>());
 		}
 	};
 
