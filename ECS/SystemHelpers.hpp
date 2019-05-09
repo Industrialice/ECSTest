@@ -385,7 +385,7 @@ namespace ECSTest
 			return Type::GetTypeName();
 		}
 
-		static constexpr const Requests &_RequestedComponents()
+		static constexpr const Requests &AcquireRequestedComponents()
 		{
 			using types = typename FunctionInfo::Info<decltype(&SystemType::Accept)>::args;
 			static constexpr auto converted = _SystemHelperFuncs::TupleToComponentsArray<types>(std::make_index_sequence<std::tuple_size_v<types>>());
@@ -423,7 +423,7 @@ namespace ECSTest
 			
 		virtual const Requests &RequestedComponents() const override final
 		{
-			return _RequestedComponents();
+			return AcquireRequestedComponents();
 		}
 		
 		using IndirectSystem::Update;
@@ -443,7 +443,7 @@ namespace ECSTest
 			return Type::GetTypeName();
 		}
 
-		static constexpr const Requests &_RequestedComponents()
+		static constexpr const Requests &AcquireRequestedComponents()
 		{
 			using typesFull = typename FunctionInfo::Info<decltype(&SystemType::Update)>::args;
 			static_assert(is_same_v<std::remove_reference_t<std::tuple_element_t<0, typesFull>>, Environment>, "First argument in Update must be Environment &");
@@ -482,7 +482,7 @@ namespace ECSTest
 
 		virtual const Requests &RequestedComponents() const override final
 		{
-			return _RequestedComponents();
+			return AcquireRequestedComponents();
 		}
 
 		virtual void Accept(Environment &env, void **array) override final

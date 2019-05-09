@@ -343,33 +343,33 @@ namespace
 			return true;
 		};
 
-		auto requiredWithoutData = TestSystem::_RequestedComponents().requiredWithoutData;
-		auto requiredWithData = TestSystem::_RequestedComponents().requiredWithData;
-		auto required = TestSystem::_RequestedComponents().required;
-		auto requiredOrOptional = TestSystem::_RequestedComponents().requiredOrOptional;
-		auto withData = TestSystem::_RequestedComponents().withData;
-		auto optionalWithData = TestSystem::_RequestedComponents().optionalWithData;
-		auto subtractive = TestSystem::_RequestedComponents().subtractive;
-		auto writeAccess = TestSystem::_RequestedComponents().writeAccess;
-		auto archetypeDefining = TestSystem::_RequestedComponents().archetypeDefining;
-		auto all = TestSystem::_RequestedComponents().all;
-		auto allOriginalOrder = TestSystem::_RequestedComponents().allOriginalOrder;
-		auto idsArgumentNumber = TestSystem::_RequestedComponents().idsArgumentNumber;
-		auto archetypeDefiningInfoOnly = TestSystem::_RequestedComponents().archetypeDefiningInfoOnly;
+		auto requiredWithoutData = TestSystem::AcquireRequestedComponents().requiredWithoutData;
+		auto requiredWithData = TestSystem::AcquireRequestedComponents().requiredWithData;
+		auto required = TestSystem::AcquireRequestedComponents().required;
+		auto requiredOrOptional = TestSystem::AcquireRequestedComponents().requiredOrOptional;
+		auto withData = TestSystem::AcquireRequestedComponents().withData;
+		auto optionalWithData = TestSystem::AcquireRequestedComponents().optionalWithData;
+		auto subtractive = TestSystem::AcquireRequestedComponents().subtractive;
+		auto writeAccess = TestSystem::AcquireRequestedComponents().writeAccess;
+		auto archetypeDefining = TestSystem::AcquireRequestedComponents().archetypeDefining;
+		auto all = TestSystem::AcquireRequestedComponents().all;
+		auto allOriginalOrder = TestSystem::AcquireRequestedComponents().allOriginalOrder;
+		auto idsArgumentNumber = TestSystem::AcquireRequestedComponents().idsArgumentNumber;
+		auto archetypeDefiningInfoOnly = TestSystem::AcquireRequestedComponents().archetypeDefiningInfoOnly;
 
-		static_assert(matches(TestSystem::_RequestedComponents().requiredWithoutData, MakeArray<ComponentDateOfBirth>()));
-		static_assert(matches(TestSystem::_RequestedComponents().requiredWithData, MakeArray<ComponentArtist, ComponentProgrammer, ComponentSpouse, ComponentCompany>()));
-		static_assert(matches(TestSystem::_RequestedComponents().required, MakeArray<ComponentArtist, ComponentProgrammer, ComponentSpouse, ComponentCompany, ComponentDateOfBirth>()));
-		static_assert(matches(TestSystem::_RequestedComponents().requiredOrOptional, MakeArray<ComponentArtist, ComponentProgrammer, ComponentSpouse, ComponentCompany, ComponentDateOfBirth, ComponentEmployee, ComponentGender>()));
-		static_assert(matches(TestSystem::_RequestedComponents().withData, MakeArray<ComponentArtist, ComponentProgrammer, ComponentSpouse, ComponentCompany, ComponentEmployee, ComponentGender>()));
-		static_assert(matches(TestSystem::_RequestedComponents().optionalWithData, MakeArray<ComponentEmployee, ComponentGender>()));
-		static_assert(matches(TestSystem::_RequestedComponents().subtractive, MakeArray<ComponentDesigner>()));
-		static_assert(matches(TestSystem::_RequestedComponents().writeAccess, MakeArray<ComponentArtist, ComponentSpouse, ComponentEmployee>()));
-		static_assert(matches(TestSystem::_RequestedComponents().archetypeDefining, MakeArray<ComponentArtist, ComponentProgrammer, ComponentSpouse, ComponentCompany, ComponentDateOfBirth, ComponentDesigner>()));
-		static_assert(matches(TestSystem::_RequestedComponents().all, MakeArray<ComponentArtist, ComponentProgrammer, ComponentSpouse, ComponentCompany, ComponentDateOfBirth, ComponentEmployee, ComponentGender, ComponentDesigner>()));
-		static_assert(matches(TestSystem::_RequestedComponents().allOriginalOrder, MakeArray<ComponentArtist, ComponentProgrammer, ComponentSpouse, ComponentCompany, ComponentEmployee, ComponentGender, ComponentDateOfBirth, ComponentDesigner>(), false));
-		static_assert(TestSystem::_RequestedComponents().idsArgumentNumber == 3);
-		static_assert(TestSystem::_RequestedComponents().archetypeDefiningInfoOnly.size() == TestSystem::_RequestedComponents().archetypeDefining.size());
+		static_assert(matches(TestSystem::AcquireRequestedComponents().requiredWithoutData, MakeArray<ComponentDateOfBirth>()));
+		static_assert(matches(TestSystem::AcquireRequestedComponents().requiredWithData, MakeArray<ComponentArtist, ComponentProgrammer, ComponentSpouse, ComponentCompany>()));
+		static_assert(matches(TestSystem::AcquireRequestedComponents().required, MakeArray<ComponentArtist, ComponentProgrammer, ComponentSpouse, ComponentCompany, ComponentDateOfBirth>()));
+		static_assert(matches(TestSystem::AcquireRequestedComponents().requiredOrOptional, MakeArray<ComponentArtist, ComponentProgrammer, ComponentSpouse, ComponentCompany, ComponentDateOfBirth, ComponentEmployee, ComponentGender>()));
+		static_assert(matches(TestSystem::AcquireRequestedComponents().withData, MakeArray<ComponentArtist, ComponentProgrammer, ComponentSpouse, ComponentCompany, ComponentEmployee, ComponentGender>()));
+		static_assert(matches(TestSystem::AcquireRequestedComponents().optionalWithData, MakeArray<ComponentEmployee, ComponentGender>()));
+		static_assert(matches(TestSystem::AcquireRequestedComponents().subtractive, MakeArray<ComponentDesigner>()));
+		static_assert(matches(TestSystem::AcquireRequestedComponents().writeAccess, MakeArray<ComponentArtist, ComponentSpouse, ComponentEmployee>()));
+		static_assert(matches(TestSystem::AcquireRequestedComponents().archetypeDefining, MakeArray<ComponentArtist, ComponentProgrammer, ComponentSpouse, ComponentCompany, ComponentDateOfBirth, ComponentDesigner>()));
+		static_assert(matches(TestSystem::AcquireRequestedComponents().all, MakeArray<ComponentArtist, ComponentProgrammer, ComponentSpouse, ComponentCompany, ComponentDateOfBirth, ComponentEmployee, ComponentGender, ComponentDesigner>()));
+		static_assert(matches(TestSystem::AcquireRequestedComponents().allOriginalOrder, MakeArray<ComponentArtist, ComponentProgrammer, ComponentSpouse, ComponentCompany, ComponentEmployee, ComponentGender, ComponentDateOfBirth, ComponentDesigner>(), false));
+		static_assert(TestSystem::AcquireRequestedComponents().idsArgumentNumber == 3);
+		static_assert(TestSystem::AcquireRequestedComponents().archetypeDefiningInfoOnly.size() == TestSystem::AcquireRequestedComponents().archetypeDefining.size());
 	}
 }
 
