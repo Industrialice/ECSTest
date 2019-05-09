@@ -372,7 +372,7 @@ namespace ECSTest
 		}
     };
 
-	template <typename BaseSystem, typename Type, typename SystemType> struct _SystemTypeIdentifiable : public BaseSystem, public Type
+	template <typename Type, typename SystemType> struct _IndirectSystemTypeIdentifiable : public IndirectSystem, public Type
 	{
 	public:
 		[[nodiscard]] virtual StableTypeId GetTypeId() const override final
@@ -384,6 +384,50 @@ namespace ECSTest
 		{
 			return Type::GetTypeName();
 		}
+
+		static constexpr const Requests &_RequestedComponents()
+		{
+			using types = typename FunctionInfo::Info<decltype(&SystemType::Accept)>::args;
+			static constexpr auto converted = _SystemHelperFuncs::TupleToComponentsArray<types>(std::make_index_sequence<std::tuple_size_v<types>>());
+			static_assert(converted.second == nullopt, "Indirect systems can't request EntityID");
+			static constexpr auto arr = converted.first;
+			static constexpr auto arrSorted = Funcs::SortCompileTime(arr);
+			static constexpr auto requiredWithoutData = _SystemHelperFuncs::FindMatchingComponents<_SystemHelperFuncs::FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::Required))>(arrSorted, make_array(RequirementForComponent::Required));
+			static constexpr auto requiredWithData = _SystemHelperFuncs::FindMatchingComponents<_SystemHelperFuncs::FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::RequiredWithData))>(arrSorted, make_array(RequirementForComponent::RequiredWithData));
+			static constexpr auto required = _SystemHelperFuncs::FindMatchingComponents<_SystemHelperFuncs::FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::RequiredWithData, RequirementForComponent::Required))>(arrSorted, make_array(RequirementForComponent::RequiredWithData, RequirementForComponent::Required));
+			static constexpr auto requiredOrOptional = _SystemHelperFuncs::FindMatchingComponents<_SystemHelperFuncs::FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::RequiredWithData, RequirementForComponent::Required, RequirementForComponent::Optional))>(arrSorted, make_array(RequirementForComponent::RequiredWithData, RequirementForComponent::Required, RequirementForComponent::Optional));
+			static constexpr auto withData = _SystemHelperFuncs::FindComponentsWithData<_SystemHelperFuncs::FindComponentsWithDataCount<false>(arrSorted), false>(arrSorted);
+			static constexpr auto optionalWithData = _SystemHelperFuncs::FindMatchingComponents<_SystemHelperFuncs::FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::Optional))>(arrSorted, make_array(RequirementForComponent::Optional));
+			static constexpr auto subtractive = _SystemHelperFuncs::FindMatchingComponents<_SystemHelperFuncs::FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::Subtractive))>(arrSorted, make_array(RequirementForComponent::Subtractive));
+			static constexpr auto writeAccess = _SystemHelperFuncs::FindComponentsWithData<_SystemHelperFuncs::FindComponentsWithDataCount<true>(arrSorted), true>(arrSorted);
+			static constexpr auto archetypeDefining = _SystemHelperFuncs::FindMatchingComponents<_SystemHelperFuncs::FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::RequiredWithData, RequirementForComponent::Required, RequirementForComponent::Subtractive))>(arrSorted, make_array(RequirementForComponent::RequiredWithData, RequirementForComponent::Required, RequirementForComponent::Subtractive));
+			static constexpr auto archetypeDefiningInfoOnly = _SystemHelperFuncs::StripAccessData(archetypeDefining);
+			static constexpr Requests requests =
+			{
+				ToArray(requiredWithoutData),
+				ToArray(requiredWithData),
+				ToArray(required),
+				ToArray(requiredOrOptional),
+				ToArray(withData),
+				ToArray(optionalWithData),
+				ToArray(subtractive),
+				ToArray(writeAccess),
+				ToArray(archetypeDefining),
+				ToArray(arrSorted),
+				ToArray(arr),
+				nullopt,
+				ToArray(archetypeDefiningInfoOnly)
+			};
+			return requests;
+		}
+			
+		virtual const Requests &RequestedComponents() const override final
+		{
+			return _RequestedComponents();
+		}
+		
+		using IndirectSystem::Update;
+		using IndirectSystem::ProcessMessages;
 	};
 
 	template <typename Type, typename SystemType> struct _DirectSystemTypeIdentifiable : public DirectSystem, public Type
@@ -449,50 +493,6 @@ namespace ECSTest
 		}
 	};
 
-	#define INDIRECT_SYSTEM(name) struct name : public _SystemTypeIdentifiable<IndirectSystem, NAME_TO_STABLE_ID(name), name>
+	#define INDIRECT_SYSTEM(name) struct name : public _IndirectSystemTypeIdentifiable<NAME_TO_STABLE_ID(name), name>
 	#define DIRECT_SYSTEM(name) struct name : public _DirectSystemTypeIdentifiable<NAME_TO_STABLE_ID(name), name>
 }
-
-#define INDIRECT_ACCEPT_COMPONENTS(...) \
-    static constexpr const Requests &_RequestedComponents() \
-    { \
-		struct Local { static void Temp(__VA_ARGS__); }; \
-		using types = typename FunctionInfo::Info<decltype(Local::Temp)>::args; \
-        static constexpr auto converted = _SystemHelperFuncs::TupleToComponentsArray<types>(std::make_index_sequence<std::tuple_size_v<types>>()); \
-        static_assert(converted.second == nullopt, "Indirect systems can't request EntityID"); \
-        static constexpr auto arr = converted.first; \
-        static constexpr auto arrSorted = Funcs::SortCompileTime(arr); \
-        static constexpr auto requiredWithoutData = _SystemHelperFuncs::FindMatchingComponents<_SystemHelperFuncs::FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::Required))>(arrSorted, make_array(RequirementForComponent::Required)); \
-        static constexpr auto requiredWithData = _SystemHelperFuncs::FindMatchingComponents<_SystemHelperFuncs::FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::RequiredWithData))>(arrSorted, make_array(RequirementForComponent::RequiredWithData)); \
-		static constexpr auto required = _SystemHelperFuncs::FindMatchingComponents<_SystemHelperFuncs::FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::RequiredWithData, RequirementForComponent::Required))>(arrSorted, make_array(RequirementForComponent::RequiredWithData, RequirementForComponent::Required)); \
-		static constexpr auto requiredOrOptional = _SystemHelperFuncs::FindMatchingComponents<_SystemHelperFuncs::FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::RequiredWithData, RequirementForComponent::Required, RequirementForComponent::Optional))>(arrSorted, make_array(RequirementForComponent::RequiredWithData, RequirementForComponent::Required, RequirementForComponent::Optional)); \
-        static constexpr auto withData = _SystemHelperFuncs::FindComponentsWithData<_SystemHelperFuncs::FindComponentsWithDataCount<false>(arrSorted), false>(arrSorted); \
-        static constexpr auto optionalWithData = _SystemHelperFuncs::FindMatchingComponents<_SystemHelperFuncs::FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::Optional))>(arrSorted, make_array(RequirementForComponent::Optional)); \
-        static constexpr auto subtractive = _SystemHelperFuncs::FindMatchingComponents<_SystemHelperFuncs::FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::Subtractive))>(arrSorted, make_array(RequirementForComponent::Subtractive)); \
-        static constexpr auto writeAccess = _SystemHelperFuncs::FindComponentsWithData<_SystemHelperFuncs::FindComponentsWithDataCount<true>(arrSorted), true>(arrSorted); \
-        static constexpr auto archetypeDefining = _SystemHelperFuncs::FindMatchingComponents<_SystemHelperFuncs::FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::RequiredWithData, RequirementForComponent::Required, RequirementForComponent::Subtractive))>(arrSorted, make_array(RequirementForComponent::RequiredWithData, RequirementForComponent::Required, RequirementForComponent::Subtractive)); \
-		static constexpr auto archetypeDefiningInfoOnly = _SystemHelperFuncs::StripAccessData(archetypeDefining); \
-        static constexpr Requests requests = \
-        { \
-            ToArray(requiredWithoutData), \
-            ToArray(requiredWithData), \
-            ToArray(required), \
-            ToArray(requiredOrOptional), \
-            ToArray(withData), \
-            ToArray(optionalWithData), \
-            ToArray(subtractive), \
-            ToArray(writeAccess), \
-            ToArray(archetypeDefining), \
-            ToArray(arrSorted), \
-            ToArray(arr), \
-            nullopt, \
-			ToArray(archetypeDefiningInfoOnly) \
-        }; \
-        return requests; \
-    } \
-    virtual const Requests &RequestedComponents() const override final \
-	{ \
-		return _RequestedComponents(); \
-	} \
-    using IndirectSystem::Update; \
-    using IndirectSystem::ProcessMessages

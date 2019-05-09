@@ -33,7 +33,7 @@ namespace
 
     PHYSICS_DECLARE(PhysicsSystem)
     {
-        PHYSICS_ACCEPT(Array<Position> &);
+        void Accept(Array<Position> &);
 
         virtual bool ControlInput(Environment &env, const ControlAction &input) override
         {
@@ -64,6 +64,7 @@ namespace
         }
 
     #ifdef PHYSICS_INDIRECT
+		using IndirectSystem::ProcessMessages;
         virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override {}
         virtual void Update(Environment &env) override;
     #endif
@@ -86,7 +87,7 @@ namespace
 
     INDIRECT_SYSTEM(RendererSystem)
     {
-        INDIRECT_ACCEPT_COMPONENTS(const Array<Position> &);
+		void Accept(const Array<Position> &);
 
         virtual bool ControlInput(Environment &env, const ControlAction &input) override
         {
@@ -127,6 +128,7 @@ namespace
             ++RendererSentKeys;
         }
 
+		using IndirectSystem::ProcessMessages;
         virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override {}
         virtual void ProcessMessages(Environment &env, const MessageStreamComponentChanged &stream) override {}
     };

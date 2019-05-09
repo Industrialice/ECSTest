@@ -59,7 +59,7 @@ namespace
 
     INDIRECT_SYSTEM(PhysicsSystem)
     {
-        INDIRECT_ACCEPT_COMPONENTS(Array<Position> &, Array<Rotation> &, const Array<MeshCollider> &, const Array<Physics> &);
+        void Accept(Array<Position> &, Array<Rotation> &, const Array<MeshCollider> &, const Array<Physics> &);
 
         struct Data
         {
@@ -194,7 +194,7 @@ namespace
 
     INDIRECT_SYSTEM(RendererSystem)
     {
-        INDIRECT_ACCEPT_COMPONENTS(const Array<Position> &, const Array<Rotation> &, const Array<MeshRenderer> &);
+        void Accept(const Array<Position> &, const Array<Rotation> &, const Array<MeshRenderer> &);
 
         struct Data
         {

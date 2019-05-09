@@ -55,7 +55,8 @@ namespace
 
     INDIRECT_SYSTEM(TransformGeneratorSystem)
     {
-        INDIRECT_ACCEPT_COMPONENTS(Array<Name> &, SubtractiveComponent<Transform>);
+        void Accept(Array<Name> &, SubtractiveComponent<Transform>);
+		using IndirectSystem::ProcessMessages;
 
         virtual void Update(Environment &env) override
         {
@@ -110,7 +111,7 @@ namespace
 
     INDIRECT_SYSTEM(TransformHeightFixerSystem)
     {
-        INDIRECT_ACCEPT_COMPONENTS(Array<Transform> &, const Array<NegativeHeightCooldown> *, Array<HeightFixerInfo> *);
+        void Accept(Array<Transform> &, const Array<NegativeHeightCooldown> *, Array<HeightFixerInfo> *);
 
         virtual void Update(Environment &env) override
         {
@@ -253,7 +254,8 @@ namespace
             optional<SpeedOfFall> speedOfFall{};
         };
 
-        INDIRECT_ACCEPT_COMPONENTS(Array<Transform> &, Array<SpeedOfFall> *);
+	public:
+        void Accept(Array<Transform> &, Array<SpeedOfFall> *);
 
         virtual void Update(Environment &env) override
         {
@@ -373,7 +375,7 @@ namespace
 
     INDIRECT_SYSTEM(AverageHeightAnalyzerSystem)
     {
-        INDIRECT_ACCEPT_COMPONENTS(const Array<Transform> &, Array<AverageHeight> *);
+        void Accept(const Array<Transform> &, Array<AverageHeight> *);
 
         virtual void Update(Environment &env) override
         {
@@ -469,7 +471,7 @@ namespace
 
     INDIRECT_SYSTEM(CooldownUpdater)
     {
-        INDIRECT_ACCEPT_COMPONENTS(Array<NegativeHeightCooldown> &);
+        void Accept(Array<NegativeHeightCooldown> &);
 
         virtual void Update(Environment &env) override
         {

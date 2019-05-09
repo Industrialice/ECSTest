@@ -90,7 +90,7 @@ namespace
 
     INDIRECT_SYSTEM(GeneratorSystem)
     {
-        INDIRECT_ACCEPT_COMPONENTS(Array<GeneratedComponent> *, SubtractiveComponent<ConsumerInfoComponent>, SubtractiveComponent<OtherComponent>, NonUnique<TagComponent> *, Array<GeneratorInfoComponent> *);
+        void Accept(Array<GeneratedComponent> *, SubtractiveComponent<ConsumerInfoComponent>, SubtractiveComponent<OtherComponent>, NonUnique<TagComponent> *, Array<GeneratorInfoComponent> *);
 
         virtual void Update(Environment &env) override
         {
@@ -221,7 +221,7 @@ namespace
 
     INDIRECT_SYSTEM(ConsumerIndirectSystem)
     {
-        INDIRECT_ACCEPT_COMPONENTS(const Array<GeneratedComponent> &, const Array<TempComponent> *, const NonUnique<TagComponent> *, Array<ConsumerInfoComponent> *, RequiredComponent<FilterTag>);
+        void Accept(const Array<GeneratedComponent> &, const Array<TempComponent> *, const NonUnique<TagComponent> *, Array<ConsumerInfoComponent> *, RequiredComponent<FilterTag>);
 
         virtual void Update(Environment &env) override
         {
@@ -408,7 +408,8 @@ namespace
 
     INDIRECT_SYSTEM(OtherIndirectSystem)
     {
-        INDIRECT_ACCEPT_COMPONENTS(Array<OtherComponent> &);
+        void Accept(Array<OtherComponent> &);
+		using IndirectSystem::ProcessMessages;
 
         virtual void Update(Environment &env) override
         {

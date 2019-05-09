@@ -35,7 +35,8 @@ namespace
     // cannot run in parallel with TestIndirectSystem2
     INDIRECT_SYSTEM(TestIndirectSystem0)
     {
-        INDIRECT_ACCEPT_COMPONENTS(Array<TestComponent0> &);
+		void Accept(Array<TestComponent0> &);
+		using IndirectSystem::ProcessMessages;
 
         virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override
         {
@@ -72,7 +73,8 @@ namespace
 
     INDIRECT_SYSTEM(TestIndirectSystem1)
     {
-        INDIRECT_ACCEPT_COMPONENTS(const Array<TestComponent0> &, const Array<TestComponent1> &, const NonUnique<TestComponent2> *);
+		void Accept(const Array<TestComponent0> &, const Array<TestComponent1> &, const NonUnique<TestComponent2> *);
+		using IndirectSystem::ProcessMessages;
 
         virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override
         {
@@ -108,7 +110,8 @@ namespace
     // cannot run in parallel with TestIndirectSystem0
     INDIRECT_SYSTEM(TestIndirectSystem2)
     {
-        INDIRECT_ACCEPT_COMPONENTS(Array<TestComponent0> &);
+		void Accept(Array<TestComponent0> &);
+		using IndirectSystem::ProcessMessages;
 
         virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override
         {}
@@ -139,7 +142,8 @@ namespace
 
     INDIRECT_SYSTEM(MonitoringSystem)
     {
-        INDIRECT_ACCEPT_COMPONENTS();
+		void Accept();
+		using IndirectSystem::ProcessMessages;
 
         virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override
         {
