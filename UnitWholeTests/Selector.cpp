@@ -1,6 +1,8 @@
 #include <PreHeader.hpp>
 #include <stdio.h>
 
+void PerformUnitTests(bool isSuppressLogs);
+
 void Benchmark();
 void Benchmark2();
 void KeyControllerTests();
@@ -10,6 +12,8 @@ void InteractionTests();
 
 int main()
 {
+	PerformUnitTests(true);
+
     printf("1. KeyControllerTests\n");
     printf("2. InteractionTests\n");
     printf("3. SyncTests\n");

@@ -207,6 +207,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='ReleaseXP|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Selector.cpp" />
+    <ClCompile Include="UnitTests.cpp" />
     <ClCompile Include="SyncTests.cpp" />
     <ClCompile Include="Falling.cpp" />
     <ClCompile Include="InteractionTests.cpp" />

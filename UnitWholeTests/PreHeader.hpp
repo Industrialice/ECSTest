@@ -7,6 +7,8 @@
 #include <Windows.h>
 #include <EntitiesStreamBuilder.hpp>
 #include <KeyController.hpp>
+#include <ArchetypeReflector.hpp>
+#include <set>
 
 namespace ECSTest
 {
