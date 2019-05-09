@@ -371,7 +371,7 @@ namespace
 
     DIRECT_SYSTEM(ConsumerDirectSystem)
     {
-        DIRECT_ACCEPT_COMPONENTS(const Array<GeneratedComponent> &generatedComponents, const Array<EntityID> &ids, const NonUnique<TagComponent> *tags)
+		void Update(Environment &env, const Array<GeneratedComponent> &generatedComponents, const Array<EntityID> &ids, const NonUnique<TagComponent> *tags)
         {
             ASSUME(ids.size() > 0);
             ASSUME(ids.size() <= EntitiesToAdd);
@@ -469,7 +469,7 @@ namespace
 
     DIRECT_SYSTEM(EmptyDirectReadSystem)
     {
-        DIRECT_ACCEPT_COMPONENTS(const Array<OtherComponent> &components, const Array<EntityID> &ids)
+		void Update(Environment &env, const Array<OtherComponent> &components, const Array<EntityID> &ids)
         {
             for (uiw index = 0; index < components.size(); ++index)
             {
@@ -482,7 +482,7 @@ namespace
 
     DIRECT_SYSTEM(EmptyDirectWriteSystem)
     {
-        DIRECT_ACCEPT_COMPONENTS(Array<OtherComponent> &components, const Array<EntityID> &ids)
+		void Update(Environment &env, Array<OtherComponent> &components, const Array<EntityID> &ids)
         {
             for (uiw index = 0; index < components.size(); ++index)
             {

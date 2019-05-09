@@ -32,7 +32,7 @@ namespace
 
     DIRECT_SYSTEM(System0)
     {
-        DIRECT_ACCEPT_COMPONENTS(Array<CosineResultComponent> &cosine, Array<SinusResultComponent> &sinus, const Array<SourceComponent> &sources, RequiredComponent<Group0Tag>)
+        void Update(Environment &env, Array<CosineResultComponent> &cosine, Array<SinusResultComponent> &sinus, const Array<SourceComponent> &sources, RequiredComponent<Group0Tag>)
         {
             ASSUME(cosine.size() == sinus.size() && sinus.size() == sources.size());
             for (uiw index = 0; index < cosine.size(); ++index)
@@ -45,7 +45,7 @@ namespace
 
     DIRECT_SYSTEM(System1)
     {
-        DIRECT_ACCEPT_COMPONENTS(Array<CosineResultComponent> &cosine, Array<SinusResultComponent> &sinus, const Array<SourceComponent> &sources, RequiredComponent<Group1Tag>)
+		void Update(Environment &env, Array<CosineResultComponent> &cosine, Array<SinusResultComponent> &sinus, const Array<SourceComponent> &sources, RequiredComponent<Group1Tag>)
         {
             ASSUME(cosine.size() == sinus.size() && sinus.size() == sources.size());
             for (uiw index = 0; index < cosine.size(); ++index)
@@ -58,7 +58,7 @@ namespace
 
     DIRECT_SYSTEM(System2)
     {
-        DIRECT_ACCEPT_COMPONENTS(Array<CosineResultComponent> &cosine, Array<SinusResultComponent> &sinus, const Array<SourceComponent> &sources, RequiredComponent<Group2Tag>)
+		void Update(Environment &env, Array<CosineResultComponent> &cosine, Array<SinusResultComponent> &sinus, const Array<SourceComponent> &sources, RequiredComponent<Group2Tag>)
         {
             ASSUME(cosine.size() == sinus.size() && sinus.size() == sources.size());
             for (uiw index = 0; index < cosine.size(); ++index)
@@ -71,7 +71,7 @@ namespace
 
     DIRECT_SYSTEM(System3)
     {
-        DIRECT_ACCEPT_COMPONENTS(Array<CosineResultComponent> &cosine, Array<SinusResultComponent> &sinus, const Array<SourceComponent> &sources, RequiredComponent<Group3Tag>)
+		void Update(Environment &env, Array<CosineResultComponent> &cosine, Array<SinusResultComponent> &sinus, const Array<SourceComponent> &sources, RequiredComponent<Group3Tag>)
         {
             ASSUME(cosine.size() == sinus.size() && sinus.size() == sources.size());
             for (uiw index = 0; index < cosine.size(); ++index)

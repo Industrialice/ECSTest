@@ -136,9 +136,9 @@ namespace ECSTest
         }
 
         // used by direct systems to convert void **array into proper function argument types
-        template <auto Method, typename types, typename T, uiw... Indexes> static FORCEINLINE void CallAccept(T *object, System::Environment &env, void **array, std::index_sequence<Indexes...>)
+        template <auto Method, typename types, typename T, uiw... Indexes> static FORCEINLINE void CallUpdate(T *object, System::Environment &env, void **array, std::index_sequence<Indexes...>)
         {
-            (object->*Method)(env, ConvertArgument<types, Indexes>(array)...);
+			object->Update(env, ConvertArgument<types, Indexes>(array)...);
         }
 
         // make sure the argument type is correct
@@ -371,58 +371,87 @@ namespace ECSTest
 			return output;
 		}
     };
-}
 
-#define DIRECT_ACCEPT_COMPONENTS(...) \
-    static constexpr const Requests &_RequestedComponents() \
-    { \
-		struct Local { static void Temp(__VA_ARGS__); }; \
-		using types = typename FunctionInfo::Info<decltype(Local::Temp)>::args; \
-        static constexpr auto converted = _SystemHelperFuncs::TupleToComponentsArray<types>(std::make_index_sequence<std::tuple_size_v<types>>()); \
-        static constexpr auto arr = converted.first; \
-        static constexpr auto arrSorted = Funcs::SortCompileTime(arr); \
-        static constexpr auto requiredWithoutData = _SystemHelperFuncs::FindMatchingComponents<_SystemHelperFuncs::FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::Required))>(arrSorted, make_array(RequirementForComponent::Required)); \
-        static constexpr auto requiredWithData = _SystemHelperFuncs::FindMatchingComponents<_SystemHelperFuncs::FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::RequiredWithData))>(arrSorted, make_array(RequirementForComponent::RequiredWithData)); \
-		static constexpr auto required = _SystemHelperFuncs::FindMatchingComponents<_SystemHelperFuncs::FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::RequiredWithData, RequirementForComponent::Required))>(arrSorted, make_array(RequirementForComponent::RequiredWithData, RequirementForComponent::Required)); \
-		static constexpr auto requiredOrOptional = _SystemHelperFuncs::FindMatchingComponents<_SystemHelperFuncs::FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::RequiredWithData, RequirementForComponent::Required, RequirementForComponent::Optional))>(arrSorted, make_array(RequirementForComponent::RequiredWithData, RequirementForComponent::Required, RequirementForComponent::Optional)); \
-        static constexpr auto withData = _SystemHelperFuncs::FindComponentsWithData<_SystemHelperFuncs::FindComponentsWithDataCount<false>(arrSorted), false>(arrSorted); \
-        static constexpr auto optionalWithData = _SystemHelperFuncs::FindMatchingComponents<_SystemHelperFuncs::FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::Optional))>(arrSorted, make_array(RequirementForComponent::Optional)); \
-        static constexpr auto subtractive = _SystemHelperFuncs::FindMatchingComponents<_SystemHelperFuncs::FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::Subtractive))>(arrSorted, make_array(RequirementForComponent::Subtractive)); \
-        static constexpr auto writeAccess = _SystemHelperFuncs::FindComponentsWithData<_SystemHelperFuncs::FindComponentsWithDataCount<true>(arrSorted), true>(arrSorted); \
-        static constexpr auto archetypeDefining = _SystemHelperFuncs::FindMatchingComponents<_SystemHelperFuncs::FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::RequiredWithData, RequirementForComponent::Required, RequirementForComponent::Subtractive))>(arrSorted, make_array(RequirementForComponent::RequiredWithData, RequirementForComponent::Required, RequirementForComponent::Subtractive)); \
-		static constexpr auto archetypeDefiningInfoOnly = _SystemHelperFuncs::StripAccessData(archetypeDefining); \
-        static constexpr Requests requests = \
-        { \
-            ToArray(requiredWithoutData), \
-            ToArray(requiredWithData), \
-            ToArray(required), \
-            ToArray(requiredOrOptional), \
-            ToArray(withData), \
-            ToArray(optionalWithData), \
-            ToArray(subtractive), \
-            ToArray(writeAccess), \
-            ToArray(archetypeDefining), \
-            ToArray(arrSorted), \
-            ToArray(arr), \
-            converted.second, \
-			ToArray(archetypeDefiningInfoOnly) \
-        }; \
-        return requests; \
-    } \
-    virtual const Requests &RequestedComponents() const override final \
-	{ \
-		return _RequestedComponents(); \
-	} \
-    \
-    virtual void Accept(Environment &env, void **array) override \
-    { \
-        using thisType = std::remove_reference_t<std::remove_cv_t<decltype(*this)>>; \
-		struct Local { static void Temp(__VA_ARGS__); }; \
-		using types = typename FunctionInfo::Info<decltype(Local::Temp)>::args; \
-		static constexpr uiw count = std::tuple_size_v<types>; \
-        _SystemHelperFuncs::CallAccept<&thisType::Update, types>(this, env, array, std::make_index_sequence<count>()); \
-    } \
-    void Update(Environment &env, __VA_ARGS__)
+	template <typename BaseSystem, typename Type, typename SystemType> struct _SystemTypeIdentifiable : public BaseSystem, public Type
+	{
+	public:
+		[[nodiscard]] virtual StableTypeId GetTypeId() const override final
+		{
+			return Type::GetTypeId();
+		}
+
+		[[nodiscard]] virtual string_view GetTypeName() const override final
+		{
+			return Type::GetTypeName();
+		}
+	};
+
+	template <typename Type, typename SystemType> struct _DirectSystemTypeIdentifiable : public DirectSystem, public Type
+	{
+	public:
+		[[nodiscard]] virtual StableTypeId GetTypeId() const override final
+		{
+			return Type::GetTypeId();
+		}
+
+		[[nodiscard]] virtual string_view GetTypeName() const override final
+		{
+			return Type::GetTypeName();
+		}
+
+		static constexpr const Requests &_RequestedComponents()
+		{
+			using typesFull = typename FunctionInfo::Info<decltype(&SystemType::Update)>::args;
+			static_assert(is_same_v<std::remove_reference_t<std::tuple_element_t<0, typesFull>>, Environment>, "First argument in Update must be Environment &");
+			using types = typename Funcs::RemoveTupleElement<0, typesFull>;
+			static constexpr auto converted = _SystemHelperFuncs::TupleToComponentsArray<types>(std::make_index_sequence<std::tuple_size_v<types>>());
+			static constexpr auto arr = converted.first;
+			static constexpr auto arrSorted = Funcs::SortCompileTime(arr);
+			static constexpr auto requiredWithoutData = _SystemHelperFuncs::FindMatchingComponents<_SystemHelperFuncs::FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::Required))>(arrSorted, make_array(RequirementForComponent::Required));
+			static constexpr auto requiredWithData = _SystemHelperFuncs::FindMatchingComponents<_SystemHelperFuncs::FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::RequiredWithData))>(arrSorted, make_array(RequirementForComponent::RequiredWithData));
+			static constexpr auto required = _SystemHelperFuncs::FindMatchingComponents<_SystemHelperFuncs::FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::RequiredWithData, RequirementForComponent::Required))>(arrSorted, make_array(RequirementForComponent::RequiredWithData, RequirementForComponent::Required));
+			static constexpr auto requiredOrOptional = _SystemHelperFuncs::FindMatchingComponents<_SystemHelperFuncs::FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::RequiredWithData, RequirementForComponent::Required, RequirementForComponent::Optional))>(arrSorted, make_array(RequirementForComponent::RequiredWithData, RequirementForComponent::Required, RequirementForComponent::Optional));
+			static constexpr auto withData = _SystemHelperFuncs::FindComponentsWithData<_SystemHelperFuncs::FindComponentsWithDataCount<false>(arrSorted), false>(arrSorted);
+			static constexpr auto optionalWithData = _SystemHelperFuncs::FindMatchingComponents<_SystemHelperFuncs::FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::Optional))>(arrSorted, make_array(RequirementForComponent::Optional));
+			static constexpr auto subtractive = _SystemHelperFuncs::FindMatchingComponents<_SystemHelperFuncs::FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::Subtractive))>(arrSorted, make_array(RequirementForComponent::Subtractive));
+			static constexpr auto writeAccess = _SystemHelperFuncs::FindComponentsWithData<_SystemHelperFuncs::FindComponentsWithDataCount<true>(arrSorted), true>(arrSorted);
+			static constexpr auto archetypeDefining = _SystemHelperFuncs::FindMatchingComponents<_SystemHelperFuncs::FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::RequiredWithData, RequirementForComponent::Required, RequirementForComponent::Subtractive))>(arrSorted, make_array(RequirementForComponent::RequiredWithData, RequirementForComponent::Required, RequirementForComponent::Subtractive));
+			static constexpr auto archetypeDefiningInfoOnly = _SystemHelperFuncs::StripAccessData(archetypeDefining);
+			static constexpr Requests requests =
+			{
+				ToArray(requiredWithoutData),
+				ToArray(requiredWithData),
+				ToArray(required),
+				ToArray(requiredOrOptional),
+				ToArray(withData),
+				ToArray(optionalWithData),
+				ToArray(subtractive),
+				ToArray(writeAccess),
+				ToArray(archetypeDefining),
+				ToArray(arrSorted),
+				ToArray(arr),
+				converted.second,
+				ToArray(archetypeDefiningInfoOnly)
+			};
+			return requests;
+		}
+
+		virtual const Requests &RequestedComponents() const override final
+		{
+			return _RequestedComponents();
+		}
+
+		virtual void Accept(Environment &env, void **array) override final
+		{
+			using types = typename Funcs::RemoveTupleElement<0, typename FunctionInfo::Info<decltype(&SystemType::Update)>::args>;
+			static constexpr uiw count = std::tuple_size_v<types>;
+			_SystemHelperFuncs::CallUpdate<&SystemType::Update, types>((SystemType *)this, env, array, std::make_index_sequence<count>());
+		}
+	};
+
+	#define INDIRECT_SYSTEM(name) struct name : public _SystemTypeIdentifiable<IndirectSystem, NAME_TO_STABLE_ID(name), name>
+	#define DIRECT_SYSTEM(name) struct name : public _DirectSystemTypeIdentifiable<NAME_TO_STABLE_ID(name), name>
+}
 
 #define INDIRECT_ACCEPT_COMPONENTS(...) \
     static constexpr const Requests &_RequestedComponents() \

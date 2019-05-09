@@ -356,7 +356,7 @@ namespace
 
     DIRECT_SYSTEM(TransformFallingDirectSystem)
     {
-        DIRECT_ACCEPT_COMPONENTS(Array<Transform> &transforms, Array<SpeedOfFall> *speeds)
+		void Update(Environment &env, Array<Transform> &transforms, Array<SpeedOfFall> *speeds)
         {
             for (uiw index = 0; index < transforms.size(); ++index)
             {

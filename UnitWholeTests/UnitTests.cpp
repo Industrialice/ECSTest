@@ -313,7 +313,7 @@ namespace
 
 	DIRECT_SYSTEM(TestSystem)
 	{
-		DIRECT_ACCEPT_COMPONENTS(NonUnique<ComponentArtist> &, const NonUnique<ComponentProgrammer> &, Array<ComponentSpouse> &, const Array<EntityID> &, const Array<ComponentCompany> &, Array<ComponentEmployee> *, const Array<ComponentGender> *, RequiredComponent<ComponentDateOfBirth>, SubtractiveComponent<ComponentDesigner>);
+		void Update(Environment &env, NonUnique<ComponentArtist> &, const NonUnique<ComponentProgrammer> &, Array<ComponentSpouse> &, const Array<EntityID> &, const Array<ComponentCompany> &, Array<ComponentEmployee> *, const Array<ComponentGender> *, RequiredComponent<ComponentDateOfBirth>, SubtractiveComponent<ComponentDesigner>);
 	};
 
 	template <typename... Types> constexpr std::array<StableTypeId, sizeof...(Types)> MakeArray()
@@ -396,7 +396,7 @@ public:
 			return name;
 		};
 
-		for (ui32 index = 0; index < 10000; ++index)
+		for (ui32 index = 0; index < 1000; ++index)
 		{
 			{
 				auto &componentBuilder = builder.AddEntity(gen.Generate());

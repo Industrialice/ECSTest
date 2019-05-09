@@ -20,7 +20,7 @@ static bool ReceiveInput(const ControlAction &action);
 
 DIRECT_SYSTEM(ScreenColorSystem)
 {
-	DIRECT_ACCEPT_COMPONENTS(Array<Camera> &cameras, const Array<EntityID> &ids)
+	void Update(Environment &env, Array<Camera> &cameras, const Array<EntityID> &ids)
 	{
 		for (auto &camera : cameras)
 		{

@@ -83,23 +83,6 @@ namespace ECSTest
 		[[nodiscard]] virtual const DirectSystem *AsDirectSystem() const override final;
 		virtual void Accept(Environment &env, void **array) = 0;
 	};
-
-    template <typename BaseSystem, typename Type> struct _SystemTypeIdentifiable : public BaseSystem, public Type
-    {
-    public:
-        [[nodiscard]] virtual StableTypeId GetTypeId() const override final
-        {
-            return Type::GetTypeId();
-        }
-
-        [[nodiscard]] virtual string_view GetTypeName() const override final
-        {
-            return Type::GetTypeName();
-        }
-    };
-
-    #define INDIRECT_SYSTEM(name) struct name : public _SystemTypeIdentifiable<IndirectSystem, NAME_TO_STABLE_ID(name)>
-	#define DIRECT_SYSTEM(name) struct name : public _SystemTypeIdentifiable<DirectSystem, NAME_TO_STABLE_ID(name)>
 }
 
 #include "SystemHelpers.hpp"
