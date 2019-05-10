@@ -358,7 +358,7 @@ namespace
 
     DIRECT_SYSTEM(TransformFallingDirectSystem)
     {
-		void Accept(Environment &env, Array<Transform> &transforms, Array<SpeedOfFall> *speeds)
+		void Accept(Array<Transform> &transforms, Array<SpeedOfFall> *speeds, Environment &env)
         {
             for (uiw index = 0; index < transforms.size(); ++index)
             {

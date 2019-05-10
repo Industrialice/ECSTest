@@ -43,9 +43,10 @@ namespace ECSTest
             Array<const RequestedComponent> subtractive; // contains only subtractive components
             Array<const RequestedComponent> writeAccess; // contains only components with write access (write access is ignored for subtractive components)
             Array<const RequestedComponent> archetypeDefining; // contains only required and subtractive components
-            Array<const RequestedComponent> all; // contains all reqested components
-            Array<const RequestedComponent> allOriginalOrder; // contains all reqested components in the order they are declared
-            std::optional<ui32> idsArgumentNumber; // direct systems only; indicates whether EntityID array was also requested and if it was, contains its argument index
+            Array<const RequestedComponent> all; // contains all requested components
+            Array<const RequestedComponent> allOriginalOrder; // contains all requested components in the order they are declared
+            optional<ui32> idsArgumentNumber; // direct systems only; indicates whether EntityID array was also requested and if it was, contains its argument index
+			optional<ui32> environmentArgumentNumber; // direct systems only; indicates whether Environment was also requested and if it was, contains its argument index
 			Array<const pair<StableTypeId, RequirementForComponent>> archetypeDefiningInfoOnly; // contains elements from archetypeDefining, but without the access information
         };
 
@@ -81,7 +82,7 @@ namespace ECSTest
 	{
 		[[nodiscard]] virtual DirectSystem *AsDirectSystem() override final;
 		[[nodiscard]] virtual const DirectSystem *AsDirectSystem() const override final;
-		virtual void AcceptUntyped(Environment &env, void **array) = 0;
+		virtual void AcceptUntyped(void **array) = 0;
 	};
 }
 

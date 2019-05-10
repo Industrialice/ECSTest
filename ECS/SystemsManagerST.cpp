@@ -998,9 +998,9 @@ void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, ControlsQueue &
         addToQueueHandle = env.keyController->OnControlAction(std::bind(&SendControlActionToQueue, std::ref(controlsToSendQueue), _1));
     }
 
-    auto &reqested = system.RequestedComponents();
+    auto &requested = system.RequestedComponents();
 
-    uiw maxArgs = reqested.withData.size() + (reqested.idsArgumentNumber != nullopt) + reqested.requiredWithoutData.size();
+    uiw maxArgs = requested.withData.size() + (requested.idsArgumentNumber != nullopt) + requested.requiredWithoutData.size() + (requested.environmentArgumentNumber != nullopt);
 
 	_tempNonUniqueArgs.reserve(maxArgs);
     _tempArrayArgs.reserve(maxArgs);
@@ -1026,7 +1026,7 @@ void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, ControlsQueue &
             _tempArrayArgs.clear();
             _tempArgs.clear();
 
-            for (const System::RequestedComponent &arg : reqested.allOriginalOrder)
+            for (const System::RequestedComponent &arg : requested.allOriginalOrder)
             {
                 if (arg.requirement == RequirementForComponent::Required)
                 {
@@ -1053,18 +1053,20 @@ void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, ControlsQueue &
 
                 if (isFound)
                 {
-					if (group.get().components[index].isUnique)
+					const auto &component = group.get().components[index];
+
+					if (component.isUnique)
 					{
-						_tempArrayArgs.push_back({group.get().components[index].data.get(), group.get().entitiesCount});
+						_tempArrayArgs.push_back({component.data.get(), group.get().entitiesCount});
 						_tempArgs.push_back(&_tempArrayArgs.back());
 					}
 					else
 					{
 						NonUnique<ui8> desc = 
 						{
-							{group.get().components[index].data.get(), group.get().entitiesCount * group.get().components[index].stride},
-							{group.get().components[index].ids.get(), group.get().entitiesCount * group.get().components[index].stride},
-							group.get().components[index].stride
+							{component.data.get(), group.get().entitiesCount * component.stride},
+							{component.ids.get(), group.get().entitiesCount * component.stride},
+							component.stride
 						};
 						_tempNonUniqueArgs.push_back(desc);
 						_tempArgs.push_back(&_tempNonUniqueArgs.back());
@@ -1077,15 +1079,37 @@ void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, ControlsQueue &
                 }
             }
 
-            if (reqested.idsArgumentNumber)
-            {
-                _tempArrayArgs.insert(_tempArrayArgs.begin() + *reqested.idsArgumentNumber, {(ui8 *)group.get().entities.get(), group.get().entitiesCount});
-                _tempArgs.insert(_tempArgs.begin() + *reqested.idsArgumentNumber, &_tempArrayArgs.back());
-            }
+			auto insertIds = [this, &requested, &group]
+			{
+				if (requested.idsArgumentNumber)
+				{
+					_tempArrayArgs.push_back({(ui8 *)group.get().entities.get(), group.get().entitiesCount});
+					_tempArgs.insert(_tempArgs.begin() + *requested.idsArgumentNumber, &_tempArrayArgs.back());
+				}
+			};
+
+			auto insertEnv = [this, &requested, &env]
+			{
+				if (requested.environmentArgumentNumber)
+				{
+					_tempArgs.insert(_tempArgs.begin() + *requested.environmentArgumentNumber, &env);
+				}
+			};
+
+			if (requested.idsArgumentNumber < requested.environmentArgumentNumber)
+			{
+				insertIds();
+				insertEnv();
+			}
+			else
+			{
+				insertEnv();
+				insertIds();
+			}
 
             ASSUME(_tempArgs.size() <= maxArgs);
 
-            system.AcceptUntyped(env, _tempArgs.data());
+            system.AcceptUntyped(_tempArgs.data());
 
 			for (const System::RequestedComponent &arg : system.RequestedComponents().writeAccess)
 			{

@@ -864,7 +864,7 @@ void SystemsManagerMT::ExecutePipeline(PipelineData &pipeline)
                     }
                     else
                     {
-                        // the group hasn't reqested any types, add all components
+                        // the group hasn't requested any types, add all components
                         for (uiw index = 0; index < group.uniqueTypedComponentsCount; ++index)
                         {
                             const auto &component = group.components[index];

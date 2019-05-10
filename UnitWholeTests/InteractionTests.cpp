@@ -371,8 +371,9 @@ namespace
 
     DIRECT_SYSTEM(ConsumerDirectSystem)
     {
-		void Accept(Environment &env, const Array<GeneratedComponent> &generatedComponents, const Array<EntityID> &ids, const NonUnique<TagComponent> *tags)
+		void Accept(const Array<GeneratedComponent> &generatedComponents, Environment &env, const Array<EntityID> &ids, const NonUnique<TagComponent> *tags)
         {
+			ASSUME(env.targetSystem == GetTypeId());
             ASSUME(ids.size() > 0);
             ASSUME(ids.size() <= EntitiesToAdd);
             ASSUME(generatedComponents.size() == ids.size());
@@ -413,6 +414,8 @@ namespace
 
         virtual void Update(Environment &env) override
         {
+			ASSUME(env.targetSystem == GetTypeId());
+
             if (_leftToGenerate)
             {
                 OtherComponent component;
@@ -470,8 +473,10 @@ namespace
 
     DIRECT_SYSTEM(EmptyDirectReadSystem)
     {
-		void Accept(Environment &env, const Array<OtherComponent> &components, const Array<EntityID> &ids)
+		void Accept(const Array<OtherComponent> &components, const Array<EntityID> &ids, Environment &env)
         {
+			ASSUME(env.targetSystem == GetTypeId());
+
             for (uiw index = 0; index < components.size(); ++index)
             {
                 auto &component = components[index];
@@ -485,6 +490,8 @@ namespace
     {
 		void Accept(Environment &env, Array<OtherComponent> &components, const Array<EntityID> &ids)
         {
+			ASSUME(env.targetSystem == GetTypeId());
+
             for (uiw index = 0; index < components.size(); ++index)
             {
                 auto &component = components[index];

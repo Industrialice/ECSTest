@@ -313,7 +313,7 @@ namespace
 
 	DIRECT_SYSTEM(TestSystem)
 	{
-		void Accept(Environment &env, NonUnique<ComponentArtist> &, const NonUnique<ComponentProgrammer> &, Array<ComponentSpouse> &, const Array<EntityID> &, const Array<ComponentCompany> &, Array<ComponentEmployee> *, const Array<ComponentGender> *, RequiredComponent<ComponentDateOfBirth>, SubtractiveComponent<ComponentDesigner>);
+		void Accept(NonUnique<ComponentArtist> &, const NonUnique<ComponentProgrammer> &, Array<ComponentSpouse> &, Environment &env, const Array<EntityID> &, const Array<ComponentCompany> &, Array<ComponentEmployee> *, const Array<ComponentGender> *, RequiredComponent<ComponentDateOfBirth>, SubtractiveComponent<ComponentDesigner>);
 	};
 
 	template <typename... Types> constexpr std::array<StableTypeId, sizeof...(Types)> MakeArray()
@@ -355,6 +355,7 @@ namespace
 		auto all = TestSystem::AcquireRequestedComponents().all;
 		auto allOriginalOrder = TestSystem::AcquireRequestedComponents().allOriginalOrder;
 		auto idsArgumentNumber = TestSystem::AcquireRequestedComponents().idsArgumentNumber;
+		auto environmentArgumentNumber = TestSystem::AcquireRequestedComponents().environmentArgumentNumber;
 		auto archetypeDefiningInfoOnly = TestSystem::AcquireRequestedComponents().archetypeDefiningInfoOnly;
 
 		static_assert(matches(TestSystem::AcquireRequestedComponents().requiredWithoutData, MakeArray<ComponentDateOfBirth>()));
@@ -368,7 +369,8 @@ namespace
 		static_assert(matches(TestSystem::AcquireRequestedComponents().archetypeDefining, MakeArray<ComponentArtist, ComponentProgrammer, ComponentSpouse, ComponentCompany, ComponentDateOfBirth, ComponentDesigner>()));
 		static_assert(matches(TestSystem::AcquireRequestedComponents().all, MakeArray<ComponentArtist, ComponentProgrammer, ComponentSpouse, ComponentCompany, ComponentDateOfBirth, ComponentEmployee, ComponentGender, ComponentDesigner>()));
 		static_assert(matches(TestSystem::AcquireRequestedComponents().allOriginalOrder, MakeArray<ComponentArtist, ComponentProgrammer, ComponentSpouse, ComponentCompany, ComponentEmployee, ComponentGender, ComponentDateOfBirth, ComponentDesigner>(), false));
-		static_assert(TestSystem::AcquireRequestedComponents().idsArgumentNumber == 3);
+		static_assert(TestSystem::AcquireRequestedComponents().idsArgumentNumber == 4);
+		static_assert(TestSystem::AcquireRequestedComponents().environmentArgumentNumber == 3);
 		static_assert(TestSystem::AcquireRequestedComponents().archetypeDefiningInfoOnly.size() == TestSystem::AcquireRequestedComponents().archetypeDefining.size());
 	}
 }
