@@ -85,5 +85,3 @@ namespace ECSTest
 		virtual void AcceptUntyped(void **array) = 0;
 	};
 }
-
-#include "SystemHelpers.hpp"

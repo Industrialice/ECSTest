@@ -89,12 +89,26 @@ namespace ECSTest
 			static constexpr bool isEntityID = false;
         };
 
-        // converts void * into a properly typed T argument - a pointer or a reference
-        template <typename types, uiw index> static FORCEINLINE auto ConvertArgument(void **args) -> decltype(auto)
-        {
-            using T = std::tuple_element_t<index, types>;
-            void *arg = args[index];
+		template <typename Types, uiw Index, uiw StopAt> static constexpr void CalculateIndexAdvance(uiw &index)
+		{
+			using T = std::tuple_element_t<Index, Types>;
+			if constexpr (Index < StopAt && (std::is_reference_v<T> || std::is_pointer_v<T>))
+			{
+				++index;
+			}
+		}
 
+		template <typename Types, uiw CurrentIndex, uiw... Indexes> static constexpr uiw GetArgumentIndexInArray(std::index_sequence<Indexes...>)
+		{
+			uiw index = 0;
+			(CalculateIndexAdvance<Types, Indexes, CurrentIndex>(index), ...);
+			return index;
+		}
+
+        // converts void * into a properly typed T argument - a pointer or a reference
+        template <typename Types, uiw Index> static FORCEINLINE auto ConvertArgument(void **args) -> decltype(auto)
+        {
+            using T = std::tuple_element_t<Index, Types>;
             using pureType = std::remove_cv_t<std::remove_pointer_t<std::remove_reference_t<T>>>;
             using componentType = typename GetComponentType<pureType>::type;
             constexpr bool isSubtractive = GetComponentType<pureType>::isSubtractive;
@@ -107,26 +121,26 @@ namespace ECSTest
 			static_assert(!isRefOrPtr || !isSubtractive, "SubtractiveComponent cannot be passed by reference or pointer");
             static_assert(!isRefOrPtr || !isRequired, "RequiredComponent cannot be passed by reference or pointer");
 
+			constexpr uiw index = GetArgumentIndexInArray<Types, Index>(std::make_index_sequence<std::tuple_size_v<Types>>());
+
 			if constexpr (std::is_reference_v<T>)
             {
                 using bare = std::remove_reference_t<T>;
                 static_assert(!std::is_pointer_v<bare>, "Type cannot be reference to pointer");
-                return *(bare *)arg;
+                return *(bare *)args[index];
             }
             else if constexpr (std::is_pointer_v<T>)
             {
                 using bare = std::remove_pointer_t<T>;
                 static_assert(!std::is_pointer_v<bare> && !std::is_reference_v<bare>, "Type cannot be pointer to reference/pointer");
-                return (T)arg;
+                return (T)args[index];
             }
             else if constexpr (isRequired)
             {
-				ASSUME(arg == nullptr);
                 return RequiredComponent<componentType>{};
             }
             else if constexpr (isSubtractive)
             {
-                ASSUME(arg == nullptr);
 				return SubtractiveComponent<componentType>{};
             }
 			else
@@ -172,6 +186,17 @@ namespace ECSTest
 				{
 					isFailed = true;
 					static_assert(false, "Used type is not component");
+				}
+
+				if constexpr (componentType::IsTag() && (isArray || isNonUnique))
+				{
+					isFailed = true;
+					static_assert(false, "Tag components can't be inside an Array or NonUnique");
+				}
+
+				if constexpr (componentType::IsTag() == false && std::is_empty_v<componentType>)
+				{
+					static_warning(false, "Component is empty, consider using TAG_COMPONENT instead");
 				}
 
 				if constexpr (isConst)

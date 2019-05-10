@@ -4,6 +4,7 @@
 #include <numeric>
 #include <PreHeader.hpp>
 #include <SystemsManager.hpp>
+#include <SystemCreation.hpp>
 #include <Windows.h>
 #include <EntitiesStreamBuilder.hpp>
 #include <KeyController.hpp>

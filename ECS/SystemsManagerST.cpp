@@ -1000,7 +1000,7 @@ void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, ControlsQueue &
 
     auto &requested = system.RequestedComponents();
 
-    uiw maxArgs = requested.withData.size() + (requested.idsArgumentNumber != nullopt) + requested.requiredWithoutData.size() + (requested.environmentArgumentNumber != nullopt);
+    uiw maxArgs = requested.withData.size() + (requested.idsArgumentNumber != nullopt) + (requested.environmentArgumentNumber != nullopt);
 
 	_tempNonUniqueArgs.reserve(maxArgs);
     _tempArrayArgs.reserve(maxArgs);
@@ -1030,7 +1030,6 @@ void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, ControlsQueue &
             {
                 if (arg.requirement == RequirementForComponent::Required)
                 {
-                    _tempArgs.push_back(nullptr);
                     continue; // already passed the archetype check
                 }
 

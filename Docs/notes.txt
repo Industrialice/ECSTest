@@ -1,0 +1,12 @@
+Benchmark2:
+  PC: 7kk (999ms vs. 1ms) and 92k (135ms vs. 866ms)
+  AMD Geode: 90k (975ms vs. 25ms) and 2.2k (133ms vs. 865ms)
+  
+TODO:
++Environment argument is optional and can appear at any position
++Remove DIRECT_ACCEPT_COMPONENTS
++Remove INDIRECT_ACCEPT_COMPONENTS
+Don't store addresses of non-data arguments
+RequiredComponent can accept arbitrary number of arguments
+SubtractiveComponent can accept arbitrary number of arguments
+Implement RequiredComponentAny

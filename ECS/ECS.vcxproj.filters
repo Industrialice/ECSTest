@@ -23,9 +23,6 @@
     <ClInclude Include="System.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="SystemHelpers.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="SystemsManager.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -69,6 +66,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="RecordingKeyController.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SystemCreation.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

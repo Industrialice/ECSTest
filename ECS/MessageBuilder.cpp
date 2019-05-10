@@ -208,7 +208,7 @@ void MessageBuilder::ComponentChangedHint(const ComponentDescription &desc, uiw 
 
 	if (memSize > entry->dataReserved)
 	{
-		entry->dataReserved = memSize;
+		entry->dataReserved = (ui32)memSize;
 
 		ui8 *oldPtr = entry->data.release();
 		ui8 *newPtr = (ui8 *)_aligned_realloc(oldPtr, entry->dataReserved, desc.alignmentOf);

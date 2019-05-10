@@ -4,6 +4,7 @@
 #include <forward_list>
 #include <SystemsManager.hpp>
 #include <KeyController.hpp>
+#include <SystemCreation.hpp>
 
 #ifdef PLATFORM_WINDOWS
     #include "WinAPI.hpp"

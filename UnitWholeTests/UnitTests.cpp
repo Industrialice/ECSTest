@@ -43,6 +43,9 @@ namespace
 		array<char, 32> name;
 	};
 
+	COMPONENT(EmptyComponent)
+	{};
+
 	NONUNIQUE_COMPONENT(ComponentProgrammer)
 	{
 		enum class Languages : ui8
@@ -313,7 +316,14 @@ namespace
 
 	DIRECT_SYSTEM(TestSystem)
 	{
-		void Accept(NonUnique<ComponentArtist> &, const NonUnique<ComponentProgrammer> &, Array<ComponentSpouse> &, Environment &env, const Array<EntityID> &, const Array<ComponentCompany> &, Array<ComponentEmployee> *, const Array<ComponentGender> *, RequiredComponent<ComponentDateOfBirth>, SubtractiveComponent<ComponentDesigner>);
+		void Accept(NonUnique<ComponentArtist> &, const NonUnique<ComponentProgrammer> &, Array<ComponentSpouse> &, Environment &env, const Array<EntityID> &, const Array<ComponentCompany> &, Array<ComponentEmployee> *, const Array<ComponentGender> *, RequiredComponent<ComponentDateOfBirth>, SubtractiveComponent<ComponentDesigner>)
+		{}
+	};
+
+	INDIRECT_SYSTEM(TestSystem2)
+	{
+		void Accept(RequiredComponent<TagTest0>, SubtractiveComponent<TagTest1>)
+		{}
 	};
 
 	template <typename... Types> constexpr std::array<StableTypeId, sizeof...(Types)> MakeArray()
@@ -343,21 +353,6 @@ namespace
 			return true;
 		};
 
-		auto requiredWithoutData = TestSystem::AcquireRequestedComponents().requiredWithoutData;
-		auto requiredWithData = TestSystem::AcquireRequestedComponents().requiredWithData;
-		auto required = TestSystem::AcquireRequestedComponents().required;
-		auto requiredOrOptional = TestSystem::AcquireRequestedComponents().requiredOrOptional;
-		auto withData = TestSystem::AcquireRequestedComponents().withData;
-		auto optionalWithData = TestSystem::AcquireRequestedComponents().optionalWithData;
-		auto subtractive = TestSystem::AcquireRequestedComponents().subtractive;
-		auto writeAccess = TestSystem::AcquireRequestedComponents().writeAccess;
-		auto archetypeDefining = TestSystem::AcquireRequestedComponents().archetypeDefining;
-		auto all = TestSystem::AcquireRequestedComponents().all;
-		auto allOriginalOrder = TestSystem::AcquireRequestedComponents().allOriginalOrder;
-		auto idsArgumentNumber = TestSystem::AcquireRequestedComponents().idsArgumentNumber;
-		auto environmentArgumentNumber = TestSystem::AcquireRequestedComponents().environmentArgumentNumber;
-		auto archetypeDefiningInfoOnly = TestSystem::AcquireRequestedComponents().archetypeDefiningInfoOnly;
-
 		static_assert(matches(TestSystem::AcquireRequestedComponents().requiredWithoutData, MakeArray<ComponentDateOfBirth>()));
 		static_assert(matches(TestSystem::AcquireRequestedComponents().requiredWithData, MakeArray<ComponentArtist, ComponentProgrammer, ComponentSpouse, ComponentCompany>()));
 		static_assert(matches(TestSystem::AcquireRequestedComponents().required, MakeArray<ComponentArtist, ComponentProgrammer, ComponentSpouse, ComponentCompany, ComponentDateOfBirth>()));
@@ -372,6 +367,22 @@ namespace
 		static_assert(TestSystem::AcquireRequestedComponents().idsArgumentNumber == 4);
 		static_assert(TestSystem::AcquireRequestedComponents().environmentArgumentNumber == 3);
 		static_assert(TestSystem::AcquireRequestedComponents().archetypeDefiningInfoOnly.size() == TestSystem::AcquireRequestedComponents().archetypeDefining.size());
+
+
+		static_assert(matches(TestSystem2::AcquireRequestedComponents().requiredWithoutData, MakeArray<TagTest0>()));
+		static_assert(matches(TestSystem2::AcquireRequestedComponents().requiredWithData, MakeArray<>()));
+		static_assert(matches(TestSystem2::AcquireRequestedComponents().required, MakeArray<TagTest0>()));
+		static_assert(matches(TestSystem2::AcquireRequestedComponents().requiredOrOptional, MakeArray<TagTest0>()));
+		static_assert(matches(TestSystem2::AcquireRequestedComponents().withData, MakeArray<>()));
+		static_assert(matches(TestSystem2::AcquireRequestedComponents().optionalWithData, MakeArray<>()));
+		static_assert(matches(TestSystem2::AcquireRequestedComponents().subtractive, MakeArray<TagTest1>()));
+		static_assert(matches(TestSystem2::AcquireRequestedComponents().writeAccess, MakeArray<>()));
+		static_assert(matches(TestSystem2::AcquireRequestedComponents().archetypeDefining, MakeArray<TagTest0, TagTest1>()));
+		static_assert(matches(TestSystem2::AcquireRequestedComponents().all, MakeArray<TagTest0, TagTest1>()));
+		static_assert(matches(TestSystem2::AcquireRequestedComponents().allOriginalOrder, MakeArray<TagTest0, TagTest1>(), false));
+		static_assert(TestSystem2::AcquireRequestedComponents().idsArgumentNumber == nullopt);
+		static_assert(TestSystem2::AcquireRequestedComponents().environmentArgumentNumber == nullopt);
+		static_assert(TestSystem2::AcquireRequestedComponents().archetypeDefiningInfoOnly.size() == TestSystem2::AcquireRequestedComponents().archetypeDefining.size());
 	}
 }
 
