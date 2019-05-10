@@ -274,7 +274,7 @@ namespace ECSTest
 
 		template <typename T, uiw Index> static constexpr void LocateEnvironmentIndex(ui32 &index)
 		{
-			using TPure = std::remove_pointer_t<std::remove_reference_t<T>>;
+			using TPure = std::remove_cv_t<std::remove_pointer_t<std::remove_reference_t<T>>>;
 			if constexpr (is_same_v<TPure, System::Environment>)
 			{
 				static_assert(std::is_reference_v<T>, "Environment must be passed by reference");
