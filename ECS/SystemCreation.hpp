@@ -468,6 +468,7 @@ namespace ECSTest
 
 		template <typename AcceptType> static constexpr const System::Requests &AcquireRequestedComponents()
 		{
+			using rfc = RequirementForComponent;
 			using typesFull = typename FunctionInfo::Info<AcceptType>::args;
 			static constexpr optional<ui32> environmentIndex = LocateEnvironmentArugument<typesFull>(std::make_index_sequence<std::tuple_size_v<typesFull>>());
 			static constexpr ui32 environmentIndexDeref = environmentIndex.value_or(0);
@@ -480,15 +481,15 @@ namespace ECSTest
 			static constexpr auto converted = TupleToComponentsArray<types>(std::make_index_sequence<std::tuple_size_v<types>>());
 			static constexpr auto arr = converted;
 			static constexpr auto arrSorted = Funcs::SortCompileTime(arr);
-			static constexpr auto requiredWithoutData = FindMatchingComponents<FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::Required))>(arrSorted, make_array(RequirementForComponent::Required));
-			static constexpr auto requiredWithData = FindMatchingComponents<FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::RequiredWithData))>(arrSorted, make_array(RequirementForComponent::RequiredWithData));
-			static constexpr auto required = FindMatchingComponents<FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::RequiredWithData, RequirementForComponent::Required))>(arrSorted, make_array(RequirementForComponent::RequiredWithData, RequirementForComponent::Required));
-			static constexpr auto requiredOrOptional = FindMatchingComponents<FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::RequiredWithData, RequirementForComponent::Required, RequirementForComponent::Optional))>(arrSorted, make_array(RequirementForComponent::RequiredWithData, RequirementForComponent::Required, RequirementForComponent::Optional));
+			static constexpr auto requiredWithoutData = FindMatchingComponents<FindMatchingComponentsCount(arrSorted, make_array(rfc::Required))>(arrSorted, make_array(rfc::Required));
+			static constexpr auto requiredWithData = FindMatchingComponents<FindMatchingComponentsCount(arrSorted, make_array(rfc::RequiredWithData))>(arrSorted, make_array(rfc::RequiredWithData));
+			static constexpr auto required = FindMatchingComponents<FindMatchingComponentsCount(arrSorted, make_array(rfc::RequiredWithData, rfc::Required))>(arrSorted, make_array(rfc::RequiredWithData, rfc::Required));
+			static constexpr auto requiredOrOptional = FindMatchingComponents<FindMatchingComponentsCount(arrSorted, make_array(rfc::RequiredWithData, rfc::Required, rfc::Optional))>(arrSorted, make_array(rfc::RequiredWithData, rfc::Required, rfc::Optional));
 			static constexpr auto withData = FindComponentsWithData<FindComponentsWithDataCount<false>(arrSorted), false>(arrSorted);
-			static constexpr auto optionalWithData = FindMatchingComponents<FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::Optional))>(arrSorted, make_array(RequirementForComponent::Optional));
-			static constexpr auto subtractive = FindMatchingComponents<FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::Subtractive))>(arrSorted, make_array(RequirementForComponent::Subtractive));
+			static constexpr auto optionalWithData = FindMatchingComponents<FindMatchingComponentsCount(arrSorted, make_array(rfc::Optional))>(arrSorted, make_array(rfc::Optional));
+			static constexpr auto subtractive = FindMatchingComponents<FindMatchingComponentsCount(arrSorted, make_array(rfc::Subtractive))>(arrSorted, make_array(rfc::Subtractive));
 			static constexpr auto writeAccess = FindComponentsWithData<FindComponentsWithDataCount<true>(arrSorted), true>(arrSorted);
-			static constexpr auto archetypeDefining = FindMatchingComponents<FindMatchingComponentsCount(arrSorted, make_array(RequirementForComponent::RequiredWithData, RequirementForComponent::Required, RequirementForComponent::Subtractive))>(arrSorted, make_array(RequirementForComponent::RequiredWithData, RequirementForComponent::Required, RequirementForComponent::Subtractive));
+			static constexpr auto archetypeDefining = FindMatchingComponents<FindMatchingComponentsCount(arrSorted, make_array(rfc::RequiredWithData, rfc::Required, rfc::Subtractive))>(arrSorted, make_array(rfc::RequiredWithData, rfc::Required, rfc::Subtractive));
 			static constexpr auto archetypeDefiningInfoOnly = StripAccessData(archetypeDefining);
 			static constexpr System::Requests requests =
 			{
