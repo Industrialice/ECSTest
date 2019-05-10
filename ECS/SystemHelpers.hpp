@@ -142,7 +142,7 @@ namespace ECSTest
         }
 
         // make sure the argument type is correct
-        template <typename T> static constexpr void CheckArgumentType()
+        template <typename T> static constexpr void CheckArgumentType(bool &isFailed)
         {
             using pureType = std::remove_cv_t<std::remove_pointer_t<std::remove_reference_t<T>>>;
             using componentType = typename GetComponentType<pureType>::type;
@@ -152,22 +152,82 @@ namespace ECSTest
             constexpr bool isNonUnique = GetComponentType<pureType>::isNonUnique;
             constexpr bool isArray = GetComponentType<pureType>::isArray;
             constexpr auto isComponent = is_base_of_v<Component, componentType>;
-			if constexpr (is_base_of_v<Component, componentType>)
+			constexpr bool isConst = std::is_const_v<GetComponentType<pureType>::type>;
+
+			if constexpr (is_same_v<componentType, System::Environment>)
 			{
-				static_assert((componentType::IsUnique() != isNonUnique) || (isSubtractive || isRequired), "NonUnique objects must be used for non unique components");
+				isFailed = true;
+				if constexpr (is_same_v<pureType, System::Environment>)
+				{
+					static_assert(false, "Environment can't appear twice");
+				}
+				else
+				{
+					static_assert(false, "Environment can't be inside a container");
+				}
 			}
-			static_assert(!is_same_v<pureType, System::Environment>, "Environment can't appear twice");
-			static_assert(!is_same_v<componentType, EntityID>, "EntityID can't appear twice");
-			static_assert(!(isSubtractive && isArray), "SubtractiveComponent can't be inside an Array");
-            static_assert(!(isRequired && isArray), "RequiredComponent can't be inside an Array");
-			static_assert(!(isNonUnique && isArray), "NonUnique can't be inside an Array");
-            static_assert(isComponent || (isSubtractive == false), "SubtractiveComponent used with a non-component type");
-            static_assert(isComponent || (isRequired == false), "RequiredComponent used with a non-component type");
-            static_assert(isSubtractive || isNonUnique || isComponent, "Invalid argument type, must be either Component, SubtractiveComponent, RequiredComponent, or EntityID");
-            if constexpr (isComponent)
-            {
-                static_assert(isSubtractive || isRequired || isRefOrPtr, "Components must be passed by either pointer, or by reference");
-            }
+			else
+			{
+				if constexpr (isComponent == false)
+				{
+					isFailed = true;
+					static_assert(false, "Used type is not component");
+				}
+
+				if constexpr (isConst)
+				{
+					isFailed = true;
+					static_assert(false, "Avoid using const to mark types inside of containers, apply const to the container itself instead");
+				}
+
+				if constexpr (isNonUnique && componentType::IsUnique())
+				{
+					isFailed = true;
+					static_assert(false, "NonUnique object used to pass unique component");
+				}
+
+				if constexpr (componentType::IsUnique() == false && (isNonUnique || isRequired || isSubtractive) == false)
+				{
+					isFailed = true;
+					static_assert(false, "NonUnique objects must be used for non unique components");
+				}
+
+				if constexpr (is_same_v<componentType, EntityID>)
+				{
+					isFailed = true;
+					static_assert(false, "EntityID can't appear twice");
+				}
+
+				if constexpr (isSubtractive && isArray)
+				{
+					isFailed = true;
+					static_assert(false, "SubtractiveComponent can't be inside an Array");
+				}
+
+				if constexpr (isRequired && isArray)
+				{
+					isFailed = true;
+					static_assert(false, "RequiredComponent can't be inside an Array");
+				}
+
+				if constexpr (isNonUnique && isArray)
+				{
+					isFailed = true;
+					static_assert(false, "NonUnique can't be inside an Array");
+				}
+
+				if constexpr (isArray == false && (isSubtractive || isRequired || isNonUnique) == false)
+				{
+					isFailed = true;
+					static_assert(false, "Unique components must be passed using Array");
+				}
+				
+				if constexpr (!(isSubtractive || isRequired || isRefOrPtr))
+				{
+					isFailed = true;
+					static_assert(false, "Components must be passed by either pointer, or by reference");
+				}
+			}
         }
 
         template <typename T> static constexpr StableTypeId ArgumentToTypeId()
@@ -263,13 +323,26 @@ namespace ECSTest
 			return index == ui32_max ? nullopt : optional<ui32>(index);
 		}
 
+		template <typename T, uiw... Indexes> static constexpr bool IsCheckingArgumentsFailed()
+		{
+			bool isFailed = false;
+			(CheckArgumentType<std::tuple_element_t<Indexes, T>>(isFailed), ...);
+			return isFailed;
+		}
+
         template <typename T, uiw... Indexes> static constexpr std::array<System::RequestedComponent, sizeof...(Indexes)> TupleToComponentsArray(std::index_sequence<Indexes...>)
         {
-            (CheckArgumentType<std::tuple_element_t<Indexes, T>>(), ...);
-            constexpr auto typeIds = ArgumentsToTypeIds<T, Indexes...>();
-            constexpr bool isAliased = IsTypesAliased(typeIds);
-            static_assert(isAliased == false, "Requested type appears more than once");
-            return {ArgumentToComponent<std::tuple_element_t<Indexes, T>>()...};
+			if constexpr (IsCheckingArgumentsFailed<T, Indexes...>())
+			{
+				return {};
+			}
+			else
+			{
+				constexpr auto typeIds = ArgumentsToTypeIds<T, Indexes...>();
+				constexpr bool isAliased = IsTypesAliased(typeIds);
+				static_assert(isAliased == false, "Requested type appears more than once");
+				return {ArgumentToComponent<std::tuple_element_t<Indexes, T>>()...};
+			}
         }
 
 		template <typename T, uiw Index> static constexpr void LocateEnvironmentIndex(ui32 &index)
