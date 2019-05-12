@@ -5,7 +5,7 @@ using namespace ECSTest;
 namespace
 {
 	constexpr bool IsMTECS = false;
-	constexpr ui32 EntitiesToTest = 2500;
+	constexpr ui32 EntitiesToTest = 25000;
 	std::atomic<bool> IsSystem0Visited = false;
 	std::atomic<bool> IsSystem1Visited = false;
 	std::atomic<bool> IsSystem2Visisted = false;

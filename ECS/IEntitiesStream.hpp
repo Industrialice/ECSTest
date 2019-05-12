@@ -8,14 +8,9 @@ namespace ECSTest
     class NOVTABLE IEntitiesStream
     {
     public:
-        struct ComponentDesc
+        struct ComponentDesc : ComponentDescription
         {
-            StableTypeId type{};
-            ui16 sizeOf{};
-            ui16 alignmentOf{};
-			const ui8 *data{};
-            bool isUnique{};
-            bool isTag{};
+			const ui8 *data{}; // not aligned
         };
 
         struct StreamedEntity

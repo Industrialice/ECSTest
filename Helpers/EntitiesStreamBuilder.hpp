@@ -9,9 +9,9 @@ namespace ECSTest
     public:
         struct EntityData
         {
-            StreamedEntity streamed;
+			EntityID entityId;
             vector<ComponentDesc> descs;
-            vector<unique_ptr<ui8[]>> componentsData;
+            vector<ui8> componentsData;
 
             EntityData() = default;
             EntityData(EntityData &&) = default;
@@ -27,10 +27,9 @@ namespace ECSTest
                 desc.type = T::GetTypeId();
                 if constexpr (T::IsTag() == false)
                 {
-                    auto componentData = make_unique<ui8[]>(sizeof(T));
-                    memcpy(componentData.get(), &component, sizeof(T));
-                    desc.data = componentData.get();
-                    componentsData.emplace_back(move(componentData));
+					uiw offset = componentsData.size();
+					componentsData.resize(offset + sizeof(T));
+                    memcpy(componentsData.data() + offset, &component, sizeof(T));
                 }
                 descs.emplace_back(desc);
             }
@@ -51,7 +50,8 @@ namespace ECSTest
             if (_currentEntity < _entities.size())
             {
                 uiw index = _currentEntity++;
-                return _entities[index].streamed;
+				StreamedEntity entity = {_entities[index].entityId, ToArray(_entities[index].descs)};
+                return entity;
             }
             return {};
         }
@@ -59,8 +59,20 @@ namespace ECSTest
         void AddEntity(EntityID id, EntityData &&entity)
         {
             _entities.emplace_back(move(entity));
-            _entities.back().streamed.entityId = id;
-            _entities.back().streamed.components = ToArray(_entities.back().descs);
+
+			auto &entry = _entities.back();
+
+			entry.entityId = id;
+
+			uiw offset = 0;
+			for (auto &desc : entry.descs)
+			{
+				if (!desc.isTag)
+				{
+					desc.data = entry.componentsData.data() + offset;
+					offset += desc.sizeOf;
+				}
+			}
         }
     };
 }
