@@ -23,6 +23,7 @@ namespace ECSTest
 
         template <typename... T> struct GetComponentType<SubtractiveComponent<T...>>
         {
+			static_assert(sizeof...(T) > 0, "Type list of SubtractiveComponent cannot be empty");
 			using expanded = std::tuple<T...>;
 			using wrapped = std::tuple<SubtractiveComponent<T>...>;
 			using type = std::tuple_element_t<0, expanded>;
@@ -35,6 +36,7 @@ namespace ECSTest
 
         template <typename... T> struct GetComponentType<RequiredComponent<T...>>
         {
+			static_assert(sizeof...(T) > 0, "Type list of RequiredComponent cannot be empty");
 			using expanded = std::tuple<T...>;
 			using wrapped = std::tuple<RequiredComponent<T>...>;
 			using type = std::tuple_element_t<0, expanded>;
@@ -151,13 +153,9 @@ namespace ECSTest
                 static_assert(!std::is_pointer_v<bare> && !std::is_reference_v<bare>, "Type cannot be pointer to reference/pointer");
                 return (T)args[index];
             }
-            else if constexpr (isRequired)
+            else if constexpr (isRequired || isSubtractive)
             {
-                return RequiredComponent<componentType>{};
-            }
-            else if constexpr (isSubtractive)
-            {
-				return SubtractiveComponent<componentType>{};
+                return pureType{};
             }
 			else
 			{
@@ -557,7 +555,7 @@ namespace ECSTest
 		static constexpr const Requests &AcquireRequestedComponents()
 		{
 			// saving the rusult to a local leads to ICE in MSVC 15.9.11
-			static_assert(_SystemHelperFuncs::AcquireRequestedComponents<decltype(&SystemType::Accept)>().idsArgumentNumber == nullopt, "Indirect systems can't request EntityID");
+			static_assert(_SystemHelperFuncs::AcquireRequestedComponents<decltype(&SystemType::Accept)>().idsArgumentIndex == nullopt, "Indirect systems can't request EntityID");
 			return _SystemHelperFuncs::AcquireRequestedComponents<decltype(&SystemType::Accept)>();
 		}
 	};

@@ -45,8 +45,8 @@ namespace ECSTest
             Array<const RequestedComponent> archetypeDefining; // contains only required and subtractive components
             Array<const RequestedComponent> all; // contains all requested components
             Array<const RequestedComponent> allOriginalOrder; // contains all requested components in the order they are declared
-            optional<ui32> idsArgumentNumber; // direct systems only; indicates whether EntityID array was also requested and if it was, contains its argument index
-			optional<ui32> environmentArgumentNumber; // direct systems only; indicates whether Environment was also requested and if it was, contains its argument index
+            optional<ui32> idsArgumentIndex; // direct systems only; indicates whether EntityID array was also requested and if it was, contains its argument index
+			optional<ui32> environmentArgumentIndex; // direct systems only; indicates whether Environment was also requested and if it was, contains its argument index
 			Array<const pair<StableTypeId, RequirementForComponent>> archetypeDefiningInfoOnly; // contains elements from archetypeDefining, but without the access information
         };
 

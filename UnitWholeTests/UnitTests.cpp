@@ -319,7 +319,7 @@ namespace
 
 	DIRECT_SYSTEM(TestSystem)
 	{
-		void Accept(NonUnique<ComponentArtist> &, const NonUnique<ComponentProgrammer> &, Array<ComponentSpouse> &, Environment &env, const Array<EntityID> &, const Array<ComponentCompany> &, Array<ComponentEmployee> *, const Array<ComponentGender> *, RequiredComponent<ComponentDateOfBirth>, SubtractiveComponent<ComponentDesigner>)
+		void Accept(NonUnique<ComponentArtist> &, RequiredComponent<TagTest0, TagTest1>, const NonUnique<ComponentProgrammer> &, Array<ComponentSpouse> &, Environment &env, const Array<EntityID> &, const Array<ComponentCompany> &, Array<ComponentEmployee> *, const Array<ComponentGender> *, RequiredComponent<ComponentDateOfBirth>, SubtractiveComponent<ComponentDesigner>)
 		{}
 	};
 
@@ -362,19 +362,19 @@ namespace
 			return true;
 		};
 
-		static_assert(matches(TestSystem::AcquireRequestedComponents().requiredWithoutData, MakeArray<ComponentDateOfBirth>()));
+		static_assert(matches(TestSystem::AcquireRequestedComponents().requiredWithoutData, MakeArray<TagTest0, TagTest1, ComponentDateOfBirth>()));
 		static_assert(matches(TestSystem::AcquireRequestedComponents().requiredWithData, MakeArray<ComponentArtist, ComponentProgrammer, ComponentSpouse, ComponentCompany>()));
-		static_assert(matches(TestSystem::AcquireRequestedComponents().required, MakeArray<ComponentArtist, ComponentProgrammer, ComponentSpouse, ComponentCompany, ComponentDateOfBirth>()));
-		static_assert(matches(TestSystem::AcquireRequestedComponents().requiredOrOptional, MakeArray<ComponentArtist, ComponentProgrammer, ComponentSpouse, ComponentCompany, ComponentDateOfBirth, ComponentEmployee, ComponentGender>()));
+		static_assert(matches(TestSystem::AcquireRequestedComponents().required, MakeArray<ComponentArtist, ComponentProgrammer, ComponentSpouse, ComponentCompany, TagTest0, TagTest1, ComponentDateOfBirth>()));
+		static_assert(matches(TestSystem::AcquireRequestedComponents().requiredOrOptional, MakeArray<ComponentArtist, ComponentProgrammer, ComponentSpouse, ComponentCompany, TagTest0, TagTest1, ComponentDateOfBirth, ComponentEmployee, ComponentGender>()));
 		static_assert(matches(TestSystem::AcquireRequestedComponents().withData, MakeArray<ComponentArtist, ComponentProgrammer, ComponentSpouse, ComponentCompany, ComponentEmployee, ComponentGender>()));
 		static_assert(matches(TestSystem::AcquireRequestedComponents().optionalWithData, MakeArray<ComponentEmployee, ComponentGender>()));
 		static_assert(matches(TestSystem::AcquireRequestedComponents().subtractive, MakeArray<ComponentDesigner>()));
 		static_assert(matches(TestSystem::AcquireRequestedComponents().writeAccess, MakeArray<ComponentArtist, ComponentSpouse, ComponentEmployee>()));
-		static_assert(matches(TestSystem::AcquireRequestedComponents().archetypeDefining, MakeArray<ComponentArtist, ComponentProgrammer, ComponentSpouse, ComponentCompany, ComponentDateOfBirth, ComponentDesigner>()));
-		static_assert(matches(TestSystem::AcquireRequestedComponents().all, MakeArray<ComponentArtist, ComponentProgrammer, ComponentSpouse, ComponentCompany, ComponentDateOfBirth, ComponentEmployee, ComponentGender, ComponentDesigner>()));
-		static_assert(matches(TestSystem::AcquireRequestedComponents().allOriginalOrder, MakeArray<ComponentArtist, ComponentProgrammer, ComponentSpouse, ComponentCompany, ComponentEmployee, ComponentGender, ComponentDateOfBirth, ComponentDesigner>(), false));
-		static_assert(TestSystem::AcquireRequestedComponents().idsArgumentNumber == 4);
-		static_assert(TestSystem::AcquireRequestedComponents().environmentArgumentNumber == 3);
+		static_assert(matches(TestSystem::AcquireRequestedComponents().archetypeDefining, MakeArray<ComponentArtist, ComponentProgrammer, ComponentSpouse, ComponentCompany, TagTest0, TagTest1, ComponentDateOfBirth, ComponentDesigner>()));
+		static_assert(matches(TestSystem::AcquireRequestedComponents().all, MakeArray<ComponentArtist, ComponentProgrammer, ComponentSpouse, ComponentCompany, TagTest0, TagTest1, ComponentDateOfBirth, ComponentEmployee, ComponentGender, ComponentDesigner>()));
+		static_assert(matches(TestSystem::AcquireRequestedComponents().allOriginalOrder, MakeArray<ComponentArtist, TagTest0, TagTest1, ComponentProgrammer, ComponentSpouse, ComponentCompany, ComponentEmployee, ComponentGender, ComponentDateOfBirth, ComponentDesigner>(), false));
+		static_assert(TestSystem::AcquireRequestedComponents().idsArgumentIndex == 5);
+		static_assert(TestSystem::AcquireRequestedComponents().environmentArgumentIndex == 4);
 		static_assert(TestSystem::AcquireRequestedComponents().archetypeDefiningInfoOnly.size() == TestSystem::AcquireRequestedComponents().archetypeDefining.size());
 
 		static_assert(matches(TestSystem2::AcquireRequestedComponents().requiredWithoutData, MakeArray<TagTest0, TagTest1, TagTest2>()));
@@ -388,8 +388,8 @@ namespace
 		static_assert(matches(TestSystem2::AcquireRequestedComponents().archetypeDefining, MakeArray<TagTest0, TagTest1, TagTest2, TagTest3, TagTest4, TagTest5>()));
 		static_assert(matches(TestSystem2::AcquireRequestedComponents().all, MakeArray<TagTest0, TagTest1, TagTest2, TagTest3, TagTest4, TagTest5>()));
 		static_assert(matches(TestSystem2::AcquireRequestedComponents().allOriginalOrder, MakeArray<TagTest0, TagTest1, TagTest2, TagTest3, TagTest4, TagTest5>(), false));
-		static_assert(TestSystem2::AcquireRequestedComponents().idsArgumentNumber == nullopt);
-		static_assert(TestSystem2::AcquireRequestedComponents().environmentArgumentNumber == nullopt);
+		static_assert(TestSystem2::AcquireRequestedComponents().idsArgumentIndex == nullopt);
+		static_assert(TestSystem2::AcquireRequestedComponents().environmentArgumentIndex == nullopt);
 		static_assert(TestSystem2::AcquireRequestedComponents().archetypeDefiningInfoOnly.size() == TestSystem2::AcquireRequestedComponents().archetypeDefining.size());
 
 		static_assert(matches(TestSystem3::AcquireRequestedComponents().requiredWithoutData, MakeArray<>()));
@@ -403,8 +403,8 @@ namespace
 		static_assert(matches(TestSystem3::AcquireRequestedComponents().archetypeDefining, MakeArray<>()));
 		static_assert(matches(TestSystem3::AcquireRequestedComponents().all, MakeArray<>()));
 		static_assert(matches(TestSystem3::AcquireRequestedComponents().allOriginalOrder, MakeArray<>(), false));
-		static_assert(TestSystem3::AcquireRequestedComponents().idsArgumentNumber == nullopt);
-		static_assert(TestSystem3::AcquireRequestedComponents().environmentArgumentNumber == nullopt);
+		static_assert(TestSystem3::AcquireRequestedComponents().idsArgumentIndex == nullopt);
+		static_assert(TestSystem3::AcquireRequestedComponents().environmentArgumentIndex == nullopt);
 		static_assert(TestSystem3::AcquireRequestedComponents().archetypeDefiningInfoOnly.size() == TestSystem3::AcquireRequestedComponents().archetypeDefining.size());
 	}
 }

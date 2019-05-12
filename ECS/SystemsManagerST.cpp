@@ -1000,7 +1000,7 @@ void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, ControlsQueue &
 
     auto &requested = system.RequestedComponents();
 
-    uiw maxArgs = requested.withData.size() + (requested.idsArgumentNumber != nullopt) + (requested.environmentArgumentNumber != nullopt);
+    uiw maxArgs = requested.withData.size() + (requested.idsArgumentIndex != nullopt) + (requested.environmentArgumentIndex != nullopt);
 
 	_tempNonUniqueArgs.reserve(maxArgs);
     _tempArrayArgs.reserve(maxArgs);
@@ -1080,22 +1080,22 @@ void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, ControlsQueue &
 
 			auto insertIds = [this, &requested, &group]
 			{
-				if (requested.idsArgumentNumber)
+				if (requested.idsArgumentIndex)
 				{
 					_tempArrayArgs.push_back({(ui8 *)group.get().entities.get(), group.get().entitiesCount});
-					_tempArgs.insert(_tempArgs.begin() + *requested.idsArgumentNumber, &_tempArrayArgs.back());
+					_tempArgs.insert(_tempArgs.begin() + *requested.idsArgumentIndex, &_tempArrayArgs.back());
 				}
 			};
 
 			auto insertEnv = [this, &requested, &env]
 			{
-				if (requested.environmentArgumentNumber)
+				if (requested.environmentArgumentIndex)
 				{
-					_tempArgs.insert(_tempArgs.begin() + *requested.environmentArgumentNumber, &env);
+					_tempArgs.insert(_tempArgs.begin() + *requested.environmentArgumentIndex, &env);
 				}
 			};
 
-			if (requested.idsArgumentNumber < requested.environmentArgumentNumber)
+			if (requested.idsArgumentIndex < requested.environmentArgumentIndex)
 			{
 				insertIds();
 				insertEnv();
