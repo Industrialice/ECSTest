@@ -93,8 +93,7 @@ namespace _details
 		sizeof...(Types)>;
 }
 
-template < class D = void, class... Types>
-constexpr _details::return_type<D, Types...> make_array(Types&&... t) 
+template <class D = void, class... Types> constexpr _details::return_type<D, Types...> make_array(Types&&... t) 
 {
 	return {std::forward<Types>(t)...};
 }

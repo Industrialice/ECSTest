@@ -91,6 +91,9 @@ namespace
 	TAG_COMPONENT(TagTest0);
 	TAG_COMPONENT(TagTest1);
 	TAG_COMPONENT(TagTest2);
+	TAG_COMPONENT(TagTest3);
+	TAG_COMPONENT(TagTest4);
+	TAG_COMPONENT(TagTest5);
 
 	static void ArchetypeTests(bool isSuppressLogs)
 	{
@@ -322,7 +325,13 @@ namespace
 
 	INDIRECT_SYSTEM(TestSystem2)
 	{
-		void Accept(RequiredComponent<TagTest0>, SubtractiveComponent<TagTest1>)
+		void Accept(RequiredComponent<TagTest0, TagTest1, TagTest2>, SubtractiveComponent<TagTest3, TagTest4, TagTest5>)
+		{}
+	};
+
+	INDIRECT_SYSTEM(TestSystem3)
+	{
+		void Accept()
 		{}
 	};
 
@@ -368,21 +377,35 @@ namespace
 		static_assert(TestSystem::AcquireRequestedComponents().environmentArgumentNumber == 3);
 		static_assert(TestSystem::AcquireRequestedComponents().archetypeDefiningInfoOnly.size() == TestSystem::AcquireRequestedComponents().archetypeDefining.size());
 
-
-		static_assert(matches(TestSystem2::AcquireRequestedComponents().requiredWithoutData, MakeArray<TagTest0>()));
+		static_assert(matches(TestSystem2::AcquireRequestedComponents().requiredWithoutData, MakeArray<TagTest0, TagTest1, TagTest2>()));
 		static_assert(matches(TestSystem2::AcquireRequestedComponents().requiredWithData, MakeArray<>()));
-		static_assert(matches(TestSystem2::AcquireRequestedComponents().required, MakeArray<TagTest0>()));
-		static_assert(matches(TestSystem2::AcquireRequestedComponents().requiredOrOptional, MakeArray<TagTest0>()));
+		static_assert(matches(TestSystem2::AcquireRequestedComponents().required, MakeArray<TagTest0, TagTest1, TagTest2>()));
+		static_assert(matches(TestSystem2::AcquireRequestedComponents().requiredOrOptional, MakeArray<TagTest0, TagTest1, TagTest2>()));
 		static_assert(matches(TestSystem2::AcquireRequestedComponents().withData, MakeArray<>()));
 		static_assert(matches(TestSystem2::AcquireRequestedComponents().optionalWithData, MakeArray<>()));
-		static_assert(matches(TestSystem2::AcquireRequestedComponents().subtractive, MakeArray<TagTest1>()));
+		static_assert(matches(TestSystem2::AcquireRequestedComponents().subtractive, MakeArray<TagTest3, TagTest4, TagTest5>()));
 		static_assert(matches(TestSystem2::AcquireRequestedComponents().writeAccess, MakeArray<>()));
-		static_assert(matches(TestSystem2::AcquireRequestedComponents().archetypeDefining, MakeArray<TagTest0, TagTest1>()));
-		static_assert(matches(TestSystem2::AcquireRequestedComponents().all, MakeArray<TagTest0, TagTest1>()));
-		static_assert(matches(TestSystem2::AcquireRequestedComponents().allOriginalOrder, MakeArray<TagTest0, TagTest1>(), false));
+		static_assert(matches(TestSystem2::AcquireRequestedComponents().archetypeDefining, MakeArray<TagTest0, TagTest1, TagTest2, TagTest3, TagTest4, TagTest5>()));
+		static_assert(matches(TestSystem2::AcquireRequestedComponents().all, MakeArray<TagTest0, TagTest1, TagTest2, TagTest3, TagTest4, TagTest5>()));
+		static_assert(matches(TestSystem2::AcquireRequestedComponents().allOriginalOrder, MakeArray<TagTest0, TagTest1, TagTest2, TagTest3, TagTest4, TagTest5>(), false));
 		static_assert(TestSystem2::AcquireRequestedComponents().idsArgumentNumber == nullopt);
 		static_assert(TestSystem2::AcquireRequestedComponents().environmentArgumentNumber == nullopt);
 		static_assert(TestSystem2::AcquireRequestedComponents().archetypeDefiningInfoOnly.size() == TestSystem2::AcquireRequestedComponents().archetypeDefining.size());
+
+		static_assert(matches(TestSystem3::AcquireRequestedComponents().requiredWithoutData, MakeArray<>()));
+		static_assert(matches(TestSystem3::AcquireRequestedComponents().requiredWithData, MakeArray<>()));
+		static_assert(matches(TestSystem3::AcquireRequestedComponents().required, MakeArray<>()));
+		static_assert(matches(TestSystem3::AcquireRequestedComponents().requiredOrOptional, MakeArray<>()));
+		static_assert(matches(TestSystem3::AcquireRequestedComponents().withData, MakeArray<>()));
+		static_assert(matches(TestSystem3::AcquireRequestedComponents().optionalWithData, MakeArray<>()));
+		static_assert(matches(TestSystem3::AcquireRequestedComponents().subtractive, MakeArray<>()));
+		static_assert(matches(TestSystem3::AcquireRequestedComponents().writeAccess, MakeArray<>()));
+		static_assert(matches(TestSystem3::AcquireRequestedComponents().archetypeDefining, MakeArray<>()));
+		static_assert(matches(TestSystem3::AcquireRequestedComponents().all, MakeArray<>()));
+		static_assert(matches(TestSystem3::AcquireRequestedComponents().allOriginalOrder, MakeArray<>(), false));
+		static_assert(TestSystem3::AcquireRequestedComponents().idsArgumentNumber == nullopt);
+		static_assert(TestSystem3::AcquireRequestedComponents().environmentArgumentNumber == nullopt);
+		static_assert(TestSystem3::AcquireRequestedComponents().archetypeDefiningInfoOnly.size() == TestSystem3::AcquireRequestedComponents().archetypeDefining.size());
 	}
 }
 

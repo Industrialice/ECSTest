@@ -6,7 +6,8 @@ TODO:
 +Environment argument is optional and can appear at any position
 +Remove DIRECT_ACCEPT_COMPONENTS
 +Remove INDIRECT_ACCEPT_COMPONENTS
-Don't store addresses of non-data arguments
-RequiredComponent can accept arbitrary number of arguments
-SubtractiveComponent can accept arbitrary number of arguments
++Don't store addresses of non-data arguments
++Warn for empty components
++RequiredComponent can accept arbitrary number of arguments
++SubtractiveComponent can accept arbitrary number of arguments
 Implement RequiredComponentAny

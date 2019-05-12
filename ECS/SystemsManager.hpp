@@ -1,7 +1,6 @@
 #pragma once
 
 #include "System.hpp"
-#include "EntityID.hpp"
 #include "IEntitiesStream.hpp"
 #include "WokerThread.hpp"
 

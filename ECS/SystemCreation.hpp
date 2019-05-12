@@ -9,9 +9,11 @@ namespace ECSTest
 
     struct _SystemHelperFuncs
     {
-        template <typename T> struct GetComponentType
+        template <typename... T> struct GetComponentType
         {
-            using type = T;
+			using expanded = std::tuple<T...>;
+			using wrapped = expanded;
+            using type = std::tuple_element_t<0, expanded>;
             static constexpr bool isSubtractive = false;
             static constexpr bool isArray = false;
 			static constexpr bool isNonUnique = false;
@@ -19,9 +21,11 @@ namespace ECSTest
 			static constexpr bool isEntityID = false;
         };
 
-        template <typename T> struct GetComponentType<SubtractiveComponent<T>>
+        template <typename... T> struct GetComponentType<SubtractiveComponent<T...>>
         {
-            using type = T;
+			using expanded = std::tuple<T...>;
+			using wrapped = std::tuple<SubtractiveComponent<T>...>;
+			using type = std::tuple_element_t<0, expanded>;
             static constexpr bool isSubtractive = true;
             static constexpr bool isArray = false;
 			static constexpr bool isNonUnique = false;
@@ -29,9 +33,11 @@ namespace ECSTest
 			static constexpr bool isEntityID = false;
         };
 
-        template <typename T> struct GetComponentType<RequiredComponent<T>>
+        template <typename... T> struct GetComponentType<RequiredComponent<T...>>
         {
-            using type = T;
+			using expanded = std::tuple<T...>;
+			using wrapped = std::tuple<RequiredComponent<T>...>;
+			using type = std::tuple_element_t<0, expanded>;
             static constexpr bool isSubtractive = false;
             static constexpr bool isArray = false;
             static constexpr bool isNonUnique = false;
@@ -39,9 +45,11 @@ namespace ECSTest
 			static constexpr bool isEntityID = false;
         };
 
-		template <typename T> struct GetComponentType<NonUnique<T>>
+		template <typename... T> struct GetComponentType<NonUnique<T...>>
 		{
-			using type = T;
+			using expanded = std::tuple<T...>;
+			using wrapped = expanded;
+			using type = std::tuple_element_t<0, expanded>;
 			static constexpr bool isSubtractive = false;
 			static constexpr bool isArray = false;
 			static constexpr bool isNonUnique = true;
@@ -49,9 +57,11 @@ namespace ECSTest
 			static constexpr bool isEntityID = false;
         };
 
-        template <typename T> struct GetComponentType<Array<T>>
+        template <typename... T> struct GetComponentType<Array<T...>>
         {
-            using type = T;
+			using expanded = std::tuple<T...>;
+			using wrapped = expanded;
+			using type = std::tuple_element_t<0, expanded>;
             static constexpr bool isSubtractive = false;
             static constexpr bool isArray = true;
 			static constexpr bool isNonUnique = false;
@@ -59,9 +69,11 @@ namespace ECSTest
 			static constexpr bool isEntityID = false;
         };
 
-        template <typename T> struct GetComponentType<Array<SubtractiveComponent<T>>>
+        template <typename... T> struct GetComponentType<Array<SubtractiveComponent<T...>>>
         {
-            using type = T;
+			using expanded = std::tuple<T...>;
+			using wrapped = expanded;
+			using type = std::tuple_element_t<0, expanded>;
             static constexpr bool isSubtractive = true;
             static constexpr bool isArray = true;
 			static constexpr bool isNonUnique = false;
@@ -69,9 +81,11 @@ namespace ECSTest
 			static constexpr bool isEntityID = false;
         };
 
-        template <typename T> struct GetComponentType<Array<RequiredComponent<T>>>
+        template <typename... T> struct GetComponentType<Array<RequiredComponent<T...>>>
         {
-            using type = T;
+			using expanded = std::tuple<T...>;
+			using wrapped = expanded;
+			using type = std::tuple_element_t<0, expanded>;
             static constexpr bool isSubtractive = false;
             static constexpr bool isArray = true;
             static constexpr bool isNonUnique = false;
@@ -79,9 +93,11 @@ namespace ECSTest
 			static constexpr bool isEntityID = false;
         };
 
-		template <typename T> struct GetComponentType<Array<NonUnique<T>>>
+		template <typename... T> struct GetComponentType<Array<NonUnique<T...>>>
 		{
-			using type = T;
+			using expanded = std::tuple<T...>;
+			using wrapped = expanded;
+			using type = std::tuple_element_t<0, expanded>;
 			static constexpr bool isSubtractive = false;
 			static constexpr bool isArray = true;
 			static constexpr bool isNonUnique = true;
@@ -328,7 +344,7 @@ namespace ECSTest
                 return {componentType::GetTypeId(), !std::is_const_v<TPure>, availability};
             }
         }
-
+		
 		template <typename T, uiw Index> static constexpr void LocateEntityIDIndex(ui32 &index)
 		{
 			using TPure = std::remove_pointer_t<std::remove_reference_t<T>>;
@@ -340,7 +356,7 @@ namespace ECSTest
 				index = Index;
 			}
 		}
-
+		
 		template <typename T, uiw... Indexes> static constexpr optional<ui32> LocateEntityIDArugument(std::index_sequence<Indexes...>)
 		{
 			ui32 index = ui32_max;
@@ -385,6 +401,16 @@ namespace ECSTest
 			ui32 index = ui32_max;
 			(LocateEnvironmentIndex<std::tuple_element_t<Indexes, T>, Indexes>(index), ...);
 			return index == ui32_max ? nullopt : optional<ui32>(index);
+		}
+
+		template <typename T, uiw... Indexes> struct UnpackArgumentsStruct
+		{
+			using types = decltype(std::tuple_cat(std::declval<typename GetComponentType<std::tuple_element_t<Indexes, T>>::wrapped>()...));
+		};
+
+		template <typename T, uiw... Indexes> static constexpr UnpackArgumentsStruct<T, Indexes...> UnpackArguments(std::index_sequence<Indexes...>)
+		{
+			return {};
 		}
 
 		template <uiw size, uiw requirementSize> [[nodiscard]] static constexpr uiw FindMatchingComponentsCount(const std::array<System::RequestedComponent, size> &arr, const std::array<RequirementForComponent, requirementSize> &requirements)
@@ -471,25 +497,23 @@ namespace ECSTest
 			using rfc = RequirementForComponent;
 			using typesFull = typename FunctionInfo::Info<AcceptType>::args;
 			static constexpr optional<ui32> environmentIndex = LocateEnvironmentArugument<typesFull>(std::make_index_sequence<std::tuple_size_v<typesFull>>());
-			static constexpr ui32 environmentIndexDeref = environmentIndex.value_or(0);
 			static constexpr optional<ui32> entityIDIndex = LocateEntityIDArugument<typesFull>(std::make_index_sequence<std::tuple_size_v<typesFull>>());
-			static constexpr ui32 entityIDIndexDeref = entityIDIndex.value_or(0);
-			using typesWithoutEnvironment = std::conditional_t<environmentIndex != nullopt, Funcs::RemoveTupleElement<environmentIndexDeref, typesFull>, typesFull>;
+			using typesWithoutEnvironment = std::conditional_t<environmentIndex != nullopt, Funcs::RemoveTupleElement<environmentIndex.value_or(0), typesFull>, typesFull>;
 			static constexpr optional<ui32> entityIDIndexToRemove = LocateEntityIDArugument<typesWithoutEnvironment>(std::make_index_sequence<std::tuple_size_v<typesWithoutEnvironment>>());
-			static constexpr ui32 entityIDIndexToRemoveDeref = entityIDIndexToRemove.value_or(0);
-			using types = std::conditional_t<entityIDIndexToRemove != nullopt, Funcs::RemoveTupleElement<entityIDIndexToRemoveDeref, typesWithoutEnvironment>, typesWithoutEnvironment>;
+			using typesWithoutEntityID = std::conditional_t<entityIDIndexToRemove != nullopt, Funcs::RemoveTupleElement<entityIDIndexToRemove.value_or(0), typesWithoutEnvironment>, typesWithoutEnvironment>;
+			using types = typename decltype(UnpackArguments<typesWithoutEntityID>(std::make_index_sequence<std::tuple_size_v<typesWithoutEntityID>>()))::types;
 			static constexpr auto converted = TupleToComponentsArray<types>(std::make_index_sequence<std::tuple_size_v<types>>());
 			static constexpr auto arr = converted;
-			static constexpr auto arrSorted = Funcs::SortCompileTime(arr);
-			static constexpr auto requiredWithoutData = FindMatchingComponents<FindMatchingComponentsCount(arrSorted, make_array(rfc::Required))>(arrSorted, make_array(rfc::Required));
-			static constexpr auto requiredWithData = FindMatchingComponents<FindMatchingComponentsCount(arrSorted, make_array(rfc::RequiredWithData))>(arrSorted, make_array(rfc::RequiredWithData));
-			static constexpr auto required = FindMatchingComponents<FindMatchingComponentsCount(arrSorted, make_array(rfc::RequiredWithData, rfc::Required))>(arrSorted, make_array(rfc::RequiredWithData, rfc::Required));
-			static constexpr auto requiredOrOptional = FindMatchingComponents<FindMatchingComponentsCount(arrSorted, make_array(rfc::RequiredWithData, rfc::Required, rfc::Optional))>(arrSorted, make_array(rfc::RequiredWithData, rfc::Required, rfc::Optional));
-			static constexpr auto withData = FindComponentsWithData<FindComponentsWithDataCount<false>(arrSorted), false>(arrSorted);
-			static constexpr auto optionalWithData = FindMatchingComponents<FindMatchingComponentsCount(arrSorted, make_array(rfc::Optional))>(arrSorted, make_array(rfc::Optional));
-			static constexpr auto subtractive = FindMatchingComponents<FindMatchingComponentsCount(arrSorted, make_array(rfc::Subtractive))>(arrSorted, make_array(rfc::Subtractive));
-			static constexpr auto writeAccess = FindComponentsWithData<FindComponentsWithDataCount<true>(arrSorted), true>(arrSorted);
-			static constexpr auto archetypeDefining = FindMatchingComponents<FindMatchingComponentsCount(arrSorted, make_array(rfc::RequiredWithData, rfc::Required, rfc::Subtractive))>(arrSorted, make_array(rfc::RequiredWithData, rfc::Required, rfc::Subtractive));
+			static constexpr auto sorted = Funcs::SortCompileTime(arr);
+			static constexpr auto requiredWithoutData = FindMatchingComponents<FindMatchingComponentsCount(sorted, make_array(rfc::Required))>(sorted, make_array(rfc::Required));
+			static constexpr auto requiredWithData = FindMatchingComponents<FindMatchingComponentsCount(sorted, make_array(rfc::RequiredWithData))>(sorted, make_array(rfc::RequiredWithData));
+			static constexpr auto required = FindMatchingComponents<FindMatchingComponentsCount(sorted, make_array(rfc::RequiredWithData, rfc::Required))>(sorted, make_array(rfc::RequiredWithData, rfc::Required));
+			static constexpr auto requiredOrOptional = FindMatchingComponents<FindMatchingComponentsCount(sorted, make_array(rfc::RequiredWithData, rfc::Required, rfc::Optional))>(sorted, make_array(rfc::RequiredWithData, rfc::Required, rfc::Optional));
+			static constexpr auto withData = FindComponentsWithData<FindComponentsWithDataCount<false>(sorted), false>(sorted);
+			static constexpr auto optionalWithData = FindMatchingComponents<FindMatchingComponentsCount(sorted, make_array(rfc::Optional))>(sorted, make_array(rfc::Optional));
+			static constexpr auto subtractive = FindMatchingComponents<FindMatchingComponentsCount(sorted, make_array(rfc::Subtractive))>(sorted, make_array(rfc::Subtractive));
+			static constexpr auto writeAccess = FindComponentsWithData<FindComponentsWithDataCount<true>(sorted), true>(sorted);
+			static constexpr auto archetypeDefining = FindMatchingComponents<FindMatchingComponentsCount(sorted, make_array(rfc::RequiredWithData, rfc::Required, rfc::Subtractive))>(sorted, make_array(rfc::RequiredWithData, rfc::Required, rfc::Subtractive));
 			static constexpr auto archetypeDefiningInfoOnly = StripAccessData(archetypeDefining);
 			static constexpr System::Requests requests =
 			{
@@ -502,7 +526,7 @@ namespace ECSTest
 				ToArray(subtractive),
 				ToArray(writeAccess),
 				ToArray(archetypeDefining),
-				ToArray(arrSorted),
+				ToArray(sorted),
 				ToArray(arr),
 				entityIDIndex,
 				environmentIndex,

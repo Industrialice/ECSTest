@@ -50,7 +50,7 @@ namespace ECSTest
                     target.data = source.data.get() + entityIndex * source.sizeOf * source.stride + offset * source.sizeOf;
                 }
             }
-
+			
             for (uiw tagIndex = 0; tagIndex < group->tagsCount; ++tagIndex)
             {
                 uiw index = _tempComponents.size();
