@@ -31,6 +31,21 @@ bool ComponentID::operator < (const ComponentID &other) const
     return _id < other._id;
 }
 
+bool ComponentID::operator <= (const ComponentID &other) const
+{
+	return _id <= other._id;
+}
+
+bool ComponentID::operator > (const ComponentID &other) const
+{
+	return _id > other._id;
+}
+
+bool ComponentID::operator >= (const ComponentID &other) const
+{
+	return _id >= other._id;
+}
+
 ComponentID ComponentIDGenerator::Generate()
 {
     auto id = ComponentID(_current.load());

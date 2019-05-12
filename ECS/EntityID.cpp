@@ -27,6 +27,21 @@ bool EntityID::operator < (const EntityID &other) const
 	return _id < other._id;
 }
 
+bool EntityID::operator <= (const EntityID &other) const
+{
+	return _id <= other._id;
+}
+
+bool EntityID::operator > (const EntityID &other) const
+{
+	return _id > other._id;
+}
+
+bool EntityID::operator >= (const EntityID &other) const
+{
+	return _id >= other._id;
+}
+
 bool EntityID::IsValid() const
 {
 	return _id != invalidId;

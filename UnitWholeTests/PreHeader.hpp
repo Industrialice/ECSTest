@@ -94,3 +94,8 @@ namespace ECSTest
         printf("%s%s: %s", tag, senderName.data(), nullTerminatedText.data());
     }
 }
+
+#if !defined(DEBUG) && !defined(_DEBUG)
+	#undef ASSUME
+	#define ASSUME(cond) do { if (!(cond)) printf("Assumption %s failed, file %s line %i\n", TOSTR(cond), __FILE__, __LINE__); } while (false)
+#endif

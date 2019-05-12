@@ -189,6 +189,7 @@
     <ClInclude Include="PreHeader.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="ArgumentPassingTests.cpp" />
     <ClCompile Include="Benchmark.cpp" />
     <ClCompile Include="Benchmark2.cpp" />
     <ClCompile Include="KeyControllerTests.cpp" />

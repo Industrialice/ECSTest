@@ -84,6 +84,8 @@ namespace
 
     static void GenerateScene(EntityIDGenerator &entityIdGenerator, SystemsManager &manager, EntitiesStream &stream)
     {
+		stream.HintTotal(EntitiesToTest * 4);
+
         auto generate = [&stream, &entityIdGenerator](auto group)
         {
             for (uiw index = 0; index < EntitiesToTest; ++index)

@@ -4,7 +4,7 @@
 
 namespace ECSTest
 {
-    enum RequirementForComponent
+    enum class RequirementForComponent
     {
         Required,
         RequiredWithData,
@@ -37,6 +37,9 @@ namespace ECSTest
 		[[nodiscard]] bool operator == (const ComponentID &other) const;
 		[[nodiscard]] bool operator != (const ComponentID &other) const;
 		[[nodiscard]] bool operator < (const ComponentID &other) const;
+		[[nodiscard]] bool operator <= (const ComponentID &other) const;
+		[[nodiscard]] bool operator > (const ComponentID &other) const;
+		[[nodiscard]] bool operator >= (const ComponentID &other) const;
 	};
 
     class ComponentIDGenerator
@@ -105,6 +108,14 @@ namespace ECSTest
     {
         using ComponentTypes = std::tuple<Types...>;
     };
+
+	struct _RequiredComponentAnyBase
+	{};
+
+	template <typename... Types> struct EMPTY_BASES RequiredComponentAny : _RequiredComponentAnyBase
+	{
+		using ComponentTypes = std::tuple<Types...>;
+	};
 
 	struct _NonUniqueBase
 	{};

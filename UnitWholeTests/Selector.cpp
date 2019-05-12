@@ -9,6 +9,7 @@ void KeyControllerTests();
 void SyncTests();
 void Falling();
 void InteractionTests();
+void ArgumentPassingTests();
 
 int main()
 {
@@ -16,10 +17,11 @@ int main()
 
     printf("1. KeyControllerTests\n");
     printf("2. InteractionTests\n");
-    printf("3. SyncTests\n");
-    printf("4. Benchmark\n");
-    printf("5. Falling\n");
-    printf("6. Benchmark2\n");
+	printf("3. ArgumentPassingTests\n");
+    printf("4. SyncTests\n");
+    printf("5. Benchmark\n");
+    printf("6. Falling\n");
+    printf("7. Benchmark2\n");
 
 restart:
     int choice = 0;
@@ -34,16 +36,19 @@ restart:
     case 2:
         InteractionTests();
         break;
-    case 3:
+	case 3:
+		ArgumentPassingTests();
+		break;
+    case 4:
         SyncTests();
         break;
-    case 4:
+    case 5:
         Benchmark();
         break;
-    case 5:
+    case 6:
         Falling();
         break;
-    case 6:
+    case 7:
         Benchmark2();
         break;
     default:

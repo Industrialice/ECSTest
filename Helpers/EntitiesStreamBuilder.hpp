@@ -4,7 +4,7 @@
 
 namespace ECSTest
 {
-    class EntitiesStream : public IEntitiesStream
+    class EntitiesStream final : public IEntitiesStream
     {
     public:
         struct EntityData
@@ -41,6 +41,11 @@ namespace ECSTest
         uiw _currentEntity{};
 
     public:
+		void HintTotal(uiw count)
+		{
+			_entities.reserve(count);
+		}
+
         [[nodiscard]] virtual optional<StreamedEntity> Next() override
         {
             if (_currentEntity < _entities.size())

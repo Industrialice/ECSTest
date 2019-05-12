@@ -977,7 +977,7 @@ void SystemsManagerST::ExecuteIndirectSystem(IndirectSystem &system, ManagedIndi
 
     for (const auto &[componentType, stream] : env.messageBuilder.ComponentChangedStreams()._data)
     {
-        auto it = requested.find_if([componentType](const System::RequestedComponent &r) { return r.type == componentType; });
+        auto it = requested.find_if([componentType](const System::ComponentRequest &r) { return r.type == componentType; });
         ASSUME(it != requested.end()); // system changed component without requesting write access
     }
 
@@ -1026,7 +1026,7 @@ void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, ControlsQueue &
             _tempArrayArgs.clear();
             _tempArgs.clear();
 
-            for (const System::RequestedComponent &arg : requested.allOriginalOrder)
+            for (const System::ComponentRequest &arg : requested.allOriginalOrder)
             {
                 if (arg.requirement == RequirementForComponent::Required)
                 {
@@ -1110,7 +1110,7 @@ void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, ControlsQueue &
 
             system.AcceptUntyped(_tempArgs.data());
 
-			for (const System::RequestedComponent &arg : system.RequestedComponents().writeAccess)
+			for (const System::ComponentRequest &arg : system.RequestedComponents().writeAccess)
 			{
 				ui32 index = 0;
 				for (; index < group.get().uniqueTypedComponentsCount; ++index)
@@ -1532,7 +1532,7 @@ void SystemsManagerST::PassMessagesToIndirectSystemsAndClear(MessageBuilder &mes
                 if (managed.system.get() != systemToIgnore)
                 {
                     auto requested = managed.system->RequestedComponents();
-                    auto searchPredicate = [componentType](const System::RequestedComponent &stored) { return componentType == stored.type; };
+                    auto searchPredicate = [componentType](const System::ComponentRequest &stored) { return componentType == stored.type; };
 
                     if (requested.subtractive.find_if(searchPredicate) != requested.subtractive.end())
                     {
@@ -1560,7 +1560,7 @@ void SystemsManagerST::PassMessagesToIndirectSystemsAndClear(MessageBuilder &mes
                 if (managed.system.get() != systemToIgnore)
                 {
                     auto requested = managed.system->RequestedComponents();
-                    auto searchPredicate = [componentType](const System::RequestedComponent &stored) { return componentType == stored.type; };
+                    auto searchPredicate = [componentType](const System::ComponentRequest &stored) { return componentType == stored.type; };
 
                     if (requested.subtractive.find_if(searchPredicate) != requested.subtractive.end())
                     {
@@ -1588,7 +1588,7 @@ void SystemsManagerST::PassMessagesToIndirectSystemsAndClear(MessageBuilder &mes
                 if (managed.system.get() != systemToIgnore)
                 {
                     auto requested = managed.system->RequestedComponents();
-                    auto searchPredicate = [componentType](const System::RequestedComponent &stored) { return componentType == stored.type; };
+                    auto searchPredicate = [componentType](const System::ComponentRequest &stored) { return componentType == stored.type; };
 
                     if (requested.subtractive.find_if(searchPredicate) != requested.subtractive.end())
                     {

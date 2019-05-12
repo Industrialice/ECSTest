@@ -812,7 +812,7 @@ void SystemsManagerMT::ExecutePipeline(PipelineData &pipeline)
                     if (requested.requiredWithData.size())
                     {
                         // locate and add all required components
-                        for (System::RequestedComponent request : requested.requiredWithData)
+                        for (System::ComponentRequest request : requested.requiredWithData)
                         {
                             for (uiw index = 0; ; ++index)
                             {
@@ -839,7 +839,7 @@ void SystemsManagerMT::ExecutePipeline(PipelineData &pipeline)
                         }
 
                         // try to locate and add any optionally requested components
-                        for (System::RequestedComponent opt : requested.optionalWithData)
+                        for (System::ComponentRequest opt : requested.optionalWithData)
                         {
                             for (uiw index = 0; index < group.uniqueTypedComponentsCount; ++index)
                             {
@@ -870,7 +870,7 @@ void SystemsManagerMT::ExecutePipeline(PipelineData &pipeline)
                             const auto &component = group.components[index];
                             bool isWriteAccess = false;
 
-                            auto req = requested.optionalWithData.find_if([&component](const System::RequestedComponent &req) { return req.type == component.type; });
+                            auto req = requested.optionalWithData.find_if([&component](const System::ComponentRequest &req) { return req.type == component.type; });
                             if (req != requested.optionalWithData.end())
                             {
                                 ASSUME(req->requirement == RequirementForComponent::Optional);
@@ -1260,7 +1260,7 @@ void SystemsManagerMT::TaskExecuteIndirectSystem(IndirectSystem &system, Managed
     //            if (managed.system.get() != &system)
     //            {
     //                auto requested = managed.system->RequestedComponents();
-    //                auto searchPredicate = [componentType](const System::RequestedComponent &stored) { return componentType == stored.type; };
+    //                auto searchPredicate = [componentType](const System::ComponentRequest &stored) { return componentType == stored.type; };
 
     //                if (requested.subtractive.find(searchPredicate) != requested.subtractive.end())
     //                {

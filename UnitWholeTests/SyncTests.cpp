@@ -202,6 +202,8 @@ namespace
 
     static void GenerateScene(EntityIDGenerator &entityIdGenerator, SystemsManager &manager, EntitiesStream &stream)
     {
+		stream.HintTotal(100);
+
         for (uiw index = 0; index < 100; ++index)
         {
             EntitiesStream::EntityData entity;

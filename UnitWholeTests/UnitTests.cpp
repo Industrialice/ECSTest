@@ -142,7 +142,7 @@ namespace
 		return result;
 	}
 
-	template <uiw size> static vector<pair<StableTypeId, RequirementForComponent>> ToRequired(const array<System::RequestedComponent, size> &source)
+	template <uiw size> static vector<pair<StableTypeId, RequirementForComponent>> ToRequired(const array<System::ComponentRequest, size> &source)
 	{
 		vector<pair<StableTypeId, RequirementForComponent>> result;
 		for (auto &req : source)
@@ -226,29 +226,29 @@ namespace
 		auto arch5 = GenerateArchetype(Funcs::SortCompileTime(ent5));
 
 		// ent0 fits
-		array<System::RequestedComponent, 3> req0 =
+		array<System::ComponentRequest, 3> req0 =
 		{
-			System::RequestedComponent{ComponentArtist::GetTypeId(), false, RequirementForComponent::Required},
-			System::RequestedComponent{ComponentDateOfBirth::GetTypeId(), false, RequirementForComponent::Optional},
-			System::RequestedComponent{ComponentCompany::GetTypeId(), false, RequirementForComponent::Subtractive},
+			System::ComponentRequest{ComponentArtist::GetTypeId(), false, RequirementForComponent::Required},
+			System::ComponentRequest{ComponentDateOfBirth::GetTypeId(), false, RequirementForComponent::Optional},
+			System::ComponentRequest{ComponentCompany::GetTypeId(), false, RequirementForComponent::Subtractive},
 		};
 		req0 = Funcs::SortCompileTime(req0);
 
 		// no entities fit
-		array<System::RequestedComponent, 3> req1 =
+		array<System::ComponentRequest, 3> req1 =
 		{
-			System::RequestedComponent{ComponentProgrammer::GetTypeId(), false, RequirementForComponent::Required},
-			System::RequestedComponent{ComponentDateOfBirth::GetTypeId(), false, RequirementForComponent::RequiredWithData},
-			System::RequestedComponent{ComponentFirstName::GetTypeId(), false, RequirementForComponent::Required},
+			System::ComponentRequest{ComponentProgrammer::GetTypeId(), false, RequirementForComponent::Required},
+			System::ComponentRequest{ComponentDateOfBirth::GetTypeId(), false, RequirementForComponent::RequiredWithData},
+			System::ComponentRequest{ComponentFirstName::GetTypeId(), false, RequirementForComponent::Required},
 		};
 		req1 = Funcs::SortCompileTime(req1);
 
 		// ent3, ent4 fit
-		array<System::RequestedComponent, 3> req2 =
+		array<System::ComponentRequest, 3> req2 =
 		{
-			System::RequestedComponent{ComponentCompany::GetTypeId(), false, RequirementForComponent::Subtractive},
-			System::RequestedComponent{ComponentDesigner::GetTypeId(), false, RequirementForComponent::Required},
-			System::RequestedComponent{ComponentSpouse::GetTypeId(), false, RequirementForComponent::RequiredWithData},
+			System::ComponentRequest{ComponentCompany::GetTypeId(), false, RequirementForComponent::Subtractive},
+			System::ComponentRequest{ComponentDesigner::GetTypeId(), false, RequirementForComponent::Required},
+			System::ComponentRequest{ComponentSpouse::GetTypeId(), false, RequirementForComponent::RequiredWithData},
 		};
 		req2 = Funcs::SortCompileTime(req2);
 
@@ -342,7 +342,7 @@ namespace
 
 	static void ArgumentPropertiesTests()
 	{
-		auto matches = [](const Array<const System::RequestedComponent> &left, auto right, bool sort = true) constexpr -> bool
+		auto matches = [](const Array<const System::ComponentRequest> &left, auto right, bool sort = true) constexpr -> bool
 		{
 			if (sort)
 			{
@@ -373,8 +373,8 @@ namespace
 		static_assert(matches(TestSystem::AcquireRequestedComponents().archetypeDefining, MakeArray<ComponentArtist, ComponentProgrammer, ComponentSpouse, ComponentCompany, TagTest0, TagTest1, ComponentDateOfBirth, ComponentDesigner>()));
 		static_assert(matches(TestSystem::AcquireRequestedComponents().all, MakeArray<ComponentArtist, ComponentProgrammer, ComponentSpouse, ComponentCompany, TagTest0, TagTest1, ComponentDateOfBirth, ComponentEmployee, ComponentGender, ComponentDesigner>()));
 		static_assert(matches(TestSystem::AcquireRequestedComponents().allOriginalOrder, MakeArray<ComponentArtist, TagTest0, TagTest1, ComponentProgrammer, ComponentSpouse, ComponentCompany, ComponentEmployee, ComponentGender, ComponentDateOfBirth, ComponentDesigner>(), false));
-		static_assert(TestSystem::AcquireRequestedComponents().idsArgumentIndex == 5);
-		static_assert(TestSystem::AcquireRequestedComponents().environmentArgumentIndex == 4);
+		static_assert(TestSystem::AcquireRequestedComponents().idsArgumentIndex == 4);
+		static_assert(TestSystem::AcquireRequestedComponents().environmentArgumentIndex == 3);
 		static_assert(TestSystem::AcquireRequestedComponents().archetypeDefiningInfoOnly.size() == TestSystem::AcquireRequestedComponents().archetypeDefining.size());
 
 		static_assert(matches(TestSystem2::AcquireRequestedComponents().requiredWithoutData, MakeArray<TagTest0, TagTest1, TagTest2>()));

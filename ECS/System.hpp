@@ -25,26 +25,26 @@ namespace ECSTest
             IKeyController *keyController;
         };
 
-        struct RequestedComponent
-        {
-            StableTypeId type{};
-            bool isWriteAccess = false;
+		struct ComponentRequest
+		{
+			StableTypeId type{};
+			bool isWriteAccess = false;
 			RequirementForComponent requirement = RequirementForComponent::Required;
-        };
+		};
 
         struct Requests
         {
-            Array<const RequestedComponent> requiredWithoutData; // contains only required components that don't require data
-            Array<const RequestedComponent> requiredWithData; // contains only required with data components
-			Array<const RequestedComponent> required; // contains only required components, both with and without data
-			Array<const RequestedComponent> requiredOrOptional; // contains only required and optional components, both with and without data
-            Array<const RequestedComponent> withData; // contains only required with data and optional components
-            Array<const RequestedComponent> optionalWithData; // contains only optional components
-            Array<const RequestedComponent> subtractive; // contains only subtractive components
-            Array<const RequestedComponent> writeAccess; // contains only components with write access (write access is ignored for subtractive components)
-            Array<const RequestedComponent> archetypeDefining; // contains only required and subtractive components
-            Array<const RequestedComponent> all; // contains all requested components
-            Array<const RequestedComponent> allOriginalOrder; // contains all requested components in the order they are declared
+            Array<const ComponentRequest> requiredWithoutData; // contains only required components that don't require data
+            Array<const ComponentRequest> requiredWithData; // contains only required with data components
+			Array<const ComponentRequest> required; // contains only required components, both with and without data
+			Array<const ComponentRequest> requiredOrOptional; // contains only required and optional components, both with and without data
+            Array<const ComponentRequest> withData; // contains only required with data and optional components
+            Array<const ComponentRequest> optionalWithData; // contains only optional components
+            Array<const ComponentRequest> subtractive; // contains only subtractive components
+            Array<const ComponentRequest> writeAccess; // contains only components with write access (write access is ignored for subtractive components)
+            Array<const ComponentRequest> archetypeDefining; // contains only required and subtractive components
+            Array<const ComponentRequest> all; // contains all requested components
+            Array<const ComponentRequest> allOriginalOrder; // contains all requested components in the order they are declared
             optional<ui32> idsArgumentIndex; // direct systems only; indicates whether EntityID array was also requested and if it was, contains its argument index
 			optional<ui32> environmentArgumentIndex; // direct systems only; indicates whether Environment was also requested and if it was, contains its argument index
 			Array<const pair<StableTypeId, RequirementForComponent>> archetypeDefiningInfoOnly; // contains elements from archetypeDefining, but without the access information

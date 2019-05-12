@@ -543,6 +543,8 @@ namespace
 
     static void GenerateScene(EntityIDGenerator &entityIdGenerator, SystemsManager &manager, EntitiesStream &stream)
     {
+		stream.HintTotal(EntitiesToTest);
+
         for (uiw index = 0; index < EntitiesToTest; ++index)
         {
             EntitiesStream::EntityData entity;
