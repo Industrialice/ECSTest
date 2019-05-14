@@ -80,6 +80,9 @@
     <ClCompile Include="SystemsManagerST.cpp" />
     <ClCompile Include="WokerThread.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <Natvis Include="NatvisFile.natvis" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{F08091C1-62EE-4763-8C58-0684B250866A}</ProjectGuid>

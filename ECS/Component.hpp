@@ -21,6 +21,13 @@ namespace ECSTest
 		bool isTag{};
 	};
 
+	struct ArchetypeDefiningRequirement
+	{
+		StableTypeId type{};
+		ui32 group{};
+		RequirementForComponent requirement{};
+	};
+
 	class ComponentID
 	{
     public:

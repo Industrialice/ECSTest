@@ -199,7 +199,7 @@ void SystemsManagerMT::Register(unique_ptr<System> system, Pipeline pipeline)
 
     if (isDirectSystem)
     {
-        uiw requiredCount = requestedComponents.requiredWithoutData.size() + requestedComponents.requiredWithData.size();
+        uiw requiredCount = requestedComponents.required.size();
         uiw optionalCount = requestedComponents.optionalWithData.size();
 
         if (requiredCount == 0 && optionalCount == 0)

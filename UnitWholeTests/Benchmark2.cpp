@@ -5,7 +5,7 @@ using namespace ECSTest;
 namespace
 {
     constexpr bool IsMTECS = false;
-	constexpr bool IsPhysicsFPSRestricted = true;
+	constexpr bool IsPhysicsFPSRestricted = false;
 	constexpr bool IsPhysicsUsingComponentChangedHints = true;
     constexpr ui32 EntitiesToTest = 32768;
     constexpr ui32 PhysicsUpdatesPerFrame = 100;

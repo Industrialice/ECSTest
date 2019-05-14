@@ -1026,12 +1026,9 @@ void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, ControlsQueue &
             _tempArrayArgs.clear();
             _tempArgs.clear();
 
-            for (const System::ComponentRequest &arg : requested.allOriginalOrder)
+            for (const System::ComponentRequest &arg : requested.argumentPassingOrder)
             {
-                if (arg.requirement == RequirementForComponent::Required)
-                {
-                    continue; // already passed the archetype check
-                }
+				ASSUME(arg.requirement == RequirementForComponent::Optional || arg.requirement == RequirementForComponent::RequiredWithData);
 
                 ui32 index = 0;
                 for (; index < group.get().uniqueTypedComponentsCount; ++index)
@@ -1043,12 +1040,6 @@ void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, ControlsQueue &
                 }
 
                 bool isFound = index < group.get().uniqueTypedComponentsCount;
-
-                if (arg.requirement == RequirementForComponent::Subtractive)
-                {
-                    ASSUME(isFound == false);
-                    continue;
-                }
 
                 if (isFound)
                 {
