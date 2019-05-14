@@ -356,6 +356,12 @@ namespace
 		return {Types::GetTypeId()...};
 	}
 
+	struct TypeAndGroup
+	{
+		StableTypeId type = 0;
+		ui32 group = 0;
+	};
+
 	static void ArgumentPropertiesTests()
 	{
 		auto matches = [](const Array<const System::ComponentRequest> &left, auto right, bool sort = true) constexpr -> bool
@@ -378,10 +384,37 @@ namespace
 			return true;
 		};
 
-		// TODO: implement it
 		auto testArchetypeDefining = [](const Array<const ArchetypeDefiningRequirement> &left, auto regular, auto anyGroups) constexpr -> bool
 		{
 			regular = Funcs::SortCompileTime(regular);
+			array<TypeAndGroup, regular.size() + anyGroups.size()> result{};
+			
+			if (left.size() != result.size())
+			{
+				return false;
+			}
+			
+			for (uiw index = 0; index < regular.size(); ++index)
+			{
+				result[index] = {regular[index], (ui32)index};
+			}
+			for (uiw index = regular.size(), sourceIndex = 0; sourceIndex < anyGroups.size(); ++index, ++sourceIndex)
+			{
+				result[index] = {anyGroups[sourceIndex].type, anyGroups[sourceIndex].group + (ui32)regular.size()};
+			}
+			
+			for (uiw index = 0; index < result.size(); ++index)
+			{
+				if (result[index].type != left[index].type)
+				{
+					return false;
+				}
+				if (result[index].group != left[index].group)
+				{
+					return false;
+				}
+			}
+			
 			return true;
 		};
 
@@ -395,7 +428,7 @@ namespace
 		static_assert(matches(TestSystem::AcquireRequestedComponents().writeAccess, MakeArray<ComponentArtist, ComponentSpouse, ComponentEmployee>()));
 		static_assert(matches(TestSystem::AcquireRequestedComponents().all, MakeArray<ComponentArtist, ComponentProgrammer, ComponentSpouse, ComponentCompany, TagTest0, TagTest1, ComponentDateOfBirth, ComponentEmployee, ComponentGender, ComponentDesigner>()));
 		static_assert(matches(TestSystem::AcquireRequestedComponents().argumentPassingOrder, MakeArray<ComponentArtist, ComponentProgrammer, ComponentSpouse, ComponentCompany, ComponentEmployee, ComponentGender>(), false));
-		static_assert(testArchetypeDefining(TestSystem4::AcquireRequestedComponents().archetypeDefiningInfoOnly, MakeArray<>(), false));
+		static_assert(testArchetypeDefining(TestSystem::AcquireRequestedComponents().archetypeDefiningInfoOnly, MakeArray<ComponentArtist, ComponentProgrammer, ComponentSpouse, ComponentCompany, TagTest0, TagTest1, ComponentDateOfBirth, ComponentDesigner>(), array<TypeAndGroup, 0>{}));
 		static_assert(TestSystem::AcquireRequestedComponents().idsArgumentIndex == 4);
 		static_assert(TestSystem::AcquireRequestedComponents().environmentArgumentIndex == 3);
 
@@ -409,7 +442,7 @@ namespace
 		static_assert(matches(TestSystem2::AcquireRequestedComponents().writeAccess, MakeArray<>()));
 		static_assert(matches(TestSystem2::AcquireRequestedComponents().all, MakeArray<TagTest0, TagTest1, TagTest2, TagTest3, TagTest4, TagTest5>()));
 		static_assert(matches(TestSystem2::AcquireRequestedComponents().argumentPassingOrder, MakeArray<>(), false));
-		static_assert(testArchetypeDefining(TestSystem4::AcquireRequestedComponents().archetypeDefiningInfoOnly, MakeArray<>(), false));
+		static_assert(testArchetypeDefining(TestSystem2::AcquireRequestedComponents().archetypeDefiningInfoOnly, MakeArray<TagTest0, TagTest1, TagTest2, TagTest3, TagTest4, TagTest5>(), array<TypeAndGroup, 0>{}));
 		static_assert(TestSystem2::AcquireRequestedComponents().idsArgumentIndex == nullopt);
 		static_assert(TestSystem2::AcquireRequestedComponents().environmentArgumentIndex == nullopt);
 
@@ -423,9 +456,12 @@ namespace
 		static_assert(matches(TestSystem3::AcquireRequestedComponents().writeAccess, MakeArray<>()));
 		static_assert(matches(TestSystem3::AcquireRequestedComponents().all, MakeArray<>()));
 		static_assert(matches(TestSystem3::AcquireRequestedComponents().argumentPassingOrder, MakeArray<>(), false));
-		static_assert(testArchetypeDefining(TestSystem4::AcquireRequestedComponents().archetypeDefiningInfoOnly, MakeArray<>(), false));
+		static_assert(testArchetypeDefining(TestSystem3::AcquireRequestedComponents().archetypeDefiningInfoOnly, MakeArray<>(), array<TypeAndGroup, 0>{}));
 		static_assert(TestSystem3::AcquireRequestedComponents().idsArgumentIndex == nullopt);
 		static_assert(TestSystem3::AcquireRequestedComponents().environmentArgumentIndex == nullopt);
+
+		auto test = TestSystem4::AcquireRequestedComponents().archetypeDefiningInfoOnly;
+		int a = 0;
 
 		static_assert(matches(TestSystem4::AcquireRequestedComponents().requiredWithoutData, MakeArray<>()));
 		static_assert(matches(TestSystem4::AcquireRequestedComponents().requiredWithData, MakeArray<ComponentSpouse, ComponentCompany>()));
@@ -437,7 +473,7 @@ namespace
 		static_assert(matches(TestSystem4::AcquireRequestedComponents().writeAccess, MakeArray<ComponentSpouse, ComponentEmployee>()));
 		static_assert(matches(TestSystem4::AcquireRequestedComponents().all, MakeArray<ComponentSpouse, ComponentCompany, ComponentEmployee, ComponentGender>()));
 		static_assert(matches(TestSystem4::AcquireRequestedComponents().argumentPassingOrder, MakeArray<ComponentSpouse, ComponentCompany, ComponentEmployee, ComponentGender>(), false));
-		static_assert(testArchetypeDefining(TestSystem4::AcquireRequestedComponents().archetypeDefiningInfoOnly, MakeArray<>(), false));
+		static_assert(testArchetypeDefining(TestSystem4::AcquireRequestedComponents().archetypeDefiningInfoOnly, MakeArray<ComponentSpouse, ComponentCompany>(), make_array(TypeAndGroup{ComponentEmployee::GetTypeId(), 0}, TypeAndGroup{ComponentGender::GetTypeId(), 0})));
 		static_assert(TestSystem4::AcquireRequestedComponents().idsArgumentIndex == nullopt);
 		static_assert(TestSystem4::AcquireRequestedComponents().environmentArgumentIndex == nullopt);
 	}
