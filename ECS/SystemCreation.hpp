@@ -14,6 +14,7 @@ namespace ECSTest
 			using expanded = tuple<T...>;
 			using wrapped = expanded;
             using type = tuple_element_t<0, expanded>;
+			static constexpr uiw argumentCount = sizeof...(T);
             static constexpr bool isSubtractive = false;
             static constexpr bool isArray = false;
 			static constexpr bool isNonUnique = false;
@@ -28,6 +29,7 @@ namespace ECSTest
 			using expanded = tuple<T...>;
 			using wrapped = tuple<SubtractiveComponent<T>...>;
 			using type = tuple_element_t<0, expanded>;
+			static constexpr uiw argumentCount = sizeof...(T);
             static constexpr bool isSubtractive = true;
             static constexpr bool isArray = false;
 			static constexpr bool isNonUnique = false;
@@ -42,7 +44,8 @@ namespace ECSTest
 			using expanded = tuple<T...>;
 			using wrapped = tuple<RequiredComponent<T>...>;
 			using type = tuple_element_t<0, expanded>;
-            static constexpr bool isSubtractive = false;
+			static constexpr uiw argumentCount = sizeof...(T);
+			static constexpr bool isSubtractive = false;
             static constexpr bool isArray = false;
             static constexpr bool isNonUnique = false;
             static constexpr bool isRequired = true;
@@ -54,8 +57,9 @@ namespace ECSTest
 		{
 			static_assert(sizeof...(T) > 0, "Type list of RequiredComponentAny cannot be empty");
 			using expanded = tuple<T...>;
-			using wrapped = RequiredComponentAny<T...>;
+			using wrapped = tuple<RequiredComponentAny<T>...>;
 			using type = tuple_element_t<0, expanded>;
+			static constexpr uiw argumentCount = sizeof...(T);
 			static constexpr bool isSubtractive = false;
 			static constexpr bool isArray = false;
 			static constexpr bool isNonUnique = false;
@@ -69,6 +73,7 @@ namespace ECSTest
 			using expanded = tuple<T...>;
 			using wrapped = expanded;
 			using type = tuple_element_t<0, expanded>;
+			static constexpr uiw argumentCount = sizeof...(T);
 			static constexpr bool isSubtractive = false;
 			static constexpr bool isArray = false;
 			static constexpr bool isNonUnique = true;
@@ -82,7 +87,8 @@ namespace ECSTest
 			using expanded = tuple<T...>;
 			using wrapped = expanded;
 			using type = tuple_element_t<0, expanded>;
-            static constexpr bool isSubtractive = false;
+			static constexpr uiw argumentCount = sizeof...(T);
+			static constexpr bool isSubtractive = false;
             static constexpr bool isArray = true;
 			static constexpr bool isNonUnique = false;
             static constexpr bool isRequired = false;
@@ -95,7 +101,8 @@ namespace ECSTest
 			using expanded = tuple<T...>;
 			using wrapped = expanded;
 			using type = tuple_element_t<0, expanded>;
-            static constexpr bool isSubtractive = true;
+			static constexpr uiw argumentCount = sizeof...(T);
+			static constexpr bool isSubtractive = true;
             static constexpr bool isArray = true;
 			static constexpr bool isNonUnique = false;
             static constexpr bool isRequired = false;
@@ -108,7 +115,8 @@ namespace ECSTest
 			using expanded = tuple<T...>;
 			using wrapped = expanded;
 			using type = tuple_element_t<0, expanded>;
-            static constexpr bool isSubtractive = false;
+			static constexpr uiw argumentCount = sizeof...(T);
+			static constexpr bool isSubtractive = false;
             static constexpr bool isArray = true;
             static constexpr bool isNonUnique = false;
             static constexpr bool isRequired = true;
@@ -119,8 +127,9 @@ namespace ECSTest
 		template <typename... T> struct GetComponentType<Array<RequiredComponentAny<T...>>>
 		{
 			using expanded = tuple<T...>;
-			using wrapped = RequiredComponentAny<T...>;
+			using wrapped = tuple<RequiredComponentAny<T>...>;
 			using type = tuple_element_t<0, expanded>;
+			static constexpr uiw argumentCount = sizeof...(T);
 			static constexpr bool isSubtractive = false;
 			static constexpr bool isArray = true;
 			static constexpr bool isNonUnique = false;
@@ -134,6 +143,7 @@ namespace ECSTest
 			using expanded = tuple<T...>;
 			using wrapped = expanded;
 			using type = tuple_element_t<0, expanded>;
+			static constexpr uiw argumentCount = sizeof...(T);
 			static constexpr bool isSubtractive = false;
 			static constexpr bool isArray = true;
 			static constexpr bool isNonUnique = true;
@@ -171,9 +181,10 @@ namespace ECSTest
 			constexpr bool isNonUnique = GetComponentType<pureType>::isNonUnique;
 
             constexpr bool isRefOrPtr = is_reference_v<T> || is_pointer_v<T>;
-            static_assert((isSubtractive || isRequired) || isRefOrPtr, "Type must be either reference or pointer");
+            static_assert((isSubtractive || isRequired || isRequiredAny) || isRefOrPtr, "Type must be either reference or pointer");
 			static_assert(!isRefOrPtr || !isSubtractive, "SubtractiveComponent cannot be passed by reference or pointer");
-            static_assert(!isRefOrPtr || !isRequired, "RequiredComponent cannot be passed by reference or pointer");
+			static_assert(!isRefOrPtr || !isRequired, "RequiredComponent cannot be passed by reference or pointer");
+			static_assert(!isRefOrPtr || !isRequiredAny, "RequiredComponentAny cannot be passed by reference or pointer");
 
 			constexpr uiw index = GetArgumentIndexInArray<Types, Index>(make_index_sequence<tuple_size_v<Types>>());
 
@@ -213,6 +224,7 @@ namespace ECSTest
             constexpr bool isRefOrPtr = is_reference_v<T> || is_pointer_v<T>;
             constexpr bool isSubtractive = GetComponentType<pureType>::isSubtractive;
 			constexpr bool isRequired = GetComponentType<pureType>::isRequired;
+			constexpr bool isRequiredAny = GetComponentType<pureType>::isRequiredAny;
             constexpr bool isNonUnique = GetComponentType<pureType>::isNonUnique;
             constexpr bool isArray = GetComponentType<pureType>::isArray;
             constexpr auto isComponent = is_base_of_v<Component, componentType>;
@@ -266,7 +278,7 @@ namespace ECSTest
 				static_assert(false, "NonUnique object used to pass unique component");
 			}
 
-			if constexpr (componentType::IsUnique() == false && (isNonUnique || isRequired || isSubtractive) == false)
+			if constexpr (componentType::IsUnique() == false && (isNonUnique || isRequired || isRequiredAny || isSubtractive) == false)
 			{
 				isFailed = true;
 				static_assert(false, "NonUnique objects must be used for non unique components");
@@ -290,19 +302,25 @@ namespace ECSTest
 				static_assert(false, "RequiredComponent can't be inside an Array");
 			}
 
+			if constexpr (isRequiredAny && isArray)
+			{
+				isFailed = true;
+				static_assert(false, "RequiredComponentAny can't be inside an Array");
+			}
+
 			if constexpr (isNonUnique && isArray)
 			{
 				isFailed = true;
 				static_assert(false, "NonUnique can't be inside an Array");
 			}
 
-			if constexpr (isArray == false && (isSubtractive || isRequired || isNonUnique) == false)
+			if constexpr (isArray == false && (isSubtractive || isRequired || isRequiredAny || isNonUnique) == false)
 			{
 				isFailed = true;
 				static_assert(false, "Unique components must be passed using Array");
 			}
 				
-			if constexpr (!(isSubtractive || isRequired || isRefOrPtr))
+			if constexpr (!(isSubtractive || isRequired || isRequiredAny || isRefOrPtr))
 			{
 				isFailed = true;
 				static_assert(false, "Components must be passed by either pointer, or by reference");
@@ -321,6 +339,10 @@ namespace ECSTest
             {
                 return componentType::ComponentType::GetTypeId();
             }
+			else if constexpr (is_base_of_v<_RequiredComponentAnyBase, componentType>)
+			{
+				return componentType::ComponentType::GetTypeId();
+			}
 			else if constexpr (is_base_of_v<_NonUniqueBase, componentType>)
 			{
 				return componentType::ComponentType::GetTypeId();
@@ -558,12 +580,54 @@ namespace ECSTest
 			return components;
         }
 
-		template <uiw size> [[nodiscard]] static constexpr array<ArchetypeDefiningRequirement, size> StripAccessData(const array<System::ComponentRequest, size> &arr)
+		template <typename T, uiw... Indexes> static constexpr void CheckRequiredAnyGroup(bool &isFailed, index_sequence<Indexes...>)
 		{
-			array<ArchetypeDefiningRequirement, size> output{};
-			for (uiw index = 0; index < size; ++index)
+			(CheckArgumentType<tuple_element_t<Indexes, T>>(isFailed), ...);
+		}
+
+		template <typename T, uiw... Indexes> static constexpr bool IsRequiredAnyGroupsFailed()
+		{
+			bool isFailed = false;
+			(CheckRequiredAnyGroup<typename GetComponentType<tuple_element_t<Indexes, T>>::wrapped>(isFailed, make_index_sequence<tuple_size_v<typename GetComponentType<tuple_element_t<Indexes, T>>::wrapped>>()), ...);
+			return isFailed;
+		}
+
+		template <typename T, uiw Group, uiw... Indexes> static constexpr auto RequiredAnyGroupToTuple(index_sequence<Indexes...>)
+		{
+			return make_tuple(pair<StableTypeId, ui32>(tuple_element_t<Indexes, GetComponentType<T>::expanded>::GetTypeId(), (ui32)Group)...);
+		}
+
+		// TODO: more checks
+		template <typename T, uiw... Indexes> static constexpr auto RequiredAnyToComponentsArray(index_sequence<Indexes...>)
+		{
+			if constexpr (IsRequiredAnyGroupsFailed<T, Indexes...>())
 			{
-				output[index] = {arr[index].type, (ui32)index, arr[index].requirement};
+				return array<pair<StableTypeId, ui32>, 0>{};
+			}
+			else
+			{
+				constexpr auto converted = Funcs::TupleToArray(tuple_cat(RequiredAnyGroupToTuple<tuple_element_t<Indexes, T>, Indexes>(make_index_sequence<GetComponentType<tuple_element_t<Indexes, T>>::argumentCount>())...));
+				if constexpr (converted.empty())
+				{
+					return array<pair<StableTypeId, ui32>, 0>{};
+				}
+				else
+				{
+					return converted;
+				}
+			}
+		}
+
+		template <uiw NonAnySize, uiw AnySize> [[nodiscard]] static constexpr array<ArchetypeDefiningRequirement, NonAnySize + AnySize > ToArchetypeDefiningRequirement(const array<System::ComponentRequest, NonAnySize> &nonAnyComponents, const array<pair<StableTypeId, ui32>, AnySize> &anyComponents)
+		{
+			array<ArchetypeDefiningRequirement, NonAnySize + AnySize> output{};
+			for (uiw index = 0; index < NonAnySize; ++index)
+			{
+				output[index] = {nonAnyComponents[index].type, (ui32)index, nonAnyComponents[index].requirement};
+			}
+			for (uiw index = NonAnySize, sourceIndex = 0; index < NonAnySize + AnySize; ++index, ++sourceIndex)
+			{
+				output[index] = {anyComponents[sourceIndex].first, anyComponents[sourceIndex].second + (ui32)NonAnySize, RequirementForComponent::Required};
 			}
 			return output;
 		}
@@ -571,16 +635,21 @@ namespace ECSTest
 		template <typename AcceptType> static constexpr const System::Requests &AcquireRequestedComponents()
 		{
 			using rfc = RequirementForComponent;
+
 			using typesFull = typename FunctionInfo::Info<AcceptType>::args;
+
 			static constexpr auto environmentIndex = LocateEnvironmentArugument<typesFull>(make_index_sequence<tuple_size_v<typesFull>>());
 			static constexpr auto entityIDIndex = LocateEntityIDArugument<typesFull>(make_index_sequence<tuple_size_v<typesFull>>());
 			using typesWithoutEnvironment = conditional_t<environmentIndex.second != nullopt, Funcs::RemoveTupleElement<environmentIndex.second.value_or(0), typesFull>, typesFull>;
+
 			static constexpr auto entityIDIndexToRemove = LocateEntityIDArugument<typesWithoutEnvironment>(make_index_sequence<tuple_size_v<typesWithoutEnvironment>>());
 			using typesWithoutEntityID = conditional_t<entityIDIndexToRemove.second != nullopt, Funcs::RemoveTupleElement<entityIDIndexToRemove.second.value_or(0), typesWithoutEnvironment>, typesWithoutEnvironment>;
+
 			using transformedTypes = decltype(TransformArguments<typesWithoutEntityID>(make_index_sequence<tuple_size_v<typesWithoutEntityID>>()));
 			using withoutAny = typename transformedTypes::withoutAny;
 			using onlyAny = typename transformedTypes::onlyAny;
 			using withoutAnyUnpacked = typename decltype(UnpackArguments<withoutAny>(make_index_sequence<tuple_size_v<withoutAny>>()))::unpacked;
+
 			static constexpr auto componentsArray = TupleToComponentsArray<withoutAnyUnpacked>(make_index_sequence<tuple_size_v<withoutAnyUnpacked>>());
 			static constexpr auto sorted = Funcs::SortCompileTime(componentsArray);
 			static constexpr auto requiredWithoutData = FindMatchingComponents<FindMatchingComponentsCount(sorted, make_array(rfc::Required))>(sorted, make_array(rfc::Required));
@@ -592,8 +661,11 @@ namespace ECSTest
 			static constexpr auto subtractive = FindMatchingComponents<FindMatchingComponentsCount(sorted, make_array(rfc::Subtractive))>(sorted, make_array(rfc::Subtractive));
 			static constexpr auto writeAccess = FindComponentsWithData<FindComponentsWithDataCount<true>(sorted), true>(sorted);
 			static constexpr auto argumentPassingOrder = FindMatchingComponents<FindMatchingComponentsCount(componentsArray, make_array(rfc::RequiredWithData, rfc::Optional))>(componentsArray, make_array(rfc::RequiredWithData, rfc::Optional));
+			
 			static constexpr auto archetypeDefining = FindMatchingComponents<FindMatchingComponentsCount(sorted, make_array(rfc::RequiredWithData, rfc::Required, rfc::Subtractive))>(sorted, make_array(rfc::RequiredWithData, rfc::Required, rfc::Subtractive));
-			static constexpr auto archetypeDefiningInfoOnly = StripAccessData(archetypeDefining);
+			static constexpr auto requiredAnyArguments = RequiredAnyToComponentsArray<onlyAny>(make_index_sequence<tuple_size_v<onlyAny>>());
+			static constexpr auto archetypeDefiningInfoOnly = ToArchetypeDefiningRequirement(archetypeDefining, requiredAnyArguments);
+
 			static constexpr System::Requests requests =
 			{
 				ToArray(requiredWithoutData),
@@ -610,6 +682,7 @@ namespace ECSTest
 				environmentIndex.first,
 				ToArray(archetypeDefiningInfoOnly)
 			};
+
 			return requests;
 		}
     };
@@ -636,6 +709,7 @@ namespace ECSTest
 		{
 			// saving the rusult to a local leads to ICE in MSVC 15.9.11
 			static_assert(_SystemHelperFuncs::AcquireRequestedComponents<decltype(&SystemType::Accept)>().idsArgumentIndex == nullopt, "Indirect systems can't request EntityID");
+			static_assert(_SystemHelperFuncs::AcquireRequestedComponents<decltype(&SystemType::Accept)>().environmentArgumentIndex == nullopt, "Indirect systems don't need to request Environment");
 			return _SystemHelperFuncs::AcquireRequestedComponents<decltype(&SystemType::Accept)>();
 		}
 	};

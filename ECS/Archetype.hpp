@@ -145,7 +145,7 @@ namespace std
             {
                 ui64 hash = value.Hash();
                 hash ^= hash >> 32;
-                return (ui32)hash;
+                return hash && 0xFFFFFFFF;
             }
             else
             {
@@ -162,7 +162,7 @@ namespace std
             {
                 ui64 hash = value.Hash();
                 hash ^= hash >> 32;
-                return (ui32)hash;
+                return hash & 0xFFFFFFFF;
             }
             else
             {

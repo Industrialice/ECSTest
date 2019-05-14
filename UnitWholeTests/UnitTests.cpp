@@ -345,6 +345,12 @@ namespace
 		{}
 	};
 
+	INDIRECT_SYSTEM(TestSystem4)
+	{
+		void Accept(Array<ComponentSpouse> &, const Array<ComponentCompany> &, Array<ComponentEmployee> *, const Array<ComponentGender> *, RequiredComponentAny<ComponentEmployee, ComponentGender>)
+		{}
+	};
+
 	template <typename... Types> constexpr array<StableTypeId, sizeof...(Types)> MakeArray()
 	{
 		return {Types::GetTypeId()...};
@@ -372,6 +378,13 @@ namespace
 			return true;
 		};
 
+		// TODO: implement it
+		auto testArchetypeDefining = [](const Array<const ArchetypeDefiningRequirement> &left, auto regular, auto anyGroups) constexpr -> bool
+		{
+			regular = Funcs::SortCompileTime(regular);
+			return true;
+		};
+
 		static_assert(matches(TestSystem::AcquireRequestedComponents().requiredWithoutData, MakeArray<TagTest0, TagTest1, ComponentDateOfBirth>()));
 		static_assert(matches(TestSystem::AcquireRequestedComponents().requiredWithData, MakeArray<ComponentArtist, ComponentProgrammer, ComponentSpouse, ComponentCompany>()));
 		static_assert(matches(TestSystem::AcquireRequestedComponents().required, MakeArray<ComponentArtist, ComponentProgrammer, ComponentSpouse, ComponentCompany, TagTest0, TagTest1, ComponentDateOfBirth>()));
@@ -382,6 +395,7 @@ namespace
 		static_assert(matches(TestSystem::AcquireRequestedComponents().writeAccess, MakeArray<ComponentArtist, ComponentSpouse, ComponentEmployee>()));
 		static_assert(matches(TestSystem::AcquireRequestedComponents().all, MakeArray<ComponentArtist, ComponentProgrammer, ComponentSpouse, ComponentCompany, TagTest0, TagTest1, ComponentDateOfBirth, ComponentEmployee, ComponentGender, ComponentDesigner>()));
 		static_assert(matches(TestSystem::AcquireRequestedComponents().argumentPassingOrder, MakeArray<ComponentArtist, ComponentProgrammer, ComponentSpouse, ComponentCompany, ComponentEmployee, ComponentGender>(), false));
+		static_assert(testArchetypeDefining(TestSystem4::AcquireRequestedComponents().archetypeDefiningInfoOnly, MakeArray<>(), false));
 		static_assert(TestSystem::AcquireRequestedComponents().idsArgumentIndex == 4);
 		static_assert(TestSystem::AcquireRequestedComponents().environmentArgumentIndex == 3);
 
@@ -395,6 +409,7 @@ namespace
 		static_assert(matches(TestSystem2::AcquireRequestedComponents().writeAccess, MakeArray<>()));
 		static_assert(matches(TestSystem2::AcquireRequestedComponents().all, MakeArray<TagTest0, TagTest1, TagTest2, TagTest3, TagTest4, TagTest5>()));
 		static_assert(matches(TestSystem2::AcquireRequestedComponents().argumentPassingOrder, MakeArray<>(), false));
+		static_assert(testArchetypeDefining(TestSystem4::AcquireRequestedComponents().archetypeDefiningInfoOnly, MakeArray<>(), false));
 		static_assert(TestSystem2::AcquireRequestedComponents().idsArgumentIndex == nullopt);
 		static_assert(TestSystem2::AcquireRequestedComponents().environmentArgumentIndex == nullopt);
 
@@ -408,8 +423,23 @@ namespace
 		static_assert(matches(TestSystem3::AcquireRequestedComponents().writeAccess, MakeArray<>()));
 		static_assert(matches(TestSystem3::AcquireRequestedComponents().all, MakeArray<>()));
 		static_assert(matches(TestSystem3::AcquireRequestedComponents().argumentPassingOrder, MakeArray<>(), false));
+		static_assert(testArchetypeDefining(TestSystem4::AcquireRequestedComponents().archetypeDefiningInfoOnly, MakeArray<>(), false));
 		static_assert(TestSystem3::AcquireRequestedComponents().idsArgumentIndex == nullopt);
 		static_assert(TestSystem3::AcquireRequestedComponents().environmentArgumentIndex == nullopt);
+
+		static_assert(matches(TestSystem4::AcquireRequestedComponents().requiredWithoutData, MakeArray<>()));
+		static_assert(matches(TestSystem4::AcquireRequestedComponents().requiredWithData, MakeArray<ComponentSpouse, ComponentCompany>()));
+		static_assert(matches(TestSystem4::AcquireRequestedComponents().required, MakeArray<ComponentSpouse, ComponentCompany>()));
+		static_assert(matches(TestSystem4::AcquireRequestedComponents().requiredOrOptional, MakeArray<ComponentSpouse, ComponentCompany, ComponentEmployee, ComponentGender>()));
+		static_assert(matches(TestSystem4::AcquireRequestedComponents().withData, MakeArray<ComponentSpouse, ComponentCompany, ComponentEmployee, ComponentGender>()));
+		static_assert(matches(TestSystem4::AcquireRequestedComponents().optionalWithData, MakeArray<ComponentEmployee, ComponentGender>()));
+		static_assert(matches(TestSystem4::AcquireRequestedComponents().subtractive, MakeArray<>()));
+		static_assert(matches(TestSystem4::AcquireRequestedComponents().writeAccess, MakeArray<ComponentSpouse, ComponentEmployee>()));
+		static_assert(matches(TestSystem4::AcquireRequestedComponents().all, MakeArray<ComponentSpouse, ComponentCompany, ComponentEmployee, ComponentGender>()));
+		static_assert(matches(TestSystem4::AcquireRequestedComponents().argumentPassingOrder, MakeArray<ComponentSpouse, ComponentCompany, ComponentEmployee, ComponentGender>(), false));
+		static_assert(testArchetypeDefining(TestSystem4::AcquireRequestedComponents().archetypeDefiningInfoOnly, MakeArray<>(), false));
+		static_assert(TestSystem4::AcquireRequestedComponents().idsArgumentIndex == nullopt);
+		static_assert(TestSystem4::AcquireRequestedComponents().environmentArgumentIndex == nullopt);
 	}
 }
 

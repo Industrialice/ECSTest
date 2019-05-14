@@ -110,7 +110,7 @@ namespace
 			{
 				if (component1)
 				{
-					ASSUME(component0[index] == component1->operator[](index));
+					ASSUME(component0[index] == component1->at(index));
 				}
 				ASSUME(component0[index].Contains(Component0::GetTypeId()));
 				ASSUME(!component0[index].Contains(Component2::GetTypeId()));
@@ -121,8 +121,40 @@ namespace
 
 	DIRECT_SYSTEM(System3)
 	{
-		void Accept()
+		void Accept(const Array<Component0> *component0, const Array<Component1> *component1, RequiredComponentAny<Component0, Component1>)
 		{
+			ASSUME(component0 || component1);
+
+			auto test = [](const auto *left, const auto *right)
+			{
+				auto leftId = std::remove_pointer_t<decltype(left)>::ItemType::GetTypeId();
+				auto rightId = std::remove_pointer_t<decltype(right)>::ItemType::GetTypeId();
+
+				for (uiw index = 0; index < left->size(); ++index)
+				{
+					ASSUME(left->at(index).Contains(leftId));
+
+					if (right)
+					{
+						ASSUME(left->at(index).Contains(rightId));
+						ASSUME(right->at(index).Contains(leftId));
+						ASSUME(right->at(index).Contains(rightId));
+					}
+					else
+					{
+						ASSUME(false == left->at(index).Contains(rightId));
+					}
+				}
+			};
+
+			if (component0)
+			{
+				test(component0, component1);
+			}
+			else
+			{
+				test(component1, component0);
+			}
 		}
 	};
 
@@ -236,7 +268,7 @@ void ArgumentPassingTests()
 	manager->Register<System0>(pipeline);
 	manager->Register<System1>(pipeline);
 	manager->Register<System2>(pipeline);
-	//manager->Register<System3>(pipeline);
+	manager->Register<System3>(pipeline);
 
 	vector<WorkerThread> workers;
 	if (IsMTECS)

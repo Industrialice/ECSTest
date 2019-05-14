@@ -366,7 +366,7 @@ namespace
                 f32 speedOfFall = 50.0f;
                 if (speeds)
                 {
-                    speedOfFall = speeds->operator[](index).speed;
+                    speedOfFall = speeds->at(index).speed;
                 }
                 t.position.y -= env.timeSinceLastFrame * speedOfFall;
             }

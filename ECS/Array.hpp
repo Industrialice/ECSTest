@@ -89,6 +89,18 @@ namespace ECSTest
             return _items + _count;
         }
 
+		[[nodiscard]] constexpr T &at(uiw index)
+		{
+			ASSUME(index < _count);
+			return _items[index];
+		}
+
+		[[nodiscard]] constexpr const T &at(uiw index) const
+		{
+			ASSUME(index < _count);
+			return _items[index];
+		}
+
         [[nodiscard]] constexpr T &operator [] (uiw index)
         {
             ASSUME(index < _count);
