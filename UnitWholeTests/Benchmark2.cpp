@@ -32,7 +32,7 @@ namespace
 
     COMPONENT(MeshRenderer)
     {
-        std::array<char, 260> mesh;
+        array<char, 260> mesh;
     };
 
     COMPONENT(Position)
@@ -54,7 +54,7 @@ namespace
     COMPONENT(MeshCollider)
     {
         bool isTrigger;
-        std::array<char, 260> mesh;
+        array<char, 260> mesh;
     };
 
     INDIRECT_SYSTEM(PhysicsSystem)

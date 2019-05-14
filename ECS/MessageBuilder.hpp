@@ -108,7 +108,7 @@ namespace ECSTest
 
             EntityID entityID;
             ComponentID addedComponentID;
-            std::remove_reference_t<SerializedComponent> added;
+            remove_reference_t<SerializedComponent> added;
             vector<SerializedComponent> components;
 
             template <typename T> [[nodiscard]] const T *FindComponent() const

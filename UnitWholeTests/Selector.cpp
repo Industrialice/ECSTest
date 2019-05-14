@@ -11,10 +11,19 @@ void Falling();
 void InteractionTests();
 void ArgumentPassingTests();
 
+static void DoTest(void func())
+{
+	static ui32 index = 1;
+	func();
+	printf("\nTest %u done\n\n", index);
+	++index;
+}
+
 int main()
 {
 	PerformUnitTests(true);
 
+	printf("0. All\n");
     printf("1. KeyControllerTests\n");
     printf("2. InteractionTests\n");
 	printf("3. ArgumentPassingTests\n");
@@ -30,7 +39,16 @@ restart:
 
     switch (choice)
     {
-    case 1:
+	case 0:
+		DoTest(KeyControllerTests);
+		DoTest(InteractionTests);
+		DoTest(ArgumentPassingTests);
+		DoTest(SyncTests);
+		DoTest(Benchmark);
+		DoTest(Falling);
+		DoTest(Benchmark2);
+		break;
+	case 1:
         KeyControllerTests();
         break;
     case 2:

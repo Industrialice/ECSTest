@@ -172,17 +172,17 @@ namespace ECSTest
 		return {value.data(), value.size()};
 	}
 
-	template <typename T, uiw size> [[nodiscard]] constexpr Array<T> ToArray(std::array<T, size> &value)
+	template <typename T, uiw size> [[nodiscard]] constexpr Array<T> ToArray(array<T, size> &value)
 	{
 		return {value.data(), size};
 	}
 
-	template <typename T, uiw size> [[nodiscard]] constexpr Array<const T> ToArray(const std::array<T, size> &value)
+	template <typename T, uiw size> [[nodiscard]] constexpr Array<const T> ToArray(const array<T, size> &value)
 	{
 		return {value.data(), size};
 	}
 
-	template <typename T, uiw size> [[nodiscard]] constexpr Array<const T> ToArray(const std::array<const T, size> &value)
+	template <typename T, uiw size> [[nodiscard]] constexpr Array<const T> ToArray(const array<const T, size> &value)
 	{
 		return {value.data(), size};
 	}

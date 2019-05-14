@@ -32,13 +32,27 @@ using std::function;
 using std::array;
 using std::optional;
 using std::variant;
+using std::tuple;
+using std::index_sequence;
 using std::to_string;
 using std::move;
+using std::tuple_cat;
 using std::swap;
+using std::make_index_sequence;
+using std::tuple_size_v;
+using std::is_empty_v;
+using std::is_pointer_v;
+using std::is_reference_v;
+using std::is_const_v;
+using std::remove_cv_t;
+using std::remove_pointer_t;
+using std::remove_reference_t;
+using std::declval;
 using std::make_pair;
 using std::make_shared;
 using std::make_unique;
 using std::nullopt;
+using std::tuple_element_t;
 using std::enable_if_t;
 using std::conditional_t;
 using std::is_base_of_v;
@@ -89,7 +103,7 @@ namespace _details
 	};
 
 	template <class D, class... Types>
-	using return_type = std::array<typename return_type_helper<D, Types...>::type,
+	using return_type = array<typename return_type_helper<D, Types...>::type,
 		sizeof...(Types)>;
 }
 

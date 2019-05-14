@@ -229,7 +229,7 @@ namespace
 		};
 		auto arch5 = GenerateArchetype(Funcs::SortCompileTime(ent5));
 
-		auto archEmpty = GenerateArchetype(std::array<StableTypeId, 0>{});
+		auto archEmpty = GenerateArchetype(array<StableTypeId, 0>{});
 
 		// ent0 fits
 		array<System::ComponentRequest, 3> req0 =
@@ -261,7 +261,7 @@ namespace
 		ArchetypeReflector reflector;
 		reflector.AddToLibrary(arch0, ToTypes(Funcs::SortCompileTime(ent0)));
 		reflector.AddToLibrary(arch1, ToTypes(Funcs::SortCompileTime(ent1)));
-		reflector.AddToLibrary(archEmpty, ToTypes(std::array<StableTypeId, 0>{}));
+		reflector.AddToLibrary(archEmpty, ToTypes(array<StableTypeId, 0>{}));
 
 		auto reflected = reflector.Reflect(arch0);
 		ASSUME(IsReflectedEqual(reflected, Funcs::SortCompileTime(ent0)));
@@ -270,7 +270,7 @@ namespace
 		ASSUME(IsReflectedEqual(reflected, Funcs::SortCompileTime(ent1)));
 
 		reflected = reflector.Reflect(archEmpty);
-		ASSUME(IsReflectedEqual(reflected, std::array<StableTypeId, 0>{}));
+		ASSUME(IsReflectedEqual(reflected, array<StableTypeId, 0>{}));
 
 		reflector.StartTrackingMatchingArchetypes(0, ToArray(ToRequired(req0)));
 		reflector.StartTrackingMatchingArchetypes(1, ToArray(ToRequired(req1)));
@@ -345,7 +345,7 @@ namespace
 		{}
 	};
 
-	template <typename... Types> constexpr std::array<StableTypeId, sizeof...(Types)> MakeArray()
+	template <typename... Types> constexpr array<StableTypeId, sizeof...(Types)> MakeArray()
 	{
 		return {Types::GetTypeId()...};
 	}

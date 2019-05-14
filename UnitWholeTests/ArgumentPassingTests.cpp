@@ -12,7 +12,7 @@ namespace
 
 	struct ComponentBase
 	{
-		std::array<StableTypeId, 16> types{};
+		array<StableTypeId, 16> types{};
 		uiw typesCount = 0;
 
 		void AddType(StableTypeId type)
@@ -130,7 +130,7 @@ namespace
 	{
 		stream.HintTotal(EntitiesToTest);
 
-		static constexpr std::array<StableTypeId, 7> types =
+		static constexpr array<StableTypeId, 7> types =
 		{
 			Component0::GetTypeId(),
 			Component1::GetTypeId(),

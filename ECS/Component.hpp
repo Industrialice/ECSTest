@@ -105,7 +105,7 @@ namespace ECSTest
 
 	template <typename... Types> struct EMPTY_BASES SubtractiveComponent : _SubtractiveComponentBase
 	{
-		using ComponentTypes = std::tuple<Types...>;
+		using ComponentTypes = tuple<Types...>;
 	};
 
     struct _RequiredComponentBase
@@ -113,7 +113,7 @@ namespace ECSTest
 
     template <typename... Types> struct EMPTY_BASES RequiredComponent : _RequiredComponentBase
     {
-        using ComponentTypes = std::tuple<Types...>;
+        using ComponentTypes = tuple<Types...>;
     };
 
 	struct _RequiredComponentAnyBase
@@ -121,7 +121,7 @@ namespace ECSTest
 
 	template <typename... Types> struct EMPTY_BASES RequiredComponentAny : _RequiredComponentAnyBase
 	{
-		using ComponentTypes = std::tuple<Types...>;
+		using ComponentTypes = tuple<Types...>;
 	};
 
 	struct _NonUniqueBase
