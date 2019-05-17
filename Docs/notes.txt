@@ -1,6 +1,6 @@
 Benchmark2:
-  PC: 7kk (999ms vs. 1ms) and 92k (135ms vs. 866ms)
-  AMD Geode: 90k (975ms vs. 25ms) and 2.2k (133ms vs. 865ms)
+  PC: 6.5kk (999.65ms vs. 0.35ms) and 203k (240ms vs. 760ms)
+  AMD Geode: 92k (988ms vs. 11ms) and 4k (235ms vs. 765ms)
   
 TODO:
 +Environment argument is optional and can appear at any position
@@ -10,4 +10,38 @@ TODO:
 +Warn for empty components
 +RequiredComponent can accept arbitrary number of arguments
 +SubtractiveComponent can accept arbitrary number of arguments
-Implement RequiredComponentAny
++Implement RequiredComponentAny
+Implement component groups for RequiredComponentAny
+
+Shader parameters:
+
+PrimitiveTopologyt { TriangleEnumeration, Point, TriangleStrip, TriangleFan }
+PolygonCullModet { Back, Front, None }
+DepthComparisonFunct { Never, Less, LessEqual, Equal, NotEqual, GreaterEqual, Greater, Always }
+BlendFactort { Zero, One, SourceColor, InvertSourceColor, SourceAlpha, InvertSourceAlpha, TargetColor, InvertTargetColor, TargetAlpha, InvertTargetAlpha }
+BlendCombineModet { Add, Subtract, ReverseSubtract, Min, Max }
+ShaderUniformTypet { color, i32, ui32, bool, f32, Texture, vec4, vec3, vec2, matrix4x4, matrix4x3, matrix3x4, matrix3x3, matrix3x2, matrix2x3, matrix2x2 }
+ShaderUniformt { string name; ShaderUniformTypet type }
+
+PolygonCullModet: PolygonCullMode
+PrimitiveTopologyt: PrimitiveTopology
+DepthComparisonFunct: DepthComparisonFunc
+bool: PolygonFrontIsCounterClockwise
+bool: IsDepthWriteEnabled
+bool: IsBlendingEnabled
+BlendFactort: BlendingSourceColorFactor
+BlendFactort: BlendingSourceAlphaFactor
+BlendFactort: BlendingTargetColorFactor
+BlendFactort: BlendingTargetAlphaFactor
+BlendCombineModet: BlendingColorCombineMode
+BlendCombineModet: BlendingAlphaCombineMode
+ShaderUniformt: uniforms[]
+
+Shaders global uniforms:
+
+matrix4x3: _ModelMatrix
+matrix4x3: _ViewMatrix
+matrix4x4: _ProjectionMatrix
+matrix4x4: _ViewProjectionMatrix
+vec3: _CameraPosition
+vec2: _Time (total time; time delta)

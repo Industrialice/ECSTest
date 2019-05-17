@@ -163,27 +163,9 @@ void MessageBuilder::ComponentChanged(EntityID entityID, const SerializedCompone
         ui8 *oldPtr = entry->data.release();
         ui8 *newPtr = (ui8 *)_aligned_realloc(oldPtr, entry->dataReserved, sc.alignmentOf);
         entry->data.reset(newPtr);
-
-        if (oldPtr != newPtr)
-        {
-            for (auto &stored : entry->infos)
-            {
-                if (stored.data)
-                {
-                    if (newPtr > oldPtr)
-                    {
-                        stored.data += newPtr - oldPtr;
-                    }
-                    else
-                    {
-                        stored.data -= oldPtr - newPtr;
-                    }
-                }
-            }
-        }
     }
 
-    entry->infos.push_back({entry->data.get() + copyIndex, entityID, sc.id});
+    entry->infos.push_back({entityID, sc.id});
     memcpy(entry->data.get() + copyIndex, sc.data, sc.sizeOf);
 }
 
@@ -213,24 +195,6 @@ void MessageBuilder::ComponentChangedHint(const ComponentDescription &desc, uiw 
 		ui8 *oldPtr = entry->data.release();
 		ui8 *newPtr = (ui8 *)_aligned_realloc(oldPtr, entry->dataReserved, desc.alignmentOf);
 		entry->data.reset(newPtr);
-
-		if (oldPtr != newPtr)
-		{
-			for (auto &stored : entry->infos)
-			{
-				if (stored.data)
-				{
-					if (newPtr > oldPtr)
-					{
-						stored.data += newPtr - oldPtr;
-					}
-					else
-					{
-						stored.data -= oldPtr - newPtr;
-					}
-				}
-			}
-		}
 	}
 }
 

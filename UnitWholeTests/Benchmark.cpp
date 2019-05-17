@@ -11,19 +11,16 @@ namespace
     {
         f32 value;
     };
-    static_assert(sizeof(CosineResultComponent) == sizeof(f32), "Unexpected sizeof");
 
     COMPONENT(SinusResultComponent)
     {
         f32 value;
     };
-    static_assert(sizeof(SinusResultComponent) == sizeof(f32), "Unexpected sizeof");
 
     COMPONENT(SourceComponent)
     {
         f32 value;
     };
-    static_assert(sizeof(SourceComponent) == sizeof(f32), "Unexpected sizeof");
 
     TAG_COMPONENT(Group0Tag);
     TAG_COMPONENT(Group1Tag);

@@ -21,30 +21,36 @@ namespace
 	{
 		array<char, 32> name;
 	};
+	static_assert(sizeof(ComponentFirstName) == 32);
 
 	COMPONENT(ComponentLastName)
 	{
 		array<char, 32> name;
 	};
+	static_assert(sizeof(ComponentLastName) == 32);
 
 	COMPONENT(ComponentDateOfBirth)
 	{
 		ui32 dateOfBirth; // days since 01/01/2000
 	};
+	static_assert(sizeof(ComponentDateOfBirth) == 4);
 
 	COMPONENT(ComponentSpouse)
 	{
 		EntityID spouse;
 		ui32 dateOfMarriage; // days since 01/01/2000
 	};
+	static_assert(sizeof(ComponentSpouse) == sizeof(EntityID) + 4);
 
 	COMPONENT(ComponentCompany)
 	{
 		array<char, 32> name;
 	};
+	static_assert(sizeof(ComponentCompany) == 32);
 
 	COMPONENT(EmptyComponent)
 	{};
+	static_assert(sizeof(EmptyComponent) == 1);
 
 	NONUNIQUE_COMPONENT(ComponentProgrammer)
 	{
@@ -65,11 +71,13 @@ namespace
 			Junior, Middle, Senior
 		} skillLevel;
 	};
+	static_assert(sizeof(ComponentProgrammer) == 2);
 
 	COMPONENT(ComponentEmployee)
 	{
 		EntityID employer;
 	};
+	static_assert(sizeof(ComponentEmployee) == sizeof(EntityID));
 
 	NONUNIQUE_COMPONENT(ComponentDesigner)
 	{
@@ -82,11 +90,13 @@ namespace
 
 		Areas area;
 	};
+	static_assert(sizeof(ComponentDesigner) == 1);
 
 	COMPONENT(ComponentGender)
 	{
 		bool isMale;
 	};
+	static_assert(sizeof(ComponentGender) == sizeof(bool));
 
 	TAG_COMPONENT(TagTest0);
 	TAG_COMPONENT(TagTest1);
@@ -94,6 +104,8 @@ namespace
 	TAG_COMPONENT(TagTest3);
 	TAG_COMPONENT(TagTest4);
 	TAG_COMPONENT(TagTest5);
+
+	static_assert(sizeof(TagTest0) == 1);
 
 	static void ArchetypeTests(bool isSuppressLogs)
 	{
@@ -607,10 +619,10 @@ public:
 		{
 			MessageStreamComponentChanged changed(streamSource.second, streamSource.first, "MessageBuilderTests");
 
-			for (const auto &component : changed.Enumerate())
+			for (auto component : changed.Enumerate<ComponentFirstName>())
 			{
 				++checked;
-				auto &casted = component.component.Cast<ComponentFirstName>();
+				auto &casted = component.component;
 				ASSUME(!memcmp(entityAfterChangeNames[component.entityID].name.data(), casted.name.data(), casted.name.size()));
 			}
 		}

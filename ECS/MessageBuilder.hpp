@@ -191,6 +191,7 @@ namespace ECSTest
         friend UnitTests;
         friend class MessageBuilder;
         friend class MessageStreamsBuilderComponentChanged;
+		friend class Enumerate;
 
     public:
 		struct EntityWithComponent
@@ -202,21 +203,14 @@ namespace ECSTest
     private:
 		struct ComponentInfo
 		{
-			const ui8 *data{};
 			EntityID entityID;
-			ComponentID componentID{};
-
-			template <typename T> [[nodiscard]] const T &Cast(StableTypeId typeToCheck) const
-			{
-				ASSUME(typeToCheck == T::GetTypeId());
-				return *(T *)data;
-			}
+			ComponentID componentID;
 		};
 
         struct InfoWithData
         {
-            vector<ComponentInfo> infos;
-            unique_ptr<ui8[], AlignedMallocDeleter> data;
+			vector<ComponentInfo> infos{};
+			unique_ptr<ui8[], AlignedMallocDeleter> data{};
             ui32 dataReserved{};
         };
 
@@ -236,26 +230,95 @@ namespace ECSTest
         }
 
     public:
-        [[nodiscard]] const ComponentInfo *begin() const
-        {
-            return _source->infos.data();
-        }
-
-        [[nodiscard]] const ComponentInfo *end() const
-        {
-            return _source->infos.data() + _source->infos.size();
-        }
-
-		[[nodiscard]] std::experimental::generator<EntityWithComponent> Enumerate() const
+		template <typename T> class const_iterator : public std::random_access_iterator_tag
 		{
-			SerializedComponent component;
-			(ComponentDescription &)component = _componentDesc;
-			for (const auto &info : _source->infos)
+			const ComponentInfo *const _start{};
+			const ComponentInfo *_ptr{};
+			const ui8 *_data{};
+
+		public:
+			const_iterator(const ComponentInfo *pointer, const ui8 *data) : _start(pointer), _ptr(pointer), _data(data)
 			{
-				component.data = info.data;
-				component.id = info.componentID;
-				co_yield {info.entityID, component};
 			}
+
+			struct Info
+			{
+				const T &component;
+				const EntityID entityID;
+			};
+
+			struct InfoWithId
+			{
+				const T &component;
+				const EntityID entityID;
+				const ComponentID componentID;
+			};
+
+			const_iterator &operator ++ ()
+			{
+				++_ptr;
+				return *this;
+			}
+
+			[[nodiscard]] bool operator != (const const_iterator &other) const
+			{
+				return _ptr != other._ptr;
+			}
+
+			[[nodiscard]] auto operator * () const
+			{
+				auto index = _ptr - _start;
+				auto *dataPtr = _data + index * sizeof(T);
+
+				if constexpr (T::IsUnique())
+				{
+					return Info{*(T *)dataPtr, _ptr->entityID};
+				}
+				else
+				{
+					return InfoWithId{*(T *)dataPtr, _ptr->entityID, _ptr->componentID};
+				}
+			}
+		};
+
+		template <typename T> class Enumerator
+		{
+			const MessageStreamComponentChanged &_source;
+			bool _isEmpty{};
+
+		public:
+			Enumerator(const MessageStreamComponentChanged &source, bool isEmpty) : _source(source), _isEmpty(isEmpty)
+			{
+			}
+
+			[[nodiscard]] const_iterator<T> begin() const
+			{
+				if (_isEmpty)
+				{
+					return {nullptr, nullptr};
+				}
+				else
+				{
+					return {_source._source->infos.data(), _source._source->data.get()};
+				}
+			}
+
+			[[nodiscard]] const_iterator<T> end() const
+			{
+				if (_isEmpty)
+				{
+					return {nullptr, nullptr};
+				}
+				else
+				{
+					return {_source._source->infos.data() + _source._source->infos.size(), nullptr};
+				}
+			}
+		};
+
+		template <typename T> [[nodiscard]] Enumerator<T> Enumerate() const
+		{
+			return {*this, T::GetTypeId() != _componentDesc.type};
 		}
 
 		[[nodiscard]] StableTypeId Type() const

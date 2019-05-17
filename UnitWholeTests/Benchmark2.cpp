@@ -130,34 +130,20 @@ namespace
 
         virtual void ProcessMessages(Environment &env, const MessageStreamComponentChanged &stream) override
         {
-            if (stream.Type() == Position::GetTypeId())
+            for (auto entry : stream.Enumerate<Position>())
             {
-                for (auto &entry : stream)
-                {
-                    _entities[entry.entityID].pos = entry.Cast<Position>(stream.Type()).position;
-                }
+                _entities[entry.entityID].pos = entry.component.position;
             }
-            else if (stream.Type() == Rotation::GetTypeId())
+            for (auto entry : stream.Enumerate<Rotation>())
             {
-                for (auto &entry : stream)
-                {
-                    _entities[entry.entityID].rot = entry.Cast<Rotation>(stream.Type()).rotation;
-                }
+                _entities[entry.entityID].rot = entry.component.rotation;
             }
-            else if (stream.Type() == Physics::GetTypeId())
+            for (auto entry : stream.Enumerate<Physics>())
             {
-                for (auto &entry : stream)
-                {
-                    _entities[entry.entityID].properties = entry.Cast<Physics>(stream.Type());
-                }
+                _entities[entry.entityID].properties = entry.component;
             }
-            else if (stream.Type() == MeshCollider::GetTypeId())
-            {
-            }
-            else
-            {
-                HARDBREAK;
-            }
+
+			ASSUME(stream.Type() == Position::GetTypeId() || stream.Type() == Rotation::GetTypeId() || stream.Type() == Physics::GetTypeId());
         }
 
         virtual void ProcessMessages(Environment &env, const MessageStreamComponentRemoved &stream) override
@@ -241,31 +227,20 @@ namespace
 
         virtual void ProcessMessages(Environment &env, const MessageStreamComponentChanged &stream) override
         {
-            if (stream.Type() == Position::GetTypeId())
+			for (auto entry : stream.Enumerate<Position>())
+			{
+				_linear[_entities[entry.entityID]].pos = entry.component.position;
+			}
+			for (auto entry : stream.Enumerate<Rotation>())
+			{
+				_linear[_entities[entry.entityID]].rot = entry.component.rotation;
+			}
+            for (auto entry : stream.Enumerate<MeshRenderer>())
             {
-				for (auto &entry : stream)
-				{
-					_linear[_entities[entry.entityID]].pos = entry.Cast<Position>(stream.Type()).position;
-				}
+				_linear[_entities[entry.entityID]].mesh = entry.component;
             }
-            else if (stream.Type() == Rotation::GetTypeId())
-            {
-				for (auto &entry : stream)
-				{
-					_linear[_entities[entry.entityID]].rot = entry.Cast<Rotation>(stream.Type()).rotation;
-				}
-            }
-            else if (stream.Type() == MeshRenderer::GetTypeId())
-            {
-                for (auto &entry : stream)
-                {
-					_linear[_entities[entry.entityID]].mesh = entry.Cast<MeshRenderer>(stream.Type());
-                }
-            }
-            else
-            {
-                HARDBREAK;
-            }
+
+			ASSUME(stream.Type() == Position::GetTypeId() || stream.Type() == Rotation::GetTypeId() || stream.Type() == MeshRenderer::GetTypeId());
         }
 
         virtual void ProcessMessages(Environment &env, const MessageStreamComponentRemoved &stream) override

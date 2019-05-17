@@ -749,7 +749,7 @@ void SystemsManagerST::SchedulerLoop()
 
     uiw repeatedIndex = uiw_max;
     ui32 repeadedCount = 0;
-    bool isTimeUpToData = false;
+    bool isTimeUpToDate = false;
 
     for (uiw index = 0, size = _pipelines.size(); index < size; )
     {
@@ -774,7 +774,7 @@ void SystemsManagerST::SchedulerLoop()
         ExecutePipeline(pipeline, timeSinceLastFrame);
 
         auto currentTime = updateTimes(&pipeline.timeSpentExecuting);
-        isTimeUpToData = true;
+        isTimeUpToDate = true;
 
         if (pipeline.executionStep)
         {
@@ -809,7 +809,7 @@ void SystemsManagerST::SchedulerLoop()
         }
     }
 
-    if (!isTimeUpToData)
+    if (!isTimeUpToDate)
     {
         updateTimes(nullptr);
     }
@@ -1428,8 +1428,10 @@ void SystemsManagerST::UpdateECSFromMessages(MessageBuilder &messageBuilder)
     {
 		const auto &[desc, stream] = descWithStream;
 
-        for (const auto &info : stream->infos)
+		for (uiw index = 0, size = stream->infos.size(); index < size; ++index)
         {
+			const auto &info = stream->infos[index];
+
             ASSUME(!desc.isTag); // tag components cannot be changed
 
             auto entityLocation = _entitiesLocations.find(info.entityID);
@@ -1467,7 +1469,7 @@ void SystemsManagerST::UpdateECSFromMessages(MessageBuilder &messageBuilder)
                 }
             }
 
-            memcpy(componentArray.data.get() + componentArray.sizeOf * componentArray.stride * entityIndex + componentArray.sizeOf * offset, info.data, desc.sizeOf);
+            memcpy(componentArray.data.get() + componentArray.sizeOf * componentArray.stride * entityIndex + componentArray.sizeOf * offset, stream->data.get() + index * desc.sizeOf, desc.sizeOf);
         }
     }
 

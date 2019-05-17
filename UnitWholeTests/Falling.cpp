@@ -196,22 +196,23 @@ namespace
                     _entitiesWithCooldown.insert(entity.entityID);
                 }
             }
+
+			ASSUME(stream.Type() == Transform::GetTypeId() || stream.Type() == NegativeHeightCooldown::GetTypeId() || stream.Type() == HeightFixerInfo::GetTypeId());
         }
 
         virtual void ProcessMessages(Environment &env, const MessageStreamComponentChanged &stream) override
         {
-            for (auto &entity : stream.Enumerate())
-            {
-                if (entity.component.type == Transform::GetTypeId())
-                {
-                    Transform t = *(Transform *)entity.component.data;
-                    if (t.position.y < 0)
-                    {
-                        t.position.y = 100;
-                        _entitiesToFix[entity.entityID] = t;
-                    }
-                }
-            }
+			for (auto entity : stream.Enumerate<Transform>())
+			{
+				Transform t = entity.component;
+				if (t.position.y < 0)
+				{
+					t.position.y = 100;
+					_entitiesToFix[entity.entityID] = t;
+				}
+			}
+
+			ASSUME(stream.Type() == Transform::GetTypeId() || stream.Type() == NegativeHeightCooldown::GetTypeId() || stream.Type() == HeightFixerInfo::GetTypeId());
         }
 
         virtual void ProcessMessages(Environment &env, const MessageStreamComponentRemoved &stream) override
@@ -227,6 +228,8 @@ namespace
                     _entitiesWithCooldown.erase(entity.entityID);
                 }
             }
+
+			ASSUME(stream.Type() == Transform::GetTypeId() || stream.Type() == NegativeHeightCooldown::GetTypeId() || stream.Type() == HeightFixerInfo::GetTypeId());
         }
 
         virtual void ProcessMessages(Environment &env, const MessageStreamEntityRemoved &stream) override
@@ -307,22 +310,18 @@ namespace
 
         virtual void ProcessMessages(Environment &env, const MessageStreamComponentChanged &stream) override
         {
-            for (auto &entity : stream.Enumerate())
-            {
-                auto &target = _entities[entity.entityID];
-                if (auto transform = entity.component.TryCast<Transform>(); transform)
-                {
-                    target.transform = *transform;
-                }
-                else if (auto speedOfFall = entity.component.TryCast<SpeedOfFall>(); speedOfFall)
-                {
-                    target.speedOfFall = *speedOfFall;
-                }
-                else
-                {
-                    SOFTBREAK;
-                }
-            }
+			for (auto entity : stream.Enumerate<Transform>())
+			{
+				auto &target = _entities[entity.entityID];
+				target.transform = entity.component;
+			}
+			for (auto entity : stream.Enumerate<SpeedOfFall>())
+			{
+				auto &target = _entities[entity.entityID];
+				target.speedOfFall = entity.component;
+			}
+
+			ASSUME(stream.Type() == Transform::GetTypeId() || stream.Type() == SpeedOfFall::GetTypeId());
         }
 
         virtual void ProcessMessages(Environment &env, const MessageStreamComponentRemoved &stream) override
@@ -438,9 +437,10 @@ namespace
 
         virtual void ProcessMessages(Environment &env, const MessageStreamComponentChanged &stream) override
         {
-            for (auto &entity : stream.Enumerate())
+			ASSUME(stream.Type() == Transform::GetTypeId());
+            for (auto entity : stream.Enumerate<Transform>())
             {
-                _entities[entity.entityID] = entity.component.Cast<Transform>().position.y;
+                _entities[entity.entityID] = entity.component.position.y;
             }
             _isChanged = true;
         }
@@ -512,9 +512,9 @@ namespace
         virtual void ProcessMessages(Environment &env, const MessageStreamComponentChanged &stream) override
         {
             SOFTBREAK;
-            for (auto &entity : stream.Enumerate())
+            for (auto entity : stream.Enumerate<NegativeHeightCooldown>())
             {
-                _cooldowns[entity.entityID] = entity.component.Cast<NegativeHeightCooldown>();
+                _cooldowns[entity.entityID] = entity.component;
             }
         }
 

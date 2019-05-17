@@ -286,42 +286,34 @@ namespace
 
         virtual void ProcessMessages(Environment &env, const MessageStreamComponentChanged &stream) override
         {
-            if (stream.Type() == GeneratedComponent::GetTypeId())
+            for (auto entity : stream.Enumerate<GeneratedComponent>())
             {
-                for (auto &entity : stream.Enumerate())
+				const auto &c = entity.component;
+                auto it = _entityInfos.find(entity.entityID);
+                if (it == _entityInfos.end())
                 {
-                    const auto &c = entity.component.Cast<GeneratedComponent>();
-                    auto it = _entityInfos.find(entity.entityID);
-                    if (it == _entityInfos.end())
-                    {
-                        ASSUME(c.value == 25);
-                        _entityInfos[entity.entityID] = {c};
-                    }
-                    else
-                    {
-                        ASSUME(it->second.component != nullopt);
-                        ASSUME(it->second.component->value == 25);
-                        ASSUME(it->second.isEntityRemoved == false);
-                        ASSUME(c.value == 35);
-                        it->second.component = c;
-                    }
-                    ++_info.generatedComponentChanged;
+                    ASSUME(c.value == 25);
+                    _entityInfos[entity.entityID] = {c};
                 }
-            }
-            else if (stream.Type() == TagComponent::GetTypeId())
-            {
-                for (auto &entity : stream.Enumerate())
+                else
                 {
-                    const auto &c = entity.component.Cast<TagComponent>();
-                    ASSUME(c.connectedTo == TagComponent::ConnectedTo::Germany || c.connectedTo == TagComponent::ConnectedTo::China);
-                    ASSUME(!c.id || c.id.value() == entity.component.id);
-                    ++_info.tagComponentChanged;
+                    ASSUME(it->second.component != nullopt);
+                    ASSUME(it->second.component->value == 25);
+                    ASSUME(it->second.isEntityRemoved == false);
+                    ASSUME(c.value == 35);
+                    it->second.component = c;
                 }
+                ++_info.generatedComponentChanged;
             }
-            else
+            for (auto entity : stream.Enumerate<TagComponent>())
             {
-                SOFTBREAK;
+				const auto &c = entity.component;
+                ASSUME(c.connectedTo == TagComponent::ConnectedTo::Germany || c.connectedTo == TagComponent::ConnectedTo::China);
+                ASSUME(!c.id || c.id.value() == entity.component.id);
+                ++_info.tagComponentChanged;
             }
+
+			ASSUME(stream.Type() == GeneratedComponent::GetTypeId() || stream.Type() == TagComponent::GetTypeId());
         }
 
         virtual void ProcessMessages(Environment &env, const MessageStreamComponentRemoved &stream) override
@@ -459,10 +451,11 @@ namespace
 
         virtual void ProcessMessages(Environment &env, const MessageStreamComponentChanged &stream) override
         {
-            for (auto &entry : stream.Enumerate())
+			ASSUME(stream.Type() == OtherComponent::GetTypeId());
+            for (auto entry : stream.Enumerate<OtherComponent>())
             {
-                CurrentData[entry.entityID] = entry.component.Cast<OtherComponent>();
-                _localData[entry.entityID] = entry.component.Cast<OtherComponent>();
+				CurrentData[entry.entityID] = entry.component;
+				_localData[entry.entityID] = entry.component;
             }
         }
 

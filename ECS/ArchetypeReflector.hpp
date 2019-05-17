@@ -18,7 +18,7 @@ namespace ECSTest
 			bool operator () (const Array<const ArchetypeDefiningRequirement> &left, const vector<ArchetypeDefiningRequirement> &right) const;
         };
 
-		//DIWRSpinLock _lock{};
+		DIWRSpinLock _lock{};
 		std::unordered_map<Archetype, vector<StableTypeId>> _library{}; // all currently stored archetypes with component ids that compose them
         std::unordered_map<uiw, vector<Archetype> *> _matchingIDArchetypes{}; // maps systems to lists of archetypes that satisfy their requirements
         std::map<vector<ArchetypeDefiningRequirement>, vector<Archetype>, MatchingRequirementComparator> _matchingRequirementArchetypes{}; // mapping each requirement to the list of archetypes all of whom satisfy it

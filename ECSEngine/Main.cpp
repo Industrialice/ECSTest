@@ -77,6 +77,8 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
     manager->Register(move(renderer), rendererPipeline);
 	manager->Register(move(screenColorSystem), rendererPipeline);
 
+	auto physicsPipeline = manager->CreatePipeline(SecondsFP64(1.0 / 60.0), false);
+
     vector<WorkerThread> workers;
     EntityIDGenerator idGenerator;
     auto stream = Scene::Create(idGenerator);

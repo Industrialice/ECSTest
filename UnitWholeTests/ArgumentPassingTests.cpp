@@ -158,6 +158,32 @@ namespace
 		}
 	};
 
+	DIRECT_SYSTEM(System4)
+	{
+		void Accept(RequiredComponent<Tag0, Tag1>, SubtractiveComponent<Tag2, Tag3>, Environment &env, const Array<Component0> &c0, const Array<Component1> *c1, const Array<EntityID> &ids, const NonUnique<Component2> *c2, RequiredComponentAny<Component1, Component2>)
+		{
+			for (uiw index = 0; index < c0.size(); ++index)
+			{
+				const Component0 &c = c0[index];
+
+				ASSUME(c.Contains(Tag0::GetTypeId()));
+				ASSUME(c.Contains(Tag1::GetTypeId()));
+				ASSUME(!c.Contains(Tag2::GetTypeId()));
+				ASSUME(!c.Contains(Tag3::GetTypeId()));
+				ASSUME(c.Contains(Component0::GetTypeId()));
+				if (c1)
+				{
+					ASSUME(c.Contains(Component1::GetTypeId()));
+				}
+				if (c2)
+				{
+					ASSUME(c.Contains(Component2::GetTypeId()));
+				}
+				ASSUME(c1 || c2);
+			}
+		}
+	};
+
 	static void GenerateScene(EntityIDGenerator &entityIdGenerator, SystemsManager &manager, EntitiesStream &stream)
 	{
 		stream.HintTotal(EntitiesToTest);
@@ -269,6 +295,7 @@ void ArgumentPassingTests()
 	manager->Register<System1>(pipeline);
 	manager->Register<System2>(pipeline);
 	manager->Register<System3>(pipeline);
+	manager->Register<System4>(pipeline);
 
 	vector<WorkerThread> workers;
 	if (IsMTECS)

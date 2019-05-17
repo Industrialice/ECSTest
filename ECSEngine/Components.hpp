@@ -6,26 +6,30 @@ namespace ECSEngine
 {
     COMPONENT(Position)
     {
-        Vector3 position;
+		Vector3 position = {0, 0, 0};
     };
 
     COMPONENT(Rotation)
     {
-        Quaternion rotation;
+		Quaternion rotation{};
     };
 
     COMPONENT(Scale)
     {
-        Vector3 scale;
+		Vector3 scale = {1, 1, 1};
     };
 
     COMPONENT(Parent)
     {
-        EntityID parent;
+		EntityID parent{};
     };
 
+	TAG_COMPONENT(HasChildren);
+
     COMPONENT(MeshRenderer)
-    {};
+    {
+		ui32 index = 0;
+	};
 
     COMPONENT(SkinnedMeshRenderer)
     {};
@@ -44,7 +48,7 @@ namespace ECSEngine
         bool isNoBorders = isFullscreen;
         bool isMaximized = !isFullscreen;
         CursorTypet cursorType{};
-        std::array<char, 64> title{};
+        array<char, 64> title{};
     };
 
     struct ClearColor
@@ -65,7 +69,7 @@ namespace ECSEngine
         f32 nearPlane;
         f32 farPlane;
         variant<std::monostate, ClearColor> clearWith;
-        RT rt[8];
+        array<RT, 8> rt;
         enum class ProjectionType : ui8 { Perspective, Orthographic } projectionType;
     };
 }

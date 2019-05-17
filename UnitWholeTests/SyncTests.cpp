@@ -164,26 +164,23 @@ namespace
 
         virtual void ProcessMessages(Environment &env, const MessageStreamComponentChanged &stream) override
         {
-            for (auto &entry : stream.Enumerate())
-            {
-                ++MonitoringStats::receivedComponentChangedCount;
+			++MonitoringStats::receivedComponentChangedCount;
 
-                if (entry.component.type == TestComponent0::GetTypeId())
-                {
-                    ++MonitoringStats::receivedTest0ChangedCount;
+			for (auto entry : stream.Enumerate<TestComponent0>())
+			{
+				++MonitoringStats::receivedTest0ChangedCount;
+				ASSUME(entry.component.value == 1);
+			}
+			for (auto entry : stream.Enumerate<TestComponent1>())
+			{
+				++MonitoringStats::receivedTest1ChangedCount;
+			}
+			for (auto entry : stream.Enumerate<TestComponent2>())
+			{
+				++MonitoringStats::receivedTest2ChangedCount;
+			}
 
-                    auto casted = (TestComponent0 *)entry.component.data;
-                    ASSUME(casted->value == 1);
-                }
-                else if (entry.component.type == TestComponent1::GetTypeId())
-                {
-                    ++MonitoringStats::receivedTest1ChangedCount;
-                }
-                else if (entry.component.type == TestComponent2::GetTypeId())
-                {
-                    ++MonitoringStats::receivedTest2ChangedCount;
-                }
-            }
+			ASSUME(stream.Type() == TestComponent0::GetTypeId() || stream.Type() == TestComponent1::GetTypeId() || stream.Type() == TestComponent2::GetTypeId());
         }
 
         virtual void ProcessMessages(Environment &env, const MessageStreamEntityRemoved &stream) override

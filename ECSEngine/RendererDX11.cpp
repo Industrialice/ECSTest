@@ -123,23 +123,18 @@ public:
     
     virtual void ProcessMessages(Environment &env, const MessageStreamComponentChanged &stream) override
     {
-        if (stream.Type() == Camera::GetTypeId())
+        for (const auto &entry : stream.Enumerate<Camera>())
         {
-            for (auto &entry : stream)
-            {
-                CameraChanged(entry.entityID, entry.Cast<Camera>(stream.Type()));
-            }
+			CameraChanged(entry.entityID, entry.component);
         }
-        else if (stream.Type() == Position::GetTypeId())
-        {
-        }
-        else if (stream.Type() == Rotation::GetTypeId())
-        {
-        }
-        else
-        {
-            HARDBREAK;
-        }
+		for (const auto &entry : stream.Enumerate<Position>())
+		{
+		}
+		for (const auto &entry : stream.Enumerate<Rotation>())
+		{
+		}
+
+		ASSUME(stream.Type() == Camera::GetTypeId() || stream.Type() == Position::GetTypeId() || stream.Type() == Rotation::GetTypeId());
     }
     
     virtual void ProcessMessages(Environment &env, const MessageStreamComponentRemoved &stream) override
@@ -175,7 +170,7 @@ public:
     {
         for (auto &camera : _cameras)
         {
-            for (uiw windowIndex = 0; windowIndex < CountOf(camera.data.rt); ++windowIndex)
+            for (uiw windowIndex = 0; windowIndex < camera.data.rt.size(); ++windowIndex)
             {
                 if (auto *window = std::get_if<Window>(&camera.data.rt[windowIndex].target); window)
                 {
@@ -215,7 +210,7 @@ public:
         {
             bool isChanged = false;
 
-            for (uiw windowIndex = 0; windowIndex < CountOf(camera.data.rt); ++windowIndex)
+            for (uiw windowIndex = 0; windowIndex < camera.data.rt.size(); ++windowIndex)
             {
                 isChanged |= camera.windows[windowIndex].isChanged;
                 camera.windows[windowIndex].isChanged = false;
@@ -350,7 +345,7 @@ private:
         {
             if (camera.id == id)
             {
-                for (uiw windowIndex = 0; windowIndex < CountOf(camera.data.rt); ++windowIndex)
+                for (uiw windowIndex = 0; windowIndex < camera.data.rt.size(); ++windowIndex)
                 {
                     auto &dxWindow = camera.windows[windowIndex];
 
