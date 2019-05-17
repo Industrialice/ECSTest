@@ -325,6 +325,18 @@ namespace ECSTest
 				isFailed = true;
 				static_assert(false, "Components must be passed by either pointer, or by reference");
 			}
+
+			if constexpr (!std::is_trivially_copyable_v<componentType>)
+			{
+				isFailed = true;
+				static_assert(false, "Components must be trivially copyable");
+			}
+
+			if constexpr (!std::is_trivially_destructible_v<componentType>)
+			{
+				isFailed = true;
+				static_assert(false, "Components must be trivially destructible");
+			}
         }
 
         template <typename T> static constexpr StableTypeId ArgumentToTypeId()

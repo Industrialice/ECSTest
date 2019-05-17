@@ -283,14 +283,7 @@ public:
     #endif
 
         vector<D3D_FEATURE_LEVEL> featureLevels{D3D_FEATURE_LEVEL_9_1, D3D_FEATURE_LEVEL_9_2, D3D_FEATURE_LEVEL_9_3, D3D_FEATURE_LEVEL_10_0, D3D_FEATURE_LEVEL_10_1, D3D_FEATURE_LEVEL_11_0};
-        for (uiw index = 1; index < featureLevels.size(); ++index)
-        {
-            if (featureLevels[index] > maxFeatureLevel)
-            {
-                featureLevels.resize(index);
-                break;
-            }
-        }
+		featureLevels.erase(std::remove_if(featureLevels.begin(), featureLevels.end(), [maxFeatureLevel](D3D_FEATURE_LEVEL level) { return level > maxFeatureLevel; }), featureLevels.end());
 
         HRESULT result = D3D11CreateDevice(
             adapters[0].get(),

@@ -225,7 +225,7 @@ namespace ECSTest
         }
 
     public:
-		template <typename T> class const_iterator : public std::random_access_iterator_tag
+		template <typename T> class const_iterator
 		{
 			const EntityID *const _start{};
 			const EntityID *_entityIdPtr{};
@@ -233,6 +233,12 @@ namespace ECSTest
 			const ui8 *_data{};
 
 		public:
+			using iterator_category = std::random_access_iterator_tag;
+			using value_type = T;
+			using difference_type = ptrdiff_t;
+			using pointer = const T *;
+			using reference = const T &;
+
 			const_iterator(const EntityID *entityIdStart, const ComponentID *componentIdStart, const ui8 *data) : _start(entityIdStart), _entityIdPtr(entityIdStart), _componentIdPtr(componentIdStart), _data(data) {}
 
 			struct Info

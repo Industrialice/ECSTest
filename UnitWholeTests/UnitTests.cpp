@@ -16,6 +16,7 @@ namespace
 
 		Areas area;
 	};
+	static_assert(sizeof(ComponentArtist) == 1);
 
 	COMPONENT(ComponentFirstName)
 	{
