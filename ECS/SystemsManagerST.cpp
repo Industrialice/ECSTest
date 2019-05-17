@@ -1428,13 +1428,11 @@ void SystemsManagerST::UpdateECSFromMessages(MessageBuilder &messageBuilder)
     {
 		const auto &[desc, stream] = descWithStream;
 
-		for (uiw index = 0, size = stream->infos.size(); index < size; ++index)
+		for (uiw index = 0, size = stream->entityIds.size(); index < size; ++index)
         {
-			const auto &info = stream->infos[index];
-
             ASSUME(!desc.isTag); // tag components cannot be changed
 
-            auto entityLocation = _entitiesLocations.find(info.entityID);
+            auto entityLocation = _entitiesLocations.find(stream->entityIds[index]);
             ASSUME(entityLocation != _entitiesLocations.end());
 
             auto &[group, entityIndex] = entityLocation->second;
@@ -1462,7 +1460,7 @@ void SystemsManagerST::UpdateECSFromMessages(MessageBuilder &messageBuilder)
                 for (; ; ++offset)
                 {
                     ASSUME(offset < componentArray.stride);
-                    if (info.componentID == componentArray.ids[entityIndex * componentArray.stride + offset])
+                    if (stream->componentIds[index] == componentArray.ids[entityIndex * componentArray.stride + offset])
                     {
                         break;
                     }

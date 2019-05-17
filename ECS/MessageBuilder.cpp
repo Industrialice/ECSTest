@@ -151,7 +151,7 @@ void MessageBuilder::ComponentChanged(EntityID entityID, const SerializedCompone
         return _componentChangedStreams._data.back().second.second;
     } (sc);
 
-    uiw copyIndex = sc.sizeOf * entry->infos.size();
+    uiw copyIndex = sc.sizeOf * entry->entityIds.size();
 
     if (copyIndex + sc.sizeOf > entry->dataReserved)
     {
@@ -165,7 +165,11 @@ void MessageBuilder::ComponentChanged(EntityID entityID, const SerializedCompone
         entry->data.reset(newPtr);
     }
 
-    entry->infos.push_back({entityID, sc.id});
+    entry->entityIds.emplace_back(entityID);
+	if (sc.isUnique == false)
+	{
+		entry->componentIds.emplace_back(sc.id);
+	}
     memcpy(entry->data.get() + copyIndex, sc.data, sc.sizeOf);
 }
 
@@ -184,7 +188,11 @@ void MessageBuilder::ComponentChangedHint(const ComponentDescription &desc, uiw 
 		return _componentChangedStreams._data.back().second.second;
 	} (desc);
 
-	entry->infos.reserve(count);
+	entry->entityIds.reserve(count);
+	if (desc.isUnique == false)
+	{
+		entry->componentIds.reserve(count);
+	}
 
 	uiw memSize = count * desc.sizeOf;
 

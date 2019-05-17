@@ -201,15 +201,10 @@ namespace ECSTest
 		};
 
     private:
-		struct ComponentInfo
-		{
-			EntityID entityID;
-			ComponentID componentID;
-		};
-
         struct InfoWithData
         {
-			vector<ComponentInfo> infos{};
+			vector<EntityID> entityIds{};
+			vector<ComponentID> componentIds{};
 			unique_ptr<ui8[], AlignedMallocDeleter> data{};
             ui32 dataReserved{};
         };
@@ -220,7 +215,7 @@ namespace ECSTest
 
         MessageStreamComponentChanged(const shared_ptr<const InfoWithData> &source, ComponentDescription componentDesc, string_view sourceName) : _source(source), _componentDesc(componentDesc), _sourceName(sourceName)
         {
-            ASSUME(_source->infos.size());
+            ASSUME(_source->entityIds.size());
 			ASSUME(componentDesc.type != StableTypeId{});
         }
 
@@ -232,14 +227,13 @@ namespace ECSTest
     public:
 		template <typename T> class const_iterator : public std::random_access_iterator_tag
 		{
-			const ComponentInfo *const _start{};
-			const ComponentInfo *_ptr{};
+			const EntityID *const _start{};
+			const EntityID *_entityIdPtr{};
+			const ComponentID *_componentIdPtr{};
 			const ui8 *_data{};
 
 		public:
-			const_iterator(const ComponentInfo *pointer, const ui8 *data) : _start(pointer), _ptr(pointer), _data(data)
-			{
-			}
+			const_iterator(const EntityID *entityIdStart, const ComponentID *componentIdStart, const ui8 *data) : _start(entityIdStart), _entityIdPtr(entityIdStart), _componentIdPtr(componentIdStart), _data(data) {}
 
 			struct Info
 			{
@@ -256,27 +250,27 @@ namespace ECSTest
 
 			const_iterator &operator ++ ()
 			{
-				++_ptr;
+				++_entityIdPtr;
 				return *this;
 			}
 
 			[[nodiscard]] bool operator != (const const_iterator &other) const
 			{
-				return _ptr != other._ptr;
+				return _entityIdPtr != other._entityIdPtr;
 			}
 
 			[[nodiscard]] auto operator * () const
 			{
-				auto index = _ptr - _start;
+				auto index = _entityIdPtr - _start;
 				auto *dataPtr = _data + index * sizeof(T);
 
 				if constexpr (T::IsUnique())
 				{
-					return Info{*(T *)dataPtr, _ptr->entityID};
+					return Info{*(T *)dataPtr, *_entityIdPtr};
 				}
 				else
 				{
-					return InfoWithId{*(T *)dataPtr, _ptr->entityID, _ptr->componentID};
+					return InfoWithId{*(T *)dataPtr, *_entityIdPtr, _componentIdPtr[index]};
 				}
 			}
 		};
@@ -295,11 +289,11 @@ namespace ECSTest
 			{
 				if (_isEmpty)
 				{
-					return {nullptr, nullptr};
+					return {nullptr, nullptr, nullptr};
 				}
 				else
 				{
-					return {_source._source->infos.data(), _source._source->data.get()};
+					return {_source._source->entityIds.data(), _source._source->componentIds.data(), _source._source->data.get()};
 				}
 			}
 
@@ -307,11 +301,11 @@ namespace ECSTest
 			{
 				if (_isEmpty)
 				{
-					return {nullptr, nullptr};
+					return {nullptr, nullptr, nullptr};
 				}
 				else
 				{
-					return {_source._source->infos.data() + _source._source->infos.size(), nullptr};
+					return {_source._source->entityIds.data() + _source._source->entityIds.size(), nullptr, nullptr};
 				}
 			}
 		};
