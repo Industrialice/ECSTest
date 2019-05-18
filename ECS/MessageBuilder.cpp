@@ -38,7 +38,7 @@ void MessageBuilder::Clear()
 
 void MessageBuilder::Flush()
 {
-	if (!_currentEntityId.IsValid())
+	if (!_currentEntityId)
 	{
 		return;
 	}
@@ -100,7 +100,7 @@ const vector<EntityID> &MessageBuilder::EntityRemovedNoArchetype()
 
 auto ECSTest::MessageBuilder::AddEntity(EntityID entityID) -> ComponentArrayBuilder &
 {
-    ASSUME(entityID.IsValid());
+    ASSUME(entityID);
     Flush();
     _currentEntityId = entityID;
     _cab.Clear();
@@ -208,7 +208,7 @@ void MessageBuilder::ComponentChangedHint(const ComponentDescription &desc, uiw 
 
 void MessageBuilder::RemoveComponent(EntityID entityID, StableTypeId type, ComponentID componentID)
 {
-    const auto &entry = [this](StableTypeId type) -> const shared_ptr<vector<MessageStreamComponentRemoved::ComponentInfo>> &
+    const auto &entry = [this](StableTypeId type) -> const shared_ptr<MessageStreamComponentRemoved::ComponentsInfo> &
     {
         for (const auto &[key, value] : _componentRemovedStreams._data)
         {
@@ -217,22 +217,26 @@ void MessageBuilder::RemoveComponent(EntityID entityID, StableTypeId type, Compo
                 return value;
             }
         }
-        _componentRemovedStreams._data.emplace_back(type, make_shared<vector<MessageStreamComponentRemoved::ComponentInfo>>());
+        _componentRemovedStreams._data.emplace_back(type, make_shared<MessageStreamComponentRemoved::ComponentsInfo>());
         return _componentRemovedStreams._data.back().second;
     } (type);
 
-    entry->push_back({entityID, componentID});
+    entry->entityIds.emplace_back(entityID);
+	if (componentID)
+	{
+		entry->componentIds.emplace_back(componentID);
+	}
 }
 
 void MessageBuilder::RemoveEntity(EntityID entityID)
 {
-    ASSUME(entityID.IsValid());
+    ASSUME(entityID);
     _entityRemovedNoArchetype.push_back(entityID);
 }
 
 void MessageBuilder::RemoveEntity(EntityID entityID, Archetype archetype)
 {
-	ASSUME(entityID.IsValid());
+	ASSUME(entityID);
 
     const auto &entry = [this](const Archetype &archetype) -> const shared_ptr<vector<EntityID>> &
     {

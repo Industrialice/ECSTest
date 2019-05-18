@@ -150,7 +150,7 @@ namespace
 
         virtual void OnDestroy(Environment &env) override
         {
-            ASSUME(_infoId.IsValid());
+            ASSUME(_infoId);
             env.messageBuilder.RemoveEntity(_infoId);
         }
 
@@ -217,17 +217,14 @@ namespace
 
         virtual void ProcessMessages(Environment &env, const MessageStreamComponentRemoved &stream) override
         {
-            for (auto &entity : stream)
-            {
-                if (stream.Type() == Transform::GetTypeId())
-                {
-                    _entitiesToFix.erase(entity.entityID);
-                }
-                else if (stream.Type() == NegativeHeightCooldown::GetTypeId())
-                {
-                    _entitiesWithCooldown.erase(entity.entityID);
-                }
-            }
+			for (const auto &entity : stream.Enumerate<Transform>())
+			{
+				_entitiesToFix.erase(entity.entityID);
+			}
+			for (const auto &entity : stream.Enumerate<NegativeHeightCooldown>())
+			{
+				_entitiesWithCooldown.erase(entity.entityID);
+			}
 
 			ASSUME(stream.Type() == Transform::GetTypeId() || stream.Type() == NegativeHeightCooldown::GetTypeId() || stream.Type() == HeightFixerInfo::GetTypeId());
         }
@@ -326,21 +323,16 @@ namespace
 
         virtual void ProcessMessages(Environment &env, const MessageStreamComponentRemoved &stream) override
         {
-            for (auto &entity : stream)
+            for (const auto &entity : stream.Enumerate<Transform>())
             {
-                if (stream.Type() == Transform::GetTypeId())
-                {
-                    _entities.erase(entity.entityID);
-                }
-                else if (stream.Type() == SpeedOfFall::GetTypeId())
-                {
-                    _entities[entity.entityID].speedOfFall = nullopt;
-                }
-                else
-                {
-                    SOFTBREAK;
-                }
+				_entities.erase(entity.entityID);
             }
+			for (const auto &entity : stream.Enumerate<SpeedOfFall>())
+			{
+				_entities[entity.entityID].speedOfFall = nullopt;
+			}
+
+			ASSUME(stream.Type() == Transform::GetTypeId() || stream.Type() == SpeedOfFall::GetTypeId());
         }
 
         virtual void ProcessMessages(Environment &env, const MessageStreamEntityRemoved &stream) override
@@ -410,7 +402,7 @@ namespace
 
         virtual void OnDestroy(Environment &env) override
         {
-            ASSUME(_entityID.IsValid());
+            ASSUME(_entityID);
             env.messageBuilder.RemoveEntity(_entityID);
         }
 
@@ -447,7 +439,8 @@ namespace
 
         virtual void ProcessMessages(Environment &env, const MessageStreamComponentRemoved &stream) override
         {
-            for (auto &entity : stream)
+			ASSUME(stream.Type() == Transform::GetTypeId());
+            for (const auto &entity : stream.Enumerate<Transform>())
             {
                 _entities.erase(entity.entityID);
             }
@@ -521,7 +514,7 @@ namespace
         virtual void ProcessMessages(Environment &env, const MessageStreamComponentRemoved &stream) override
         {
             SOFTBREAK;
-            for (auto &entity : stream)
+            for (const auto &entity : stream.Enumerate<NegativeHeightCooldown>())
             {
                 _cooldowns.erase(entity.entityID);
             }

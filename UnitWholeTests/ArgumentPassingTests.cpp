@@ -90,8 +90,8 @@ namespace
 			{
 				ASSUME(component0[index] == component1[index]);
 				ASSUME(component0[index] == component2.components[index]);
-				ASSUME(component2.ids[index].IsValid() && component2.ids[index] <= env.componentIdGenerator.LastGenerated());
-				ASSUME(ids[index].IsValid() && ids[index] <= env.entityIdGenerator.LastGenerated());
+				ASSUME(component2.ids[index] && component2.ids[index] <= env.componentIdGenerator.LastGenerated());
+				ASSUME(ids[index] && ids[index] <= env.entityIdGenerator.LastGenerated());
 			}
 		}
 	};

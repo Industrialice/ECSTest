@@ -23,6 +23,7 @@ namespace ECSTest
 		[[nodiscard]] bool operator > (const EntityID &other) const;
 		[[nodiscard]] bool operator >= (const EntityID &other) const;
 		[[nodiscard]] bool IsValid() const;
+		[[nodiscard]] explicit operator bool() const;
 	};
 
     class EntityIDGenerator

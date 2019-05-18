@@ -139,23 +139,12 @@ public:
     
     virtual void ProcessMessages(Environment &env, const MessageStreamComponentRemoved &stream) override
     {
-        if (stream.Type() == Camera::GetTypeId())
-        {
-            for (auto &entry : stream)
-            {
-                RemoveCamera(entry.entityID);
-            }
-        }
-        else if (stream.Type() == Position::GetTypeId())
-        {
-        }
-        else if (stream.Type() == Rotation::GetTypeId())
-        {
-        }
-        else
-        {
-            HARDBREAK;
-        }
+		for (const auto &entry : stream.Enumerate<Camera>())
+		{
+			RemoveCamera(entry.entityID);
+		}
+
+		ASSUME(stream.Type() == Camera::GetTypeId() || stream.Type() == Position::GetTypeId() || stream.Type() == Rotation::GetTypeId());
     }
     
     virtual void ProcessMessages(Environment &env, const MessageStreamEntityRemoved &stream) override
@@ -269,7 +258,7 @@ public:
 
             adapters.emplace_back(adapter);
         }
-
+		
         if (adapters.empty())
         {
             env.logger.Message(LogLevels::Error, "Adapters list is empty, try another adaptersMask\n");

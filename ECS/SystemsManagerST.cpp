@@ -345,7 +345,7 @@ static ArchetypeFull ComputeArchetype(Array<const SerializedComponent> component
 {
 	for (const auto &component : components)
 	{
-		ASSUME(component.isUnique || component.id.IsValid());
+		ASSUME(component.isUnique || component.id);
 	}
 	return ArchetypeFull::Create<SerializedComponent, ComponentDescription, &SerializedComponent::type, &SerializedComponent::id>(components);
 }
@@ -625,7 +625,7 @@ void SystemsManagerST::AddEntityToArchetypeGroup(const ArchetypeFull &archetype,
             if (!componentArray.isUnique)
             {
                 ASSUME(component.isUnique == false);
-                ASSUME(component.id.IsValid());
+                ASSUME(component.id);
 
                 for (; ; ++offset)
                 {
@@ -1161,7 +1161,7 @@ void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, ControlsQueue &
 						if (stored.isUnique == false)
 						{
 							serialized.id = stored.ids[component * stored.stride + stride];
-                            ASSUME(serialized.id.IsValid());
+                            ASSUME(serialized.id);
 						}
 
 						env.messageBuilder.ComponentChanged(entityID, serialized);
@@ -1338,7 +1338,7 @@ void SystemsManagerST::UpdateECSFromMessages(MessageBuilder &messageBuilder)
                 if (row.isUnique == false)
                 {
                     serialized.id = row.ids[indexInGroup * row.stride + nonUniqueIndex];
-                    ASSUME(serialized.id.IsValid());
+                    ASSUME(serialized.id);
                 }
                 serialized.type = row.type;
                 if (serialized.id == componentIDToRemove && serialized.type == typeToRemove)
@@ -1473,10 +1473,15 @@ void SystemsManagerST::UpdateECSFromMessages(MessageBuilder &messageBuilder)
 
     for (const auto &[componentType, stream] : messageBuilder.ComponentRemovedStreams()._data)
     {
-        for (const auto &[entityID, componentID] : *stream)
-        {
-            addOrRemoveComponent(entityID, componentType, componentID, nullopt);
-        }
+		for (uiw index = 0, size = stream->entityIds.size(); index < size; ++index)
+		{
+			ComponentID componentID;
+			if (stream->componentIds.size())
+			{
+				componentID = stream->componentIds[index];
+			}
+			addOrRemoveComponent(stream->entityIds[index], componentType, componentID, nullopt);
+		}
     }
 
     for (const auto &[streamArchetype, stream] : messageBuilder.EntityRemovedStreams()._data)

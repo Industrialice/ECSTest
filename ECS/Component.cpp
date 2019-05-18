@@ -46,6 +46,11 @@ bool ComponentID::operator >= (const ComponentID &other) const
 	return _id >= other._id;
 }
 
+ComponentID::operator bool() const
+{
+	return IsValid();
+}
+
 ComponentID ComponentIDGenerator::Generate()
 {
     auto id = ComponentID(_current.load());

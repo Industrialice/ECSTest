@@ -47,6 +47,11 @@ bool EntityID::IsValid() const
 	return _id != invalidId;
 }
 
+EntityID::operator bool() const
+{
+	return IsValid();
+}
+
 EntityID EntityIDGenerator::Generate()
 {
     auto id = EntityID(_current.load());

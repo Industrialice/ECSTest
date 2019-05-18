@@ -47,6 +47,7 @@ namespace ECSTest
 		[[nodiscard]] bool operator <= (const ComponentID &other) const;
 		[[nodiscard]] bool operator > (const ComponentID &other) const;
 		[[nodiscard]] bool operator >= (const ComponentID &other) const;
+		[[nodiscard]] explicit operator bool() const;
 	};
 
     class ComponentIDGenerator

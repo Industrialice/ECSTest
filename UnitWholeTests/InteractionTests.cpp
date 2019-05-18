@@ -256,7 +256,7 @@ namespace
                 {
                     if (attached.type == TagComponent::GetTypeId())
                     {
-                        ASSUME(attached.id.IsValid());
+                        ASSUME(attached.id);
                         ASSUME(attached.isUnique == false);
                         ++_info.tagComponentsReceived;
 
@@ -324,7 +324,7 @@ namespace
                 return;
             }
 
-            for (auto &entity : stream)
+            for (const auto &entity : stream.Enumerate<TempComponent>())
             {
                 auto it = _entityInfos.find(entity.entityID);
                 ASSUME(it != _entityInfos.end());

@@ -148,16 +148,33 @@ namespace
 
         virtual void ProcessMessages(Environment &env, const MessageStreamComponentRemoved &stream) override
         {
-            if (stream.Type() == Position::GetTypeId() || stream.Type() == Rotation::GetTypeId() || stream.Type() == Physics::GetTypeId() || stream.Type() == MeshCollider::GetTypeId())
+			ASSUME(stream.Type() == Position::GetTypeId() || stream.Type() == Rotation::GetTypeId() || stream.Type() == Physics::GetTypeId() || stream.Type() == MeshCollider::GetTypeId());
+
+			uiw size = _entities.size();
+
+			for (const auto &entry : stream.Enumerate<Position>())
             {
-                for (auto &entry : stream)
-                {
-                    _entities.erase(entry.entityID);
-                }
+				_entities.erase(entry.entityID);
+            }
+			for (const auto &entry : stream.Enumerate<Rotation>())
+			{
+				_entities.erase(entry.entityID);
+			}
+			for (const auto &entry : stream.Enumerate<Physics>())
+			{
+				_entities.erase(entry.entityID);
+			}
+			for (const auto &entry : stream.Enumerate<MeshCollider>())
+			{
+				_entities.erase(entry.entityID);
+			}
+
+			if (size != _entities.size())
+			{
 				_updatePositionsList.clear();
 				_updateRotationsList.clear();
 				_updateIdsList.clear();
-            }
+			}
         }
 
         virtual void ProcessMessages(Environment &env, const MessageStreamEntityRemoved &stream) override
@@ -245,13 +262,20 @@ namespace
 
         virtual void ProcessMessages(Environment &env, const MessageStreamComponentRemoved &stream) override
         {
-            if (stream.Type() == Position::GetTypeId() || stream.Type() == Rotation::GetTypeId() || stream.Type() == MeshRenderer::GetTypeId())
-            {
-                for (auto &entry : stream)
-                {
-					RemoveEntity(entry.entityID);
-                }
-            }
+			ASSUME(stream.Type() == Position::GetTypeId() || stream.Type() == Rotation::GetTypeId() || stream.Type() == MeshRenderer::GetTypeId());
+			
+			for (const auto &entry : stream.Enumerate<Position>())
+			{
+				RemoveEntity(entry.entityID);
+			}
+			for (const auto &entry : stream.Enumerate<Rotation>())
+			{
+				RemoveEntity(entry.entityID);
+			}
+			for (const auto &entry : stream.Enumerate<MeshRenderer>())
+			{
+				RemoveEntity(entry.entityID);
+			}
         }
 
         virtual void ProcessMessages(Environment &env, const MessageStreamEntityRemoved &stream) override

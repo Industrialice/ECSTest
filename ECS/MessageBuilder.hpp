@@ -233,12 +233,6 @@ namespace ECSTest
 			const ui8 *_data{};
 
 		public:
-			using iterator_category = std::random_access_iterator_tag;
-			using value_type = T;
-			using difference_type = ptrdiff_t;
-			using pointer = const T *;
-			using reference = const T &;
-
 			const_iterator(const EntityID *entityIdStart, const ComponentID *componentIdStart, const ui8 *data) : _start(entityIdStart), _entityIdPtr(entityIdStart), _componentIdPtr(componentIdStart), _data(data) {}
 
 			struct Info
@@ -339,24 +333,25 @@ namespace ECSTest
         friend UnitTests;
         friend class MessageBuilder;
         friend class MessageStreamsBuilderComponentRemoved;
+		friend class Enumerate;
 
     public:
-        struct ComponentInfo
+        struct ComponentsInfo
         {
             friend class MessageBuilder;
 
-            EntityID entityID;
-            ComponentID componentID;
+            vector<EntityID> entityIds;
+            vector<ComponentID> componentIds;
         };
 
     private:
-        shared_ptr<const vector<ComponentInfo>> _source{};
+        shared_ptr<const ComponentsInfo> _source{};
         StableTypeId _type{};
         string_view _sourceName{};
 
-        MessageStreamComponentRemoved(StableTypeId type, const shared_ptr<const vector<ComponentInfo>> &source, string_view sourceName) : _type(type), _source(source), _sourceName(sourceName)
+        MessageStreamComponentRemoved(StableTypeId type, const shared_ptr<const ComponentsInfo> &source, string_view sourceName) : _type(type), _source(source), _sourceName(sourceName)
         {
-            ASSUME(_source->size());
+            ASSUME(_source->entityIds.size());
 			ASSUME(_type != StableTypeId{});
         }
 
@@ -366,15 +361,91 @@ namespace ECSTest
         }
 
     public:
-        [[nodiscard]] const ComponentInfo *begin() const
-        {
-            return _source->data();
-        }
+		template <typename T> class const_iterator
+		{
+			const EntityID *const _start{};
+			const EntityID *_entityIdPtr{};
+			const ComponentID *_componentIdPtr{};
 
-        [[nodiscard]] const ComponentInfo *end() const
-        {
-            return _source->data() + _source->size();
-        }
+		public:
+			const_iterator(const EntityID *entityIdStart, const ComponentID *componentIdStart) : _start(entityIdStart), _entityIdPtr(entityIdStart), _componentIdPtr(componentIdStart) {}
+
+			struct Info
+			{
+				const EntityID entityID;
+			};
+
+			struct InfoWithId
+			{
+				const EntityID entityID;
+				const ComponentID componentID;
+			};
+
+			const_iterator &operator ++ ()
+			{
+				++_entityIdPtr;
+				return *this;
+			}
+
+			[[nodiscard]] bool operator != (const const_iterator &other) const
+			{
+				return _entityIdPtr != other._entityIdPtr;
+			}
+
+			[[nodiscard]] auto operator * () const
+			{
+				auto index = _entityIdPtr - _start;
+
+				if constexpr (T::IsUnique())
+				{
+					return Info{*_entityIdPtr};
+				}
+				else
+				{
+					return InfoWithId{*_entityIdPtr, _componentIdPtr[index]};
+				}
+			}
+		};
+
+		template <typename T> class Enumerator
+		{
+			const MessageStreamComponentRemoved &_source;
+			bool _isEmpty{};
+
+		public:
+			Enumerator(const MessageStreamComponentRemoved &source, bool isEmpty) : _source(source), _isEmpty(isEmpty)
+			{
+			}
+
+			[[nodiscard]] const_iterator<T> begin() const
+			{
+				if (_isEmpty)
+				{
+					return {nullptr, nullptr};
+				}
+				else
+				{
+					return {_source._source->entityIds.data(), _source._source->componentIds.data()};
+				}
+			}
+
+			[[nodiscard]] const_iterator<T> end() const
+			{
+				if (_isEmpty)
+				{
+					return {nullptr, nullptr};
+				}
+				else
+				{
+					return {_source._source->entityIds.data() + _source._source->entityIds.size(), nullptr};
+				}
+			}
+		};
+
+		template <typename T> [[nodiscard]] Enumerator<T> Enumerate() const
+		{
+			return {*this, T::GetTypeId() != _type};
+		}
 
         [[nodiscard]] StableTypeId Type() const
         {
@@ -456,7 +527,7 @@ namespace ECSTest
         friend class MessageBuilder;
         friend UnitTests;
 
-        vector<pair<StableTypeId, shared_ptr<vector<MessageStreamComponentRemoved::ComponentInfo>>>> _data{};
+        vector<pair<StableTypeId, shared_ptr<MessageStreamComponentRemoved::ComponentsInfo>>> _data{};
     };
 
     class MessageStreamsBuilderEntityRemoved
