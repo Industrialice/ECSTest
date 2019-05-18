@@ -11,5 +11,9 @@
       </ArrayItems>
     </Expand>
   </Type>
+
+  <Type Name="ECSTest::SerializedComponent">
+    <DisplayString>{{ name={type._name} }}</DisplayString>
+  </Type>
   
 </AutoVisualizer>

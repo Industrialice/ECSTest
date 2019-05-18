@@ -64,12 +64,15 @@ Component requirement types:
     data will not be fetched.
   Subtractive: an entity cannot contain any subtractive component from the list.
     Component data will not be fetched.
-  Optional: doesn't affect archetype selection, after all the archetypes that contain
-    all the required component types and don't contain any subtractive types were 
-	selected, their required components are passed into the system. If these entities
-	have any components specified as optional, these components get passed as well.
-	When used for indirect systems, you get notifications regarding optional components
-	the same way you get notifications for required components.
+  OptionalWithData: doesn't affect archetype selection, after all the archetypes that 
+    contain all the required component types and don't contain any subtractive types
+	were selected, their required components are passed into the system. If these
+	entities have any components specified as optional, these components get passed
+	as well. When used for indirect systems, you get notifications regarding optional 
+	components the same way you get notifications for required components.
+  Optional: same as OptionalWithData, but doesn't request data access. Makes sense
+    only for indirect systems, for example if you want to be notified about presence
+	of StaticTag tags.
   If a required types list is empty, it is a special case that means selecting all
     archetypes except the ones that contain component types requested as subtractive. 
 	For a direct system, requesting no required and no optional components doesn't make

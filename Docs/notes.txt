@@ -12,6 +12,7 @@ TODO:
 +SubtractiveComponent can accept arbitrary number of arguments
 +Implement RequiredComponentAny
 Implement component groups for RequiredComponentAny
++Implement OptionalComponent
 
 Shader parameters:
 

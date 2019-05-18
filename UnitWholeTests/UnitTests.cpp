@@ -160,7 +160,7 @@ namespace
 		vector<ArchetypeDefiningRequirement> result;
 		for (auto &req : source)
 		{
-			if (req.requirement != RequirementForComponent::Optional)
+			if (req.requirement != RequirementForComponent::OptionalWithData)
 			{
 				result.push_back({req.type, 0, req.requirement});
 			}
@@ -248,7 +248,7 @@ namespace
 		array<System::ComponentRequest, 3> req0 =
 		{
 			System::ComponentRequest{ComponentArtist::GetTypeId(), false, RequirementForComponent::Required},
-			System::ComponentRequest{ComponentDateOfBirth::GetTypeId(), false, RequirementForComponent::Optional},
+			System::ComponentRequest{ComponentDateOfBirth::GetTypeId(), false, RequirementForComponent::OptionalWithData},
 			System::ComponentRequest{ComponentCompany::GetTypeId(), false, RequirementForComponent::Subtractive},
 		};
 		req0 = Funcs::SortCompileTime(req0);
@@ -360,7 +360,7 @@ namespace
 
 	INDIRECT_SYSTEM(TestSystem4)
 	{
-		void Accept(Array<ComponentSpouse> &, const Array<ComponentCompany> &, Array<ComponentEmployee> *, const Array<ComponentGender> *, RequiredComponentAny<ComponentEmployee, ComponentGender>)
+		void Accept(Array<ComponentSpouse> &, const Array<ComponentCompany> &, Array<ComponentEmployee> *, const Array<ComponentGender> *, RequiredComponentAny<ComponentEmployee, ComponentGender>, OptionalComponent<ComponentDateOfBirth, ComponentDesigner>)
 		{}
 	};
 
@@ -436,6 +436,7 @@ namespace
 		static_assert(matches(TestSystem::AcquireRequestedComponents().required, MakeArray<ComponentArtist, ComponentProgrammer, ComponentSpouse, ComponentCompany, TagTest0, TagTest1, ComponentDateOfBirth>()));
 		static_assert(matches(TestSystem::AcquireRequestedComponents().requiredOrOptional, MakeArray<ComponentArtist, ComponentProgrammer, ComponentSpouse, ComponentCompany, TagTest0, TagTest1, ComponentDateOfBirth, ComponentEmployee, ComponentGender>()));
 		static_assert(matches(TestSystem::AcquireRequestedComponents().withData, MakeArray<ComponentArtist, ComponentProgrammer, ComponentSpouse, ComponentCompany, ComponentEmployee, ComponentGender>()));
+		static_assert(matches(TestSystem::AcquireRequestedComponents().optional, MakeArray<>()));
 		static_assert(matches(TestSystem::AcquireRequestedComponents().optionalWithData, MakeArray<ComponentEmployee, ComponentGender>()));
 		static_assert(matches(TestSystem::AcquireRequestedComponents().subtractive, MakeArray<ComponentDesigner>()));
 		static_assert(matches(TestSystem::AcquireRequestedComponents().writeAccess, MakeArray<ComponentArtist, ComponentSpouse, ComponentEmployee>()));
@@ -450,6 +451,7 @@ namespace
 		static_assert(matches(TestSystem2::AcquireRequestedComponents().required, MakeArray<TagTest0, TagTest1, TagTest2>()));
 		static_assert(matches(TestSystem2::AcquireRequestedComponents().requiredOrOptional, MakeArray<TagTest0, TagTest1, TagTest2>()));
 		static_assert(matches(TestSystem2::AcquireRequestedComponents().withData, MakeArray<>()));
+		static_assert(matches(TestSystem2::AcquireRequestedComponents().optional, MakeArray<>()));
 		static_assert(matches(TestSystem2::AcquireRequestedComponents().optionalWithData, MakeArray<>()));
 		static_assert(matches(TestSystem2::AcquireRequestedComponents().subtractive, MakeArray<TagTest3, TagTest4, TagTest5>()));
 		static_assert(matches(TestSystem2::AcquireRequestedComponents().writeAccess, MakeArray<>()));
@@ -464,6 +466,7 @@ namespace
 		static_assert(matches(TestSystem3::AcquireRequestedComponents().required, MakeArray<>()));
 		static_assert(matches(TestSystem3::AcquireRequestedComponents().requiredOrOptional, MakeArray<>()));
 		static_assert(matches(TestSystem3::AcquireRequestedComponents().withData, MakeArray<>()));
+		static_assert(matches(TestSystem3::AcquireRequestedComponents().optional, MakeArray<>()));
 		static_assert(matches(TestSystem3::AcquireRequestedComponents().optionalWithData, MakeArray<>()));
 		static_assert(matches(TestSystem3::AcquireRequestedComponents().subtractive, MakeArray<>()));
 		static_assert(matches(TestSystem3::AcquireRequestedComponents().writeAccess, MakeArray<>()));
@@ -479,12 +482,13 @@ namespace
 		static_assert(matches(TestSystem4::AcquireRequestedComponents().requiredWithoutData, MakeArray<>()));
 		static_assert(matches(TestSystem4::AcquireRequestedComponents().requiredWithData, MakeArray<ComponentSpouse, ComponentCompany>()));
 		static_assert(matches(TestSystem4::AcquireRequestedComponents().required, MakeArray<ComponentSpouse, ComponentCompany>()));
-		static_assert(matches(TestSystem4::AcquireRequestedComponents().requiredOrOptional, MakeArray<ComponentSpouse, ComponentCompany, ComponentEmployee, ComponentGender>()));
+		static_assert(matches(TestSystem4::AcquireRequestedComponents().requiredOrOptional, MakeArray<ComponentSpouse, ComponentCompany, ComponentEmployee, ComponentGender, ComponentDateOfBirth, ComponentDesigner>()));
 		static_assert(matches(TestSystem4::AcquireRequestedComponents().withData, MakeArray<ComponentSpouse, ComponentCompany, ComponentEmployee, ComponentGender>()));
+		static_assert(matches(TestSystem4::AcquireRequestedComponents().optional, MakeArray<ComponentDateOfBirth, ComponentDesigner>()));
 		static_assert(matches(TestSystem4::AcquireRequestedComponents().optionalWithData, MakeArray<ComponentEmployee, ComponentGender>()));
 		static_assert(matches(TestSystem4::AcquireRequestedComponents().subtractive, MakeArray<>()));
 		static_assert(matches(TestSystem4::AcquireRequestedComponents().writeAccess, MakeArray<ComponentSpouse, ComponentEmployee>()));
-		static_assert(matches(TestSystem4::AcquireRequestedComponents().all, MakeArray<ComponentSpouse, ComponentCompany, ComponentEmployee, ComponentGender>()));
+		static_assert(matches(TestSystem4::AcquireRequestedComponents().all, MakeArray<ComponentSpouse, ComponentCompany, ComponentEmployee, ComponentGender, ComponentDateOfBirth, ComponentDesigner>()));
 		static_assert(matches(TestSystem4::AcquireRequestedComponents().argumentPassingOrder, MakeArray<ComponentSpouse, ComponentCompany, ComponentEmployee, ComponentGender>(), false));
 		static_assert(testArchetypeDefining(TestSystem4::AcquireRequestedComponents().archetypeDefiningInfoOnly, MakeArray<ComponentSpouse, ComponentCompany>(), make_array(TypeAndGroup{ComponentEmployee::GetTypeId(), 0}, TypeAndGroup{ComponentGender::GetTypeId(), 0})));
 		static_assert(TestSystem4::AcquireRequestedComponents().idsArgumentIndex == nullopt);

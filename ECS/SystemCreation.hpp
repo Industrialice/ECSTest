@@ -19,6 +19,7 @@ namespace ECSTest
             static constexpr bool isArray = false;
 			static constexpr bool isNonUnique = false;
 			static constexpr bool isRequired = false;
+			static constexpr bool isOptional = false;
 			static constexpr bool isRequiredAny = false;
 			static constexpr bool isEntityID = false;
         };
@@ -34,6 +35,7 @@ namespace ECSTest
             static constexpr bool isArray = false;
 			static constexpr bool isNonUnique = false;
             static constexpr bool isRequired = false;
+			static constexpr bool isOptional = false;
 			static constexpr bool isRequiredAny = false;
 			static constexpr bool isEntityID = false;
         };
@@ -49,9 +51,26 @@ namespace ECSTest
             static constexpr bool isArray = false;
             static constexpr bool isNonUnique = false;
             static constexpr bool isRequired = true;
+			static constexpr bool isOptional = false;
 			static constexpr bool isRequiredAny = false;
 			static constexpr bool isEntityID = false;
         };
+
+		template <typename... T> struct GetComponentType<OptionalComponent<T...>>
+		{
+			static_assert(sizeof...(T) > 0, "Type list of OptionalComponent cannot be empty");
+			using expanded = tuple<T...>;
+			using wrapped = tuple<OptionalComponent<T>...>;
+			using type = tuple_element_t<0, expanded>;
+			static constexpr uiw argumentCount = sizeof...(T);
+			static constexpr bool isSubtractive = false;
+			static constexpr bool isArray = false;
+			static constexpr bool isNonUnique = false;
+			static constexpr bool isRequired = false;
+			static constexpr bool isOptional = true;
+			static constexpr bool isRequiredAny = false;
+			static constexpr bool isEntityID = false;
+		};
 
 		template <typename... T> struct GetComponentType<RequiredComponentAny<T...>>
 		{
@@ -64,6 +83,7 @@ namespace ECSTest
 			static constexpr bool isArray = false;
 			static constexpr bool isNonUnique = false;
 			static constexpr bool isRequired = false;
+			static constexpr bool isOptional = false;
 			static constexpr bool isRequiredAny = true;
 			static constexpr bool isEntityID = false;
 		};
@@ -78,6 +98,7 @@ namespace ECSTest
 			static constexpr bool isArray = false;
 			static constexpr bool isNonUnique = true;
             static constexpr bool isRequired = false;
+			static constexpr bool isOptional = false;
 			static constexpr bool isRequiredAny = false;
 			static constexpr bool isEntityID = false;
         };
@@ -92,6 +113,7 @@ namespace ECSTest
             static constexpr bool isArray = true;
 			static constexpr bool isNonUnique = false;
             static constexpr bool isRequired = false;
+			static constexpr bool isOptional = false;
 			static constexpr bool isRequiredAny = false;
 			static constexpr bool isEntityID = false;
         };
@@ -106,6 +128,7 @@ namespace ECSTest
             static constexpr bool isArray = true;
 			static constexpr bool isNonUnique = false;
             static constexpr bool isRequired = false;
+			static constexpr bool isOptional = false;
 			static constexpr bool isRequiredAny = false;
 			static constexpr bool isEntityID = false;
         };
@@ -120,9 +143,25 @@ namespace ECSTest
             static constexpr bool isArray = true;
             static constexpr bool isNonUnique = false;
             static constexpr bool isRequired = true;
+			static constexpr bool isOptional = false;
 			static constexpr bool isRequiredAny = false;
 			static constexpr bool isEntityID = false;
         };
+
+		template <typename... T> struct GetComponentType<Array<OptionalComponent<T...>>>
+		{
+			using expanded = tuple<T...>;
+			using wrapped = expanded;
+			using type = tuple_element_t<0, expanded>;
+			static constexpr uiw argumentCount = sizeof...(T);
+			static constexpr bool isSubtractive = false;
+			static constexpr bool isArray = true;
+			static constexpr bool isNonUnique = false;
+			static constexpr bool isRequired = false;
+			static constexpr bool isOptional = true;
+			static constexpr bool isRequiredAny = false;
+			static constexpr bool isEntityID = false;
+		};
 
 		template <typename... T> struct GetComponentType<Array<RequiredComponentAny<T...>>>
 		{
@@ -134,6 +173,7 @@ namespace ECSTest
 			static constexpr bool isArray = true;
 			static constexpr bool isNonUnique = false;
 			static constexpr bool isRequired = false;
+			static constexpr bool isOptional = false;
 			static constexpr bool isRequiredAny = true;
 			static constexpr bool isEntityID = false;
 		};
@@ -148,6 +188,7 @@ namespace ECSTest
 			static constexpr bool isArray = true;
 			static constexpr bool isNonUnique = true;
             static constexpr bool isRequired = false;
+			static constexpr bool isOptional = false;
 			static constexpr bool isRequiredAny = false;
 			static constexpr bool isEntityID = false;
         };
@@ -176,6 +217,7 @@ namespace ECSTest
             using componentType = typename GetComponentType<pureType>::type;
             constexpr bool isSubtractive = GetComponentType<pureType>::isSubtractive;
             constexpr bool isRequired = GetComponentType<pureType>::isRequired;
+			constexpr bool isOptional = GetComponentType<pureType>::isOptional;
 			constexpr bool isRequiredAny = GetComponentType<pureType>::isRequiredAny;
             constexpr bool isArray = GetComponentType<pureType>::isArray;
 			constexpr bool isNonUnique = GetComponentType<pureType>::isNonUnique;
@@ -184,6 +226,7 @@ namespace ECSTest
             static_assert((isSubtractive || isRequired || isRequiredAny) || isRefOrPtr, "Type must be either reference or pointer");
 			static_assert(!isRefOrPtr || !isSubtractive, "SubtractiveComponent cannot be passed by reference or pointer");
 			static_assert(!isRefOrPtr || !isRequired, "RequiredComponent cannot be passed by reference or pointer");
+			static_assert(!isRefOrPtr || !isOptional, "OptionalComponent cannot be passed by reference or pointer");
 			static_assert(!isRefOrPtr || !isRequiredAny, "RequiredComponentAny cannot be passed by reference or pointer");
 
 			constexpr uiw index = GetArgumentIndexInArray<Types, Index>(make_index_sequence<tuple_size_v<Types>>());
@@ -200,7 +243,7 @@ namespace ECSTest
                 static_assert(!is_pointer_v<bare> && !is_reference_v<bare>, "Type cannot be pointer to reference/pointer");
                 return (T)args[index];
             }
-            else if constexpr (isRequired || isSubtractive || isRequiredAny)
+            else if constexpr (isRequired || isSubtractive || isOptional || isRequiredAny)
             {
                 return pureType{};
             }
@@ -224,6 +267,7 @@ namespace ECSTest
             constexpr bool isRefOrPtr = is_reference_v<T> || is_pointer_v<T>;
             constexpr bool isSubtractive = GetComponentType<pureType>::isSubtractive;
 			constexpr bool isRequired = GetComponentType<pureType>::isRequired;
+			constexpr bool isOptional = GetComponentType<pureType>::isOptional;
 			constexpr bool isRequiredAny = GetComponentType<pureType>::isRequiredAny;
             constexpr bool isNonUnique = GetComponentType<pureType>::isNonUnique;
             constexpr bool isArray = GetComponentType<pureType>::isArray;
@@ -278,7 +322,7 @@ namespace ECSTest
 				static_assert(false, "NonUnique object used to pass unique component");
 			}
 
-			if constexpr (componentType::IsUnique() == false && (isNonUnique || isRequired || isRequiredAny || isSubtractive) == false)
+			if constexpr (componentType::IsUnique() == false && (isNonUnique || isRequired || isOptional || isRequiredAny || isSubtractive) == false)
 			{
 				isFailed = true;
 				static_assert(false, "NonUnique objects must be used for non unique components");
@@ -302,6 +346,12 @@ namespace ECSTest
 				static_assert(false, "RequiredComponent can't be inside an Array");
 			}
 
+			if constexpr (isOptional && isArray)
+			{
+				isFailed = true;
+				static_assert(false, "OptionalComponent can't be inside an Array");
+			}
+
 			if constexpr (isRequiredAny && isArray)
 			{
 				isFailed = true;
@@ -314,13 +364,13 @@ namespace ECSTest
 				static_assert(false, "NonUnique can't be inside an Array");
 			}
 
-			if constexpr (isArray == false && (isSubtractive || isRequired || isRequiredAny || isNonUnique) == false)
+			if constexpr (isArray == false && (isSubtractive || isRequired || isOptional || isRequiredAny || isNonUnique) == false)
 			{
 				isFailed = true;
 				static_assert(false, "Unique components must be passed using Array");
 			}
 				
-			if constexpr (!(isSubtractive || isRequired || isRequiredAny || isRefOrPtr))
+			if constexpr (!(isSubtractive || isRequired || isOptional || isRequiredAny || isRefOrPtr))
 			{
 				isFailed = true;
 				static_assert(false, "Components must be passed by either pointer, or by reference");
@@ -351,6 +401,10 @@ namespace ECSTest
             {
                 return componentType::ComponentType::GetTypeId();
             }
+			else if constexpr (is_base_of_v<_OptionalComponentBase, componentType>)
+			{
+				return componentType::ComponentType::GetTypeId();
+			}
 			else if constexpr (is_base_of_v<_RequiredComponentAnyBase, componentType>)
 			{
 				return componentType::ComponentType::GetTypeId();
@@ -399,7 +453,7 @@ namespace ECSTest
 			}
 			else if constexpr (is_pointer_v<T>)
 			{
-				return RequirementForComponent::Optional;
+				return RequirementForComponent::OptionalWithData;
 			}
 			else if constexpr (is_base_of_v<_SubtractiveComponentBase, T>)
 			{
@@ -408,6 +462,10 @@ namespace ECSTest
 			else if constexpr (is_base_of_v<_RequiredComponentBase, T>)
 			{
 				return RequirementForComponent::Required;
+			}
+			else if constexpr (is_base_of_v<_OptionalComponentBase, T>)
+			{
+				return RequirementForComponent::Optional;
 			}
 			else
 			{
@@ -442,7 +500,7 @@ namespace ECSTest
 				isLocated = true;
 				actual = Index;
 			}
-			else if (GetComponentType<TPure>::isRequired == false && GetComponentType<TPure>::isSubtractive == false && isLocated == false)
+			else if (GetComponentType<TPure>::isRequired == false && GetComponentType<TPure>::isSubtractive == false && GetComponentType<TPure>::isOptional == false && isLocated == false)
 			{
 				++filtered;
 			}
@@ -488,7 +546,7 @@ namespace ECSTest
 				isLocated = true;
 				actual = Index;
 			}
-			else if (GetComponentType<TPure>::isRequired == false && GetComponentType<TPure>::isSubtractive == false && isLocated == false)
+			else if (GetComponentType<TPure>::isRequired == false && GetComponentType<TPure>::isSubtractive == false && GetComponentType<TPure>::isOptional == false && isLocated == false)
 			{
 				++filtered;
 			}
@@ -564,7 +622,7 @@ namespace ECSTest
 			uiw target = 0;
 			for (uiw source = 0; source < arr.size(); ++source)
 			{
-				if (arr[source].requirement == RequirementForComponent::RequiredWithData || arr[source].requirement == RequirementForComponent::Optional)
+				if (arr[source].requirement == RequirementForComponent::RequiredWithData || arr[source].requirement == RequirementForComponent::OptionalWithData)
 				{
 					if (IsRequireWriteAccess == false || arr[source].isWriteAccess)
 					{
@@ -581,7 +639,7 @@ namespace ECSTest
             uiw target = 0;
             for (uiw source = 0; source < arr.size(); ++source)
             {
-                if (arr[source].requirement == RequirementForComponent::RequiredWithData || arr[source].requirement == RequirementForComponent::Optional)
+                if (arr[source].requirement == RequirementForComponent::RequiredWithData || arr[source].requirement == RequirementForComponent::OptionalWithData)
                 {
                     if (IsRequireWriteAccess == false || arr[source].isWriteAccess)
                     {
@@ -667,12 +725,13 @@ namespace ECSTest
 			static constexpr auto requiredWithoutData = FindMatchingComponents<FindMatchingComponentsCount(sorted, make_array(rfc::Required))>(sorted, make_array(rfc::Required));
 			static constexpr auto requiredWithData = FindMatchingComponents<FindMatchingComponentsCount(sorted, make_array(rfc::RequiredWithData))>(sorted, make_array(rfc::RequiredWithData));
 			static constexpr auto required = FindMatchingComponents<FindMatchingComponentsCount(sorted, make_array(rfc::RequiredWithData, rfc::Required))>(sorted, make_array(rfc::RequiredWithData, rfc::Required));
-			static constexpr auto requiredOrOptional = FindMatchingComponents<FindMatchingComponentsCount(sorted, make_array(rfc::RequiredWithData, rfc::Required, rfc::Optional))>(sorted, make_array(rfc::RequiredWithData, rfc::Required, rfc::Optional));
+			static constexpr auto requiredOrOptional = FindMatchingComponents<FindMatchingComponentsCount(sorted, make_array(rfc::RequiredWithData, rfc::Required, rfc::OptionalWithData, rfc::Optional))>(sorted, make_array(rfc::RequiredWithData, rfc::Required, rfc::OptionalWithData, rfc::Optional));
 			static constexpr auto withData = FindComponentsWithData<FindComponentsWithDataCount<false>(sorted), false>(sorted);
-			static constexpr auto optionalWithData = FindMatchingComponents<FindMatchingComponentsCount(sorted, make_array(rfc::Optional))>(sorted, make_array(rfc::Optional));
+			static constexpr auto optionalNoData = FindMatchingComponents<FindMatchingComponentsCount(sorted, make_array(rfc::Optional))>(sorted, make_array(rfc::Optional));
+			static constexpr auto optionalWithData = FindMatchingComponents<FindMatchingComponentsCount(sorted, make_array(rfc::OptionalWithData))>(sorted, make_array(rfc::OptionalWithData));
 			static constexpr auto subtractive = FindMatchingComponents<FindMatchingComponentsCount(sorted, make_array(rfc::Subtractive))>(sorted, make_array(rfc::Subtractive));
 			static constexpr auto writeAccess = FindComponentsWithData<FindComponentsWithDataCount<true>(sorted), true>(sorted);
-			static constexpr auto argumentPassingOrder = FindMatchingComponents<FindMatchingComponentsCount(componentsArray, make_array(rfc::RequiredWithData, rfc::Optional))>(componentsArray, make_array(rfc::RequiredWithData, rfc::Optional));
+			static constexpr auto argumentPassingOrder = FindMatchingComponents<FindMatchingComponentsCount(componentsArray, make_array(rfc::RequiredWithData, rfc::OptionalWithData))>(componentsArray, make_array(rfc::RequiredWithData, rfc::OptionalWithData));
 			
 			static constexpr auto archetypeDefining = FindMatchingComponents<FindMatchingComponentsCount(sorted, make_array(rfc::RequiredWithData, rfc::Required, rfc::Subtractive))>(sorted, make_array(rfc::RequiredWithData, rfc::Required, rfc::Subtractive));
 			static constexpr auto requiredAnyArguments = RequiredAnyToComponentsArray<onlyAny>(make_index_sequence<tuple_size_v<onlyAny>>());
@@ -685,6 +744,7 @@ namespace ECSTest
 				ToArray(required),
 				ToArray(requiredOrOptional),
 				ToArray(withData),
+				ToArray(optionalNoData),
 				ToArray(optionalWithData),
 				ToArray(subtractive),
 				ToArray(writeAccess),

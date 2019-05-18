@@ -534,7 +534,6 @@ auto SystemsManagerST::AddNewArchetypeGroup(const ArchetypeFull &archetype, Arra
 		{
 			uiw allocSize = sizeof(ComponentID) * componentArray.stride * group.reservedCount;
 			componentArray.ids.reset((ComponentID *)malloc(allocSize));
-			memset(componentArray.ids.get(), ComponentID::invalidId, allocSize);
 		}
 	}
 
@@ -584,7 +583,6 @@ void SystemsManagerST::AddEntityToArchetypeGroup(const ArchetypeFull &archetype,
 				ComponentID *oldUPtr = componentArray.ids.release();
 				ComponentID *newUPtr = (ComponentID *)realloc(oldUPtr, sizeof(ComponentID) * componentArray.stride * group.reservedCount);
 				componentArray.ids.reset(newUPtr);
-				memset(newUPtr + componentArray.stride * group.entitiesCount, ComponentID::invalidId, (group.reservedCount - group.entitiesCount) * sizeof(ComponentID) * componentArray.stride);
 			}
 		}
 
@@ -600,6 +598,14 @@ void SystemsManagerST::AddEntityToArchetypeGroup(const ArchetypeFull &archetype,
 	}
 
     uiw tagsCount = 0;
+
+	for (uiw index = 0; index < group.uniqueTypedComponentsCount; ++index)
+	{
+		if (group.components[index].isUnique == false)
+		{
+			memset(group.components[index].ids.get() + group.entitiesCount * group.components[index].stride, ComponentID::invalidId, sizeof(ComponentID) * group.components[index].stride);
+		}
+	}
 
 	for (uiw index = 0; index < components.size(); ++index)
 	{
@@ -1028,7 +1034,7 @@ void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, ControlsQueue &
 
             for (const System::ComponentRequest &arg : requested.argumentPassingOrder)
             {
-				ASSUME(arg.requirement == RequirementForComponent::Optional || arg.requirement == RequirementForComponent::RequiredWithData);
+				ASSUME(arg.requirement == RequirementForComponent::OptionalWithData || arg.requirement == RequirementForComponent::RequiredWithData);
 
                 ui32 index = 0;
                 for (; index < group.get().uniqueTypedComponentsCount; ++index)
@@ -1064,7 +1070,7 @@ void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, ControlsQueue &
                 }
                 else
                 {
-                    ASSUME(arg.requirement == RequirementForComponent::Optional);
+                    ASSUME(arg.requirement == RequirementForComponent::OptionalWithData); // should have failed the archetype test if there's no such component
                     _tempArgs.push_back(nullptr);
                 }
             }
@@ -1115,7 +1121,7 @@ void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, ControlsQueue &
                 bool isFound = index < group.get().uniqueTypedComponentsCount;
                 if (isFound == false)
                 {
-                    ASSUME(arg.requirement == RequirementForComponent::Optional);
+                    ASSUME(arg.requirement == RequirementForComponent::OptionalWithData); // should have failed the archetype test if there's no such component
                     continue;
                 }
 
@@ -1290,14 +1296,14 @@ void SystemsManagerST::UpdateECSFromMessages(MessageBuilder &messageBuilder)
             {
                 auto &arr = group.components[componentIndex];
                 void *target = arr.data.get() + arr.sizeOf * index * arr.stride;
-                void *source = arr.data.get() + arr.sizeOf * replaceIndex * arr.stride;
+                const void *source = arr.data.get() + arr.sizeOf * replaceIndex * arr.stride;
                 uiw copySize = arr.sizeOf * arr.stride;
                 memcpy(target, source, copySize);
 
                 if (!arr.isUnique)
                 {
                     ComponentID *idTarget = arr.ids.get() + index * arr.stride;
-                    ComponentID *idSource = arr.ids.get() + replaceIndex * arr.stride;
+                    const ComponentID *idSource = arr.ids.get() + replaceIndex * arr.stride;
                     uiw idCopySize = sizeof(ComponentID) * arr.stride;
                     memcpy(idTarget, idSource, idCopySize);
                 }
@@ -1326,7 +1332,9 @@ void SystemsManagerST::UpdateECSFromMessages(MessageBuilder &messageBuilder)
 
         auto[group, indexInGroup] = entityLocation->second;
 
-        _tempComponents.clear();
+		ASSUME(_tempComponents.empty());
+
+		bool isFoundRemoveTarget = false;
 
         // collect the current components
         for (ui32 componentTypeIndex = 0; componentTypeIndex < group->uniqueTypedComponentsCount; ++componentTypeIndex)
@@ -1343,6 +1351,7 @@ void SystemsManagerST::UpdateECSFromMessages(MessageBuilder &messageBuilder)
                 serialized.type = row.type;
                 if (serialized.id == componentIDToRemove && serialized.type == typeToRemove)
                 {
+					isFoundRemoveTarget = true;
                     continue;
                 }
                 serialized.alignmentOf = row.alignmentOf;
@@ -1363,6 +1372,7 @@ void SystemsManagerST::UpdateECSFromMessages(MessageBuilder &messageBuilder)
         {
             if (typeToRemove == group->tags[tagIndex])
             {
+				isFoundRemoveTarget = true;
                 continue;
             }
 
@@ -1372,6 +1382,8 @@ void SystemsManagerST::UpdateECSFromMessages(MessageBuilder &messageBuilder)
             serialized.type = group->tags[tagIndex];
             _tempComponents.push_back(serialized);
         }
+
+		ASSUME(isFoundRemoveTarget || typeToRemove == StableTypeId{}); // trying to remove component that doesn't exist
 
         ArchetypeGroup *newGroup;
         ArchetypeFull archetype = ComputeArchetype(ToArray(_tempComponents));
@@ -1386,9 +1398,35 @@ void SystemsManagerST::UpdateECSFromMessages(MessageBuilder &messageBuilder)
             newGroup = &groupSearch->second;
         }
 
+		#ifdef DEBUG
+			for (auto index = 0; index < newGroup->uniqueTypedComponentsCount; ++index)
+			{
+				ASSUME(std::find_if(_tempComponents.begin(), _tempComponents.end(), [type = newGroup->components[index].type](const SerializedComponent &stored) { return type == stored.type; }) != _tempComponents.end());
+			}
+			for (auto index = 0; index < newGroup->tagsCount; ++index)
+			{
+				ASSUME(std::find_if(_tempComponents.begin(), _tempComponents.end(), [type = newGroup->tags[index]](const SerializedComponent &stored) { return type == stored.type; }) != _tempComponents.end());
+			}
+			for (const SerializedComponent &stored : _tempComponents)
+			{
+				if (stored.isTag)
+				{
+					ASSUME(std::find_if(newGroup->tags.get(), newGroup->tags.get() + newGroup->tagsCount, [type = stored.type](const auto &c) { return c == type; }) != newGroup->tags.get() + newGroup->tagsCount);
+				}
+				else
+				{
+					ASSUME(std::find_if(newGroup->components.get(), newGroup->components.get() + newGroup->uniqueTypedComponentsCount, [type = stored.type](const auto &c) { return c.type == type; }) != newGroup->components.get() + newGroup->uniqueTypedComponentsCount);
+				}
+			}
+		#endif
+
+		ASSUME(newGroup != group);
+
         AddEntityToArchetypeGroup(archetype, *newGroup, entityID, ToArray(_tempComponents), nullptr);
 
         removeEntity(*group, indexInGroup, nullopt);
+
+		_tempComponents.clear();
     };
 
     // update the ECS using the received messages

@@ -60,6 +60,9 @@ namespace
 	TAG_COMPONENT(Tag2);
 	TAG_COMPONENT(Tag3);
 
+	TAG_COMPONENT(StaticTag);
+	TAG_COMPONENT(StaticPositionTag);
+
 	DIRECT_SYSTEM(System0)
 	{
 		void Accept(RequiredComponent<Tag0, Tag1>, SubtractiveComponent<Tag2, Tag3>, const Array<Component0> &data)
@@ -184,6 +187,119 @@ namespace
 		}
 	};
 
+	INDIRECT_SYSTEM(System5)
+	{
+		using IndirectSystem::ProcessMessages;
+
+		void Accept(RequiredComponent<Tag0, Tag1>, SubtractiveComponent<Tag2, Tag3>, OptionalComponent<StaticTag, StaticPositionTag>, const Array<Component0> &c0, const Array<Component1> *c1, const NonUnique<Component2> *c2, RequiredComponentAny<Component1, Component2>);
+
+		virtual void Update(Environment &env) override
+		{
+		}
+
+		virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override
+		{
+		}
+
+		virtual void ProcessMessages(Environment &env, const MessageStreamComponentAdded &stream) override
+		{
+			for (auto &entry : stream)
+			{
+				if (stream.Type() == StaticTag::GetTypeId())
+				{
+					ASSUME(entry.Find<StaticTag>());
+					_staticEntities.insert(entry.entityID);
+				}
+				else if (stream.Type() == StaticPositionTag::GetTypeId())
+				{
+					ASSUME(entry.Find<StaticPositionTag>());
+					_staticPositionEntities.insert(entry.entityID);
+				}
+				else
+				{
+					SOFTBREAK;
+				}
+			}
+		}
+
+		virtual void ProcessMessages(Environment &env, const MessageStreamComponentRemoved &stream) override
+		{
+			for (const auto &entry : stream.Enumerate<StaticTag>())
+			{
+				uiw count = _staticEntities.erase(entry.entityID);
+				ASSUME(count == 1);
+			}
+			for (const auto &entry : stream.Enumerate<StaticPositionTag>())
+			{
+				uiw count = _staticPositionEntities.erase(entry.entityID);
+				ASSUME(count == 1);
+			}
+
+			ASSUME(stream.Type() == StaticTag::GetTypeId() || stream.Type() == StaticPositionTag::GetTypeId());
+		}
+
+		virtual void ProcessMessages(System::Environment &env, const MessageStreamComponentChanged &stream)
+		{
+		}
+
+		std::set<EntityID> _staticEntities{}, _staticPositionEntities{};
+	};
+
+	INDIRECT_SYSTEM(System6)
+	{
+		using IndirectSystem::ProcessMessages;
+
+		void Accept();
+
+		virtual void Update(Environment &env) override
+		{
+			for (auto id : _staticEntities)
+			{
+				env.messageBuilder.RemoveComponent(id, StaticTag::GetTypeId(), {});
+			}
+			for (auto id : _staticPositionEntities)
+			{
+				env.messageBuilder.RemoveComponent(id, StaticPositionTag::GetTypeId(), {});
+			}
+			_staticEntities.clear();
+			_staticPositionEntities.clear();
+		}
+
+		virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override
+		{
+			for (auto &entry : stream)
+			{
+				if (rand() % 2)
+				{
+					if (rand() % 2)
+					{
+						env.messageBuilder.AddComponent(entry.entityID, StaticTag{});
+						_staticEntities.push_back(entry.entityID);
+					}
+					else
+					{
+						env.messageBuilder.AddComponent(entry.entityID, StaticPositionTag{});
+						_staticPositionEntities.push_back(entry.entityID);
+					}
+				}
+			}
+		}
+
+		virtual void ProcessMessages(Environment &env, const MessageStreamComponentAdded &stream) override
+		{
+		}
+
+		virtual void ProcessMessages(Environment &env, const MessageStreamComponentRemoved &stream) override
+		{
+		}
+
+		virtual void ProcessMessages(System::Environment &env, const MessageStreamComponentChanged &stream) 
+		{
+		}
+
+		vector<EntityID> _staticEntities{}, _staticPositionEntities{};
+	};
+
 	static void GenerateScene(EntityIDGenerator &entityIdGenerator, SystemsManager &manager, EntitiesStream &stream)
 	{
 		stream.HintTotal(EntitiesToTest);
@@ -296,6 +412,8 @@ void ArgumentPassingTests()
 	manager->Register<System2>(pipeline);
 	manager->Register<System3>(pipeline);
 	manager->Register<System4>(pipeline);
+	manager->Register<System5>(pipeline);
+	manager->Register<System6>(pipeline);
 
 	vector<WorkerThread> workers;
 	if (IsMTECS)
@@ -308,7 +426,7 @@ void ArgumentPassingTests()
 	for (;;)
 	{
 		auto info = manager->GetPipelineInfo(pipeline);
-		if (info.executedTimes > 0)
+		if (info.executedTimes > 2)
 		{
 			break;
 		}

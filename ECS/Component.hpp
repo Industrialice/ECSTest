@@ -8,7 +8,8 @@ namespace ECSTest
     {
         Required,
         RequiredWithData,
-        Optional,
+		Optional,
+        OptionalWithData,
         Subtractive
     };
 
@@ -116,6 +117,14 @@ namespace ECSTest
     {
         using ComponentTypes = tuple<Types...>;
     };
+
+	struct _OptionalComponentBase
+	{};
+
+	template <typename... Types> struct EMPTY_BASES OptionalComponent : _OptionalComponentBase
+	{
+		using ComponentTypes = tuple<Types...>;
+	};
 
 	struct _RequiredComponentAnyBase
 	{};

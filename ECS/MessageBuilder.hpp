@@ -55,6 +55,18 @@ namespace ECSTest
                 return false;
             }
 
+			template <typename T> bool Find() const
+			{
+				if constexpr (T::IsTag())
+				{
+					return FindTag<T>();
+				}
+				else
+				{
+					return FindComponent<T>() != nullptr;
+				}
+			}
+
         private:
             vector<ui8> componentsData;
         };
@@ -145,6 +157,18 @@ namespace ECSTest
                 }
                 return false;
             }
+
+			template <typename T> bool Find() const
+			{
+				if constexpr (T::IsTag())
+				{
+					return FindTag<T>();
+				}
+				else
+				{
+					return FindComponent<T>() != nullptr;
+				}
+			}
 
         private:
             vector<ui8> componentsData;
@@ -559,7 +583,7 @@ namespace ECSTest
         [[nodiscard]] const vector<EntityID> &EntityRemovedNoArchetype();
 
     public:
-        template <typename T, typename = enable_if_t<T::IsUnique() && T::IsTag() == false>> void AddComponent(EntityID entityID, const T &component)
+        template <typename T, typename = enable_if_t<T::IsUnique()>> void AddComponent(EntityID entityID, const T &component)
         {
             SerializedComponent sc;
             sc.isUnique = true;
