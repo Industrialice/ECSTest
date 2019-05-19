@@ -4,8 +4,8 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <IncludePath>$(VisualStudioDir)\Projects\StdLib2018\Core\;$(VisualStudioDir)\Projects\StdLib2018\PlatformAbstraction\;$(VisualStudioDir)\Projects\StdLib2018\Miscellaneous\;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
-    <LibraryPath>$(VisualStudioDir)\Projects\StdLib2018\$(Configuration)_$(Platform)\;$(LibraryPath)</LibraryPath>
-    <OutDir>$(SolutionDir)\$(Platform)_$(Configuration)\</OutDir>
+    <LibraryPath>$(VisualStudioDir)\Projects\StdLib2018\$(Configuration)_$(PlatformTarget)\;$(LibraryPath)</LibraryPath>
+    <OutDir>$(SolutionDir)$(Configuration)_$(PlatformTarget)\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>

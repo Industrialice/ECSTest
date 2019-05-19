@@ -4,7 +4,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <IncludePath>$(SolutionDir)\ECS\;$(SolutionDir)\Helpers\;$(VisualStudioDir)\Projects\StdLib2018\Core\;$(VisualStudioDir)\Projects\StdLib2018\PlatformAbstraction\;$(VisualStudioDir)\Projects\StdLib2018\Miscellaneous\;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)\$(Platform)_$(Configuration)\;$(VisualStudioDir)\Projects\StdLib2018\$(Configuration)_$(Platform)\;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(SolutionDir)$(Configuration)_$(PlatformTarget)\;$(VisualStudioDir)\Projects\StdLib2018\$(Configuration)_$(PlatformTarget)\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <Link>

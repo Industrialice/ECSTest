@@ -228,3 +228,7 @@ ModelManifest.xml
 /ECSEngine/log.txt
 /Win32_Release
 /Win32_ReleaseXP
+/Debug_x86
+/ReleaseXP_x64
+/ReleaseXP_x86
+/Release_x86
