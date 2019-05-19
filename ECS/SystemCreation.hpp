@@ -766,7 +766,7 @@ namespace ECSTest
 		{
 			return Type::GetTypeId();
 		}
-
+		
 		[[nodiscard]] virtual string_view GetTypeName() const override final
 		{
 			return Type::GetTypeName();

@@ -7,6 +7,7 @@ namespace
     constexpr bool IsMTECS = false;
 	constexpr bool IsPhysicsFPSRestricted = false;
 	constexpr bool IsPhysicsUsingComponentChangedHints = true;
+	constexpr bool IsShuffleUpdatesOrder = false;
     constexpr ui32 EntitiesToTest = 32768;
     constexpr ui32 PhysicsUpdatesPerFrame = 100;
     constexpr ui32 RendererDrawPerFrame = 100;
@@ -204,7 +205,6 @@ namespace
             EntityID id;
             Vector3 pos;
             Quaternion rot;
-            MeshRenderer mesh;
         };
 
         virtual void Update(Environment &env) override
@@ -221,11 +221,12 @@ namespace
             for (auto &entry : stream)
             {
                 Data data;
+				data.id = entry.entityID;
                 data.pos = entry.GetComponent<Position>().position;
                 data.rot = entry.GetComponent<Rotation>().rotation;
-                data.mesh = entry.GetComponent<MeshRenderer>();
 				_entities[entry.entityID] = (ui32)_linear.size();
 				_linear.emplace_back(data);
+				_meshLinear.emplace_back(entry.GetComponent<MeshRenderer>());
             }
         }
 
@@ -234,27 +235,53 @@ namespace
             for (auto &entry : stream)
             {
                 Data data;
+				data.id = entry.entityID;
                 data.pos = entry.GetComponent<Position>().position;
                 data.rot = entry.GetComponent<Rotation>().rotation;
-                data.mesh = entry.GetComponent<MeshRenderer>();
 				_entities[entry.entityID] = (ui32)_linear.size();
 				_linear.emplace_back(data);
+				_meshLinear.emplace_back(entry.GetComponent<MeshRenderer>());
             }
         }
 
         virtual void ProcessMessages(Environment &env, const MessageStreamComponentChanged &stream) override
         {
+			if (_linear.size() == _entities.size())
+			{
+				_linear.emplace_back();
+			}
+
+			uiw prevIndex = uiw_max;
 			for (auto entry : stream.Enumerate<Position>())
 			{
-				_linear[_entities[entry.entityID]].pos = entry.component.position;
+				uiw index = prevIndex + 1;
+				Data *data = &_linear[index];
+				if (data->id != entry.entityID)
+				{
+					index = _entities[entry.entityID];
+					data = &_linear[index];
+				}
+				data->pos = entry.component.position;
+				prevIndex = index;
 			}
+
+			prevIndex = uiw_max;
 			for (auto entry : stream.Enumerate<Rotation>())
 			{
-				_linear[_entities[entry.entityID]].rot = entry.component.rotation;
+				uiw index = prevIndex + 1;
+				Data *data = &_linear[index];
+				if (data->id != entry.entityID)
+				{
+					index = _entities[entry.entityID];
+					data = &_linear[index];
+				}
+				data->rot = entry.component.rotation;
+				prevIndex = index;
 			}
+
             for (auto entry : stream.Enumerate<MeshRenderer>())
             {
-				_linear[_entities[entry.entityID]].mesh = entry.component;
+				_meshLinear[_entities[entry.entityID]] = entry.component;
             }
 
 			ASSUME(stream.Type() == Position::GetTypeId() || stream.Type() == Rotation::GetTypeId() || stream.Type() == MeshRenderer::GetTypeId());
@@ -301,11 +328,30 @@ namespace
     private:
         std::unordered_map<EntityID, ui32> _entities{};
         vector<Data> _linear{};
+		vector<MeshRenderer> _meshLinear{};
     };
 
     static void GenerateScene(EntityIDGenerator &entityIdGenerator, SystemsManager &manager, EntitiesStream &stream)
     {
 		stream.HintTotal(EntitiesToTest);
+
+		vector<EntityID> ids;
+		if (IsShuffleUpdatesOrder)
+		{
+			TimeMoment before = TimeMoment::Now();
+			ids.resize(EntitiesToTest);
+			for (EntityID &id : ids)
+			{
+				id = entityIdGenerator.Generate();
+			}
+			auto pred = [](EntityID left, EntityID right)
+			{
+				return Hash::FNVHash<Hash::Precision::P32>(left.Hash()) < Hash::FNVHash<Hash::Precision::P32>(right.Hash());
+			};
+			std::sort(ids.begin(), ids.end(), pred);
+			TimeMoment after = TimeMoment::Now();
+			printf("Generating entity ids tool %.2lfs\n", (after - before).ToSec_f64());
+		}
 
         for (uiw index = 0; index < EntitiesToTest; ++index)
         {
@@ -326,7 +372,17 @@ namespace
             MeshCollider collider;
             entity.AddComponent(collider);
 
-            stream.AddEntity(entityIdGenerator.Generate(), move(entity));
+			EntityID id;
+			if (IsShuffleUpdatesOrder)
+			{
+				id = ids[index];
+			}
+			else
+			{
+				id = entityIdGenerator.Generate();
+			}
+
+            stream.AddEntity(id, move(entity));
         }
     }
 }
@@ -338,6 +394,7 @@ void Benchmark2()
 	printf("ECS multithreaded: %s\n", IsMTECS ? "yes" : "no");
 	printf("IsPhysicsFPSRestricted: %s\n", IsPhysicsFPSRestricted ? "yes" : "no");
 	printf("IsPhysicsUsingComponentChangedHints: %s\n", IsPhysicsUsingComponentChangedHints ? "yes" : "no");
+	printf("IsShuffleUpdatesOrder: %s\n", IsShuffleUpdatesOrder ? "yes" : "no");
 	printf("EntitiesToTest: %u\n", EntitiesToTest);
 	printf("PhysicsUpdatesPerFrame: %u\n", PhysicsUpdatesPerFrame);
 	printf("RendererDrawPerFrame: %u\n", RendererDrawPerFrame);
@@ -352,7 +409,7 @@ void Benchmark2()
     auto before = TimeMoment::Now();
     GenerateScene(idGenerator, *manager, *stream);
     auto after = TimeMoment::Now();
-    printf("Generating scene took %.2lfs\n", (after - before).ToSec());
+    printf("Generating scene took %.2lfs\n", (after - before).ToSec_f64());
 
     auto physicsPipeline = manager->CreatePipeline(IsPhysicsFPSRestricted ? optional(SecondsFP64(1.0 / 60.0)) : nullopt, false);
     auto rendererPipeline = manager->CreatePipeline(nullopt, false);

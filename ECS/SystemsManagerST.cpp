@@ -587,8 +587,10 @@ void SystemsManagerST::AddEntityToArchetypeGroup(const ArchetypeFull &archetype,
 		}
 
 		EntityID *oldPtr = group.entities.release();
-		EntityID *newPtr = (EntityID *)realloc(oldPtr, sizeof(EntityID) * group.reservedCount);
+		EntityID *newPtr = (EntityID *)realloc(oldPtr, sizeof(EntityID) * (group.reservedCount + 1));
 		group.entities.reset(newPtr);
+
+		newPtr[group.reservedCount] = EntityID(); // use an extra entry to speed up predictive lookups
 	}
 
 	optional<std::reference_wrapper<ComponentArrayBuilder>> componentBuilder;
@@ -1328,7 +1330,7 @@ void SystemsManagerST::UpdateECSFromMessages(MessageBuilder &messageBuilder)
     auto addOrRemoveComponent = [this, removeEntity](EntityID entityID, StableTypeId typeToRemove, ComponentID componentIDToRemove, optional<SerializedComponent> componentToAdd)
     {
         auto entityLocation = _entitiesLocations.find(entityID);
-        ASSUME(entityLocation != _entitiesLocations.end());
+        ASSUME(entityLocation != _entitiesLocations.end()); // requested entity that doesn't exist
 
         auto[group, indexInGroup] = entityLocation->second;
 
@@ -1466,14 +1468,33 @@ void SystemsManagerST::UpdateECSFromMessages(MessageBuilder &messageBuilder)
     {
 		const auto &[desc, stream] = descWithStream;
 
+		ArchetypeGroup *prevGroup = nullptr;
+		if (_archetypeGroups.size() && _archetypeGroups.begin()->second.size())
+		{
+			// the only case when there're no groups is when there're no entities,
+			// in that case any component changed message is an error
+			prevGroup = &_archetypeGroups.begin()->second.data()->get();
+		}
+		uiw prevEntityIndex = uiw_max;
+
 		for (uiw index = 0, size = stream->entityIds.size(); index < size; ++index)
         {
+			EntityID entityID = stream->entityIds[index];
+
             ASSUME(!desc.isTag); // tag components cannot be changed
+			ASSUME(entityID);
 
-            auto entityLocation = _entitiesLocations.find(stream->entityIds[index]);
-            ASSUME(entityLocation != _entitiesLocations.end());
+			ArchetypeGroup *group = prevGroup;
+			uiw entityIndex = prevEntityIndex + 1;
 
-            auto &[group, entityIndex] = entityLocation->second;
+			if (entityID != prevGroup->entities[entityIndex])
+			{
+				auto entityLocation = _entitiesLocations.find(entityID);
+				ASSUME(entityLocation != _entitiesLocations.end());
+
+				group = entityLocation->second.group;
+				entityIndex = entityLocation->second.index;
+			}
 
             uiw componentIndex = 0;
             for (; ; ++componentIndex)
@@ -1506,6 +1527,9 @@ void SystemsManagerST::UpdateECSFromMessages(MessageBuilder &messageBuilder)
             }
 
             memcpy(componentArray.data.get() + componentArray.sizeOf * componentArray.stride * entityIndex + componentArray.sizeOf * offset, stream->data.get() + index * desc.sizeOf, desc.sizeOf);
+
+			prevGroup = group;
+			prevEntityIndex = entityIndex;
         }
     }
 
