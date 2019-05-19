@@ -71,7 +71,7 @@ struct MallocDeleter
 {
     void operator()(void *ptr)
     {
-        free(ptr);
+		Allocator::Malloc::Free(ptr);
     }
 };
 
@@ -79,7 +79,7 @@ struct AlignedMallocDeleter
 {
     void operator()(void *ptr)
     {
-        _aligned_free(ptr);
+        Allocator::MallocRuntimeAlignment::Free(ptr);
     }
 };
 

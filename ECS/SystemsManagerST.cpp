@@ -528,16 +528,15 @@ auto SystemsManagerST::AddNewArchetypeGroup(const ArchetypeFull &archetype, Arra
 
 		// allocate memory
 		ASSUME(componentArray.sizeOf > 0 && componentArray.stride > 0 && group.reservedCount > 0 && componentArray.alignmentOf > 0);
-		componentArray.data.reset((ui8 *)_aligned_malloc(componentArray.sizeOf * componentArray.stride * group.reservedCount, componentArray.alignmentOf));
+		componentArray.data.reset(Allocator::MallocRuntimeAlignment::Allocate(componentArray.sizeOf * componentArray.stride * group.reservedCount, componentArray.alignmentOf));
 
 		if (!componentArray.isUnique)
 		{
-			uiw allocSize = sizeof(ComponentID) * componentArray.stride * group.reservedCount;
-			componentArray.ids.reset((ComponentID *)malloc(allocSize));
+			componentArray.ids.reset(Allocator::Malloc::Allocate<ComponentID>(componentArray.stride * group.reservedCount));
 		}
 	}
 
-	group.entities.reset((EntityID *)malloc(sizeof(EntityID) * group.reservedCount));
+	group.entities.reset(Allocator::Malloc::Allocate<EntityID>(group.reservedCount));
     
     // add tag components
     vector<StableTypeId> tagTypes;
@@ -575,19 +574,19 @@ void SystemsManagerST::AddEntityToArchetypeGroup(const ArchetypeFull &archetype,
 			ASSUME(componentArray.sizeOf > 0 && componentArray.stride > 0 && componentArray.alignmentOf > 0);
 
 			void *oldPtr = componentArray.data.release();
-			void *newPtr = _aligned_realloc(oldPtr, componentArray.sizeOf * componentArray.stride * group.reservedCount, componentArray.alignmentOf);
+			void *newPtr = Allocator::MallocRuntimeAlignment::Reallocate(oldPtr, componentArray.sizeOf * componentArray.stride * group.reservedCount, componentArray.alignmentOf);
 			componentArray.data.reset((ui8 *)newPtr);
 
 			if (!componentArray.isUnique)
 			{
 				ComponentID *oldUPtr = componentArray.ids.release();
-				ComponentID *newUPtr = (ComponentID *)realloc(oldUPtr, sizeof(ComponentID) * componentArray.stride * group.reservedCount);
+				ComponentID *newUPtr = Allocator::Malloc::Reallocate(oldUPtr, componentArray.stride * group.reservedCount);
 				componentArray.ids.reset(newUPtr);
 			}
 		}
 
 		EntityID *oldPtr = group.entities.release();
-		EntityID *newPtr = (EntityID *)realloc(oldPtr, sizeof(EntityID) * (group.reservedCount + 1));
+		EntityID *newPtr = Allocator::Malloc::Reallocate(oldPtr, group.reservedCount + 1);
 		group.entities.reset(newPtr);
 
 		newPtr[group.reservedCount] = EntityID(); // use an extra entry to speed up predictive lookups

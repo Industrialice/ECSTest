@@ -560,17 +560,15 @@ auto SystemsManagerMT::AddNewArchetypeGroup(const ArchetypeFull &archetype, Arra
 
         // allocate memory
         ASSUME(componentArray.sizeOf > 0 && componentArray.stride > 0 && group.reservedCount > 0 && componentArray.alignmentOf > 0);
-        componentArray.data.reset((ui8 *)_aligned_malloc(componentArray.sizeOf * componentArray.stride * group.reservedCount, componentArray.alignmentOf));
+        componentArray.data.reset(Allocator::MallocRuntimeAlignment::Allocate(componentArray.sizeOf * componentArray.stride * group.reservedCount, componentArray.alignmentOf));
 
         if (!componentArray.isUnique)
         {
-            uiw allocSize = sizeof(ComponentID) * componentArray.stride * group.reservedCount;
-            componentArray.ids.reset((ComponentID *)malloc(allocSize));
-            memset(componentArray.ids.get(), 0x0, allocSize);
+			componentArray.ids.reset(Allocator::Malloc::Allocate<ComponentID>(componentArray.stride * group.reservedCount));
         }
     }
 
-    group.entities.reset((EntityID *)malloc(sizeof(EntityID) * group.reservedCount));
+    group.entities.reset(Allocator::Malloc::Allocate<EntityID>(group.reservedCount));
 
     // also add that archetype to the library
     _archetypeReflector.AddToLibrary(archetype.ToShort(), move(uniqueTypes));
@@ -591,20 +589,19 @@ void SystemsManagerMT::AddEntityToArchetypeGroup(const ArchetypeFull &archetype,
             ASSUME(componentArray.sizeOf > 0 && componentArray.stride > 0 && group.reservedCount && componentArray.alignmentOf > 0);
 
             void *oldPtr = componentArray.data.release();
-            void *newPtr = _aligned_realloc(oldPtr, componentArray.sizeOf * componentArray.stride * group.reservedCount, componentArray.alignmentOf);
+            void *newPtr = Allocator::MallocRuntimeAlignment::Reallocate(oldPtr, componentArray.sizeOf * componentArray.stride * group.reservedCount, componentArray.alignmentOf);
             componentArray.data.reset((ui8 *)newPtr);
 
             if (!componentArray.isUnique)
             {
                 ComponentID *oldUPtr = componentArray.ids.release();
-                ComponentID *newUPtr = (ComponentID *)realloc(oldUPtr, sizeof(ComponentID) * componentArray.stride * group.reservedCount);
+                ComponentID *newUPtr = Allocator::Malloc::Reallocate(oldUPtr, componentArray.stride * group.reservedCount);
                 componentArray.ids.reset(newUPtr);
-                memset(newUPtr + componentArray.stride * group.entitiesCount, 0x0, (group.reservedCount - group.entitiesCount) * sizeof(ComponentID) * componentArray.stride);
             }
         }
 
         EntityID *oldPtr = group.entities.release();
-        EntityID *newPtr = (EntityID *)realloc(oldPtr, sizeof(EntityID) * group.reservedCount);
+        EntityID *newPtr = Allocator::Malloc::Reallocate(oldPtr, group.reservedCount);
         group.entities.reset(newPtr);
     }
 
