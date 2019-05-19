@@ -21,7 +21,14 @@
       <ControlFlowGuard>false</ControlFlowGuard>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <FloatingPointModel>Fast</FloatingPointModel>
+      <AdditionalOptions>/Gw %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
+    <Link>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+    <Link>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+    </Link>
   </ItemDefinitionGroup>
   <ItemGroup />
 </Project>

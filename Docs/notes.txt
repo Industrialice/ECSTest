@@ -13,6 +13,7 @@ TODO:
 +Implement RequiredComponentAny
 Implement component groups for RequiredComponentAny
 +Implement OptionalComponent
+Implement solution for shared components
 
 Shader parameters:
 

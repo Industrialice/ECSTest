@@ -23,7 +23,7 @@
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <OpenMPSupport>false</OpenMPSupport>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <AdditionalOptions>/await %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>/await /volatile:iso %(AdditionalOptions)</AdditionalOptions>
       <SDLCheck>false</SDLCheck>
     </ClCompile>
     <Link>
