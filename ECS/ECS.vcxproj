@@ -44,7 +44,6 @@
     <ClInclude Include="System.hpp" />
     <ClInclude Include="SystemCreation.hpp" />
     <ClInclude Include="SystemsManager.hpp" />
-    <ClInclude Include="SystemsManagerMT.hpp" />
     <ClInclude Include="SystemsManagerST.hpp" />
     <ClInclude Include="WokerThread.hpp" />
   </ItemGroup>
@@ -69,14 +68,6 @@
     <ClCompile Include="RecordingKeyController.cpp" />
     <ClCompile Include="System.cpp" />
     <ClCompile Include="SystemsManager.cpp" />
-    <ClCompile Include="SystemsManagerMT.cpp">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ReleaseXP|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='ReleaseXP|x64'">true</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
-    </ClCompile>
     <ClCompile Include="SystemsManagerST.cpp" />
     <ClCompile Include="WokerThread.cpp" />
   </ItemGroup>
