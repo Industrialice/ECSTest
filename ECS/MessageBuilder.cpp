@@ -161,7 +161,7 @@ void MessageBuilder::ComponentChanged(EntityID entityID, const SerializedCompone
         ASSUME(entry->dataReserved >= copyIndex + sc.sizeOf);
 
         ui8 *oldPtr = entry->data.release();
-        ui8 *newPtr = Allocator::MallocRuntimeAlignment::Reallocate(oldPtr, entry->dataReserved, sc.alignmentOf);
+        ui8 *newPtr = Allocator::MallocAlignedRuntime::Reallocate(oldPtr, entry->dataReserved, sc.alignmentOf);
         entry->data.reset(newPtr);
     }
 
@@ -170,7 +170,7 @@ void MessageBuilder::ComponentChanged(EntityID entityID, const SerializedCompone
 	{
 		entry->componentIds.emplace_back(sc.id);
 	}
-    memcpy(entry->data.get() + copyIndex, sc.data, sc.sizeOf);
+    MemOps::Copy(entry->data.get() + copyIndex, sc.data, sc.sizeOf);
 }
 
 void MessageBuilder::ComponentChangedHint(const ComponentDescription &desc, uiw count)
@@ -201,7 +201,7 @@ void MessageBuilder::ComponentChangedHint(const ComponentDescription &desc, uiw 
 		entry->dataReserved = (ui32)memSize;
 
 		ui8 *oldPtr = entry->data.release();
-		ui8 *newPtr = Allocator::MallocRuntimeAlignment::Reallocate(oldPtr, entry->dataReserved, desc.alignmentOf);
+		ui8 *newPtr = Allocator::MallocAlignedRuntime::Reallocate(oldPtr, entry->dataReserved, desc.alignmentOf);
 		entry->data.reset(newPtr);
 	}
 }

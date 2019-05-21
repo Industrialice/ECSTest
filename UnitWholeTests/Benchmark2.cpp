@@ -431,7 +431,7 @@ void Benchmark2()
 
     std::vector<f32> fpsHistory{};
 	char backBuf[512];
-	memset(backBuf, '\b', sizeof(backBuf));
+	MemOps::Set(backBuf, '\b', sizeof(backBuf));
 	int lastPrinted = 510;
 
     for (;;)

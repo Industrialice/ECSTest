@@ -61,7 +61,7 @@ auto ComponentArrayBuilder::AddComponent(const SerializedComponent &sc) -> Compo
     if (sc.isTag == false)
     {
         SerializedComponent &added = _components.back();
-        memcpy(_data.data() + copyIndex, sc.data, sc.sizeOf);
+        MemOps::Copy(_data.data() + copyIndex, sc.data, sc.sizeOf);
 
         added.data = _data.data() + copyIndex;
     }

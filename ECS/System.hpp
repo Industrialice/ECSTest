@@ -50,6 +50,7 @@ namespace ECSTest
 			Array<const ArchetypeDefiningRequirement> archetypeDefiningInfoOnly; // contains elements from archetypeDefining, but without the access information
         };
 
+		virtual ~System() = default;
 		[[nodiscard]] virtual const Requests &RequestedComponents() const = 0;
 		[[nodiscard]] virtual StableTypeId GetTypeId() const = 0;
         [[nodiscard]] virtual string_view GetTypeName() const = 0;

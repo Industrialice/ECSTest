@@ -587,7 +587,7 @@ public:
 					ASSUME(alignment >= alignof(ComponentFirstName));
 
 					ComponentFirstName *casted = (ComponentFirstName *)c.data;
-					ASSUME(!memcmp(casted->name.data(), refName.name.data(), refName.name.size()));
+					ASSUME(!MemOps::Compare(casted->name.data(), refName.name.data(), refName.name.size()));
 				};
 
 				checkFirstName(c0.type == ComponentFirstName::GetTypeId() ? c0 : c1);
@@ -628,7 +628,7 @@ public:
 			{
 				++checked;
 				auto &casted = component.component;
-				ASSUME(!memcmp(entityAfterChangeNames[component.entityID].name.data(), casted.name.data(), casted.name.size()));
+				ASSUME(!MemOps::Compare(entityAfterChangeNames[component.entityID].name.data(), casted.name.data(), casted.name.size()));
 			}
 		}
 		ASSUME(checked == entityAfterChangeNames.size());

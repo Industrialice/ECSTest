@@ -1,15 +1,14 @@
 #pragma once
 
+#ifdef _MSC_VER
+    #include "WinAPI.hpp"
+    #include <d3d11.h>
+#endif
+
 #include <PreHeader.hpp>
 #include <forward_list>
 #include <SystemsManager.hpp>
 #include <KeyController.hpp>
-#include <SystemCreation.hpp>
-
-#ifdef PLATFORM_WINDOWS
-    #include "WinAPI.hpp"
-    #include <d3d11.h>
-#endif
 
 using namespace ECSTest;
 

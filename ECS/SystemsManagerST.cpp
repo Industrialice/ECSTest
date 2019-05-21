@@ -528,7 +528,7 @@ auto SystemsManagerST::AddNewArchetypeGroup(const ArchetypeFull &archetype, Arra
 
 		// allocate memory
 		ASSUME(componentArray.sizeOf > 0 && componentArray.stride > 0 && group.reservedCount > 0 && componentArray.alignmentOf > 0);
-		componentArray.data.reset(Allocator::MallocRuntimeAlignment::Allocate(componentArray.sizeOf * componentArray.stride * group.reservedCount, componentArray.alignmentOf));
+		componentArray.data.reset(Allocator::MallocAlignedRuntime::Allocate(componentArray.sizeOf * componentArray.stride * group.reservedCount, componentArray.alignmentOf));
 
 		if (!componentArray.isUnique)
 		{
@@ -574,7 +574,7 @@ void SystemsManagerST::AddEntityToArchetypeGroup(const ArchetypeFull &archetype,
 			ASSUME(componentArray.sizeOf > 0 && componentArray.stride > 0 && componentArray.alignmentOf > 0);
 
 			void *oldPtr = componentArray.data.release();
-			void *newPtr = Allocator::MallocRuntimeAlignment::Reallocate(oldPtr, componentArray.sizeOf * componentArray.stride * group.reservedCount, componentArray.alignmentOf);
+			void *newPtr = Allocator::MallocAlignedRuntime::Reallocate(oldPtr, componentArray.sizeOf * componentArray.stride * group.reservedCount, componentArray.alignmentOf);
 			componentArray.data.reset((ui8 *)newPtr);
 
 			if (!componentArray.isUnique)
@@ -604,7 +604,7 @@ void SystemsManagerST::AddEntityToArchetypeGroup(const ArchetypeFull &archetype,
 	{
 		if (group.components[index].isUnique == false)
 		{
-			memset(group.components[index].ids.get() + group.entitiesCount * group.components[index].stride, ComponentID::invalidId, sizeof(ComponentID) * group.components[index].stride);
+			MemOps::Set(group.components[index].ids.get() + group.entitiesCount * group.components[index].stride, ComponentID::invalidId, sizeof(ComponentID) * group.components[index].stride);
 		}
 	}
 
@@ -650,7 +650,7 @@ void SystemsManagerST::AddEntityToArchetypeGroup(const ArchetypeFull &archetype,
                 ASSUME(component.id.IsValid() == false);
             }
 
-            memcpy(componentArray.data.get() + componentArray.sizeOf * componentArray.stride * group.entitiesCount + offset * componentArray.sizeOf, component.data, componentArray.sizeOf);
+            MemOps::Copy(componentArray.data.get() + componentArray.sizeOf * componentArray.stride * group.entitiesCount + offset * componentArray.sizeOf, component.data, componentArray.sizeOf);
         }
 
 		if (componentBuilder)
@@ -1296,17 +1296,17 @@ void SystemsManagerST::UpdateECSFromMessages(MessageBuilder &messageBuilder)
             for (uiw componentIndex = 0; componentIndex < group.uniqueTypedComponentsCount; ++componentIndex)
             {
                 auto &arr = group.components[componentIndex];
-                void *target = arr.data.get() + arr.sizeOf * index * arr.stride;
-                const void *source = arr.data.get() + arr.sizeOf * replaceIndex * arr.stride;
+                ui8 *target = arr.data.get() + arr.sizeOf * index * arr.stride;
+                const ui8 *source = arr.data.get() + arr.sizeOf * replaceIndex * arr.stride;
                 uiw copySize = arr.sizeOf * arr.stride;
-                memcpy(target, source, copySize);
+                MemOps::Copy(target, source, copySize);
 
                 if (!arr.isUnique)
                 {
                     ComponentID *idTarget = arr.ids.get() + index * arr.stride;
                     const ComponentID *idSource = arr.ids.get() + replaceIndex * arr.stride;
                     uiw idCopySize = sizeof(ComponentID) * arr.stride;
-                    memcpy(idTarget, idSource, idCopySize);
+                    MemOps::Copy(idTarget, idSource, idCopySize);
                 }
             }
         }
@@ -1525,7 +1525,7 @@ void SystemsManagerST::UpdateECSFromMessages(MessageBuilder &messageBuilder)
                 }
             }
 
-            memcpy(componentArray.data.get() + componentArray.sizeOf * componentArray.stride * entityIndex + componentArray.sizeOf * offset, stream->data.get() + index * desc.sizeOf, desc.sizeOf);
+            MemOps::Copy(componentArray.data.get() + componentArray.sizeOf * componentArray.stride * entityIndex + componentArray.sizeOf * offset, stream->data.get() + index * desc.sizeOf, desc.sizeOf);
 
 			prevGroup = group;
 			prevEntityIndex = entityIndex;

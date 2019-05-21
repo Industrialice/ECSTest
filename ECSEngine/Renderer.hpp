@@ -1,5 +1,6 @@
 #pragma once
 
+#include <SystemCreation.hpp>
 #include "Components.hpp"
 
 namespace ECSEngine

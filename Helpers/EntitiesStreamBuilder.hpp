@@ -29,7 +29,7 @@ namespace ECSTest
                 {
 					uiw offset = componentsData.size();
 					componentsData.resize(offset + sizeof(T));
-                    memcpy(componentsData.data() + offset, &component, sizeof(T));
+                    MemOps::Copy(componentsData.data() + offset, (ui8 *)&component, sizeof(T));
                 }
                 descs.emplace_back(desc);
             }
