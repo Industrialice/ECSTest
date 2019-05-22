@@ -18,7 +18,7 @@ Archetype ECSTest::Archetype::FromFull(const ArchetypeFull &source)
 bool ECSTest::Archetype::operator == (const Archetype &other) const
 {
     bool equalTest = _u.typePart == other._u.typePart;
-#ifdef DEBUG
+#ifdef CHECK_TYPES_IN_ARCHETYPES
     if (equalTest)
     {
         ASSUME(std::equal(_storedTypes.begin(), _storedTypes.end(), other._storedTypes.begin(), other._storedTypes.end()));
@@ -48,7 +48,7 @@ Archetype ArchetypeFull::ToShort() const
 {
     Archetype result;
     result._u.typePart = _u.typePart;
-#ifdef DEBUG
+#ifdef CHECK_TYPES_IN_ARCHETYPES
     result._storedTypes = _storedTypes;
 #endif
     return result;
@@ -57,7 +57,7 @@ Archetype ArchetypeFull::ToShort() const
 bool ArchetypeFull::operator == (const ArchetypeFull &other) const
 {
     bool equalTest = _u.typePart == other._u.typePart && _u.idPart == other._u.idPart;
-#ifdef DEBUG
+#ifdef CHECK_TYPES_IN_ARCHETYPES
     if (equalTest)
     {
         ASSUME(std::equal(_storedTypes.begin(), _storedTypes.end(), other._storedTypes.begin(), other._storedTypes.end()));

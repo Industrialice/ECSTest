@@ -670,8 +670,8 @@ void SystemsManagerST::AddEntityToArchetypeGroup(const ArchetypeFull &archetype,
 
 void SystemsManagerST::StartScheduler(vector<unique_ptr<IEntitiesStream>> &streams)
 {
-	MessageBuilder messageBulder;
-    messageBulder.SourceName("Initial Streaming");
+	ASSUME(_tempMessageBuilder.IsEmpty());
+    _tempMessageBuilder.SourceName("Initial Streaming");
 	vector<SerializedComponent> serialized;
 
     auto before = TimeMoment::Now();
@@ -683,20 +683,22 @@ void SystemsManagerST::StartScheduler(vector<unique_ptr<IEntitiesStream>> &strea
 			AssignComponentIDs(ToArray(serialized), _componentIdGenerator);
 			ArchetypeFull entityArchetype = ComputeArchetype(ToArray(serialized));
 			ArchetypeGroup &archetypeGroup = FindArchetypeGroup(entityArchetype, ToArray(serialized));
-			AddEntityToArchetypeGroup(entityArchetype, archetypeGroup, entity->entityId, ToArray(serialized), &messageBulder);
+			AddEntityToArchetypeGroup(entityArchetype, archetypeGroup, entity->entityId, ToArray(serialized), &_tempMessageBuilder);
 		}
+		stream = {};
 	}
     auto after = TimeMoment::Now();
     if (streams.size())
     {
         _logger->Message(LogLevels::Info, selfName, "Creating ECS structure took %.2lfs\n", (after - before).ToSec_f64());
+		streams.clear();
     }
 
-	auto &entityAddedStreams = messageBulder.EntityAddedStreams();
+	auto &entityAddedStreams = _tempMessageBuilder.EntityAddedStreams();
 	for (auto &[archetype, messages] : entityAddedStreams._data)
 	{
 		auto reflected = _archetypeReflector.Reflect(archetype);
-		MessageStreamEntityAdded stream = {archetype, messages, messageBulder.SourceName()};
+		MessageStreamEntityAdded stream = {archetype, messages, _tempMessageBuilder.SourceName()};
 		for (auto &pipeline : _pipelines)
 		{
 			for (auto &managed : pipeline.indirectSystems)
@@ -708,6 +710,8 @@ void SystemsManagerST::StartScheduler(vector<unique_ptr<IEntitiesStream>> &strea
 			}
 		}
 	}
+	
+	_tempMessageBuilder.Clear();
 
     _currentTime = TimeMoment::Now();
 

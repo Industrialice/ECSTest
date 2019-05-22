@@ -24,9 +24,9 @@ namespace ECSTest
         std::map<vector<ArchetypeDefiningRequirement>, vector<Archetype>, MatchingRequirementComparator> _matchingRequirementArchetypes{}; // mapping each requirement to the list of archetypes all of whom satisfy it
 
 	public:
-        [[nodiscard]] bool Contains(Archetype archetype) const;
-		void AddToLibrary(Archetype archetype, vector<StableTypeId> &&types);
-        [[nodiscard]] Array<const StableTypeId> Reflect(Archetype archetype) const;
+        [[nodiscard]] bool Contains(const Archetype &archetype) const;
+		void AddToLibrary(const Archetype &archetype, vector<StableTypeId> &&types);
+        [[nodiscard]] Array<const StableTypeId> Reflect(const Archetype &archetype) const;
         void StartTrackingMatchingArchetypes(uiw id, Array<const ArchetypeDefiningRequirement> archetypeDefining);
         void StopTrackingMatchingArchetypes(uiw id);
         [[nodiscard]] const vector<Archetype> &FindMatchingArchetypes(uiw id) const; // the reference is valid as long as you continue tracking that id

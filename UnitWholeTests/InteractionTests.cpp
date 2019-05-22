@@ -599,4 +599,7 @@ void InteractionTests()
     PrintStreamInfo(*ecsstream, true);
 
     manager->Stop(true);
+
+	CurrentData = {};
+	ValueGenerator = 0;
 }

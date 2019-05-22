@@ -3,6 +3,10 @@
 #include "TypeIdentifiable.hpp"
 #include "Component.hpp"
 
+#ifdef DEBUG
+	#define CHECK_TYPES_IN_ARCHETYPES
+#endif
+
 namespace ECSTest
 {
     class ArchetypeFull;
@@ -20,7 +24,7 @@ namespace ECSTest
             } _u{};
         };
 
-    #ifdef DEBUG
+    #ifdef CHECK_TYPES_IN_ARCHETYPES
         friend class ArchetypeReflector;
         vector<StableTypeId> _storedTypes{};
     #endif
@@ -61,13 +65,13 @@ namespace ECSTest
                     unduplicated[count++] = tType;
                     result._u.typePart ^= (ui32)tType.Hash();
 
-                #ifdef DEBUG
+                #ifdef CHECK_TYPES_IN_ARCHETYPES
                     result._storedTypes.push_back(tType);
                 #endif
                 }
             }
 
-        #ifdef DEBUG
+        #ifdef CHECK_TYPES_IN_ARCHETYPES
             std::sort(result._storedTypes.begin(), result._storedTypes.end());
         #endif
 
@@ -95,7 +99,7 @@ namespace ECSTest
             } _u{};
         };
 
-    #ifdef DEBUG
+    #ifdef CHECK_TYPES_IN_ARCHETYPES
         friend class ArchetypeReflector;
         vector<StableTypeId> _storedTypes{};
         vector<StableTypeId> _storedTypesFull{};
@@ -109,7 +113,7 @@ namespace ECSTest
             auto shor = Archetype::Create<T, E, type>(types);
             result._u.typePart = shor._u.typePart;
 
-        #ifdef DEBUG
+        #ifdef CHECK_TYPES_IN_ARCHETYPES
             result._storedTypes = move(shor._storedTypes);
             for (const auto &t : types)
             {

@@ -9,7 +9,7 @@ namespace
 	constexpr bool IsPhysicsUsingComponentChangedHints = true;
 	constexpr bool IsShuffleUpdatesOrder = false;
     constexpr ui32 EntitiesToTest = 32768;
-    constexpr ui32 PhysicsUpdatesPerFrame = 100;
+    constexpr ui32 PhysicsUpdatesPerFrame = 5000;
     constexpr ui32 RendererDrawPerFrame = 100;
 
     COMPONENT(Physics)

@@ -3,7 +3,7 @@
 
 using namespace ECSTest;
 
-bool ArchetypeReflector::Contains(Archetype archetype) const
+bool ArchetypeReflector::Contains(const Archetype &archetype) const
 {
 	auto unlocker = _lock.Lock(DIWRSpinLock::LockType::Read);
 	bool contains = _library.find(archetype) != _library.end();
@@ -11,9 +11,9 @@ bool ArchetypeReflector::Contains(Archetype archetype) const
 	return contains;
 }
 
-void ArchetypeReflector::AddToLibrary(Archetype archetype, vector<StableTypeId> &&types)
+void ArchetypeReflector::AddToLibrary(const Archetype &archetype, vector<StableTypeId> &&types)
 {
-#ifdef DEBUG
+#ifdef CHECK_TYPES_IN_ARCHETYPES
     ASSUME(std::equal(archetype._storedTypes.begin(), archetype._storedTypes.end(), types.begin(), types.end()));
 #endif
 
@@ -37,14 +37,14 @@ void ArchetypeReflector::AddToLibrary(Archetype archetype, vector<StableTypeId> 
     unlocker.Unlock();
 }
 
-Array<const StableTypeId> ArchetypeReflector::Reflect(Archetype archetype) const
+Array<const StableTypeId> ArchetypeReflector::Reflect(const Archetype &archetype) const
 {
 	auto unlocker = _lock.Lock(DIWRSpinLock::LockType::Read);
 	auto it = _library.find(archetype);
 	ASSUME(it != _library.end());
 	auto types = ToArray(it->second);
     unlocker.Unlock();
-#ifdef DEBUG
+#ifdef CHECK_TYPES_IN_ARCHETYPES
     ASSUME(std::equal(types.begin(), types.end(), archetype._storedTypes.begin(), archetype._storedTypes.end()));
 #endif
 	return types;
