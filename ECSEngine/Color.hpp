@@ -167,15 +167,7 @@ namespace ECSEngine
             A(convert(source[3], aMax));
         }
 
-		[[nodiscard]] bool operator == (const TColor &other) const
-        {
-            return this->value == other.value;
-        }
-
-		[[nodiscard]] bool operator != (const TColor &other) const
-        {
-            return this->value != other.value;
-        }
+		[[nodiscard]] auto operator <=> (const TColor &other) const = default;
 
     protected:
         template <typename T, ui32 targetBits, ui32 sourceBits, typename U> [[nodiscard]]T ConvertColor(U sourceColor)

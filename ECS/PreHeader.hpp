@@ -14,6 +14,7 @@
 #include <map>
 #include <cstdlib>
 #include <stack>
+#include <compare>
 #include <experimental/coroutine>
 #include <experimental/generator>
 

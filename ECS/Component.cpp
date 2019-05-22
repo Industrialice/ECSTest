@@ -16,35 +16,37 @@ bool ComponentID::IsValid() const
     return _id != invalidId;
 }
 
-bool ComponentID::operator == (const ComponentID &other) const
-{
-    return _id == other._id;
-}
+#ifndef SPACESHIP_SUPPORTED
+	bool ComponentID::operator == (const ComponentID &other) const
+	{
+		return _id == other._id;
+	}
 
-bool ComponentID::operator != (const ComponentID &other) const
-{
-    return _id != other._id;
-}
+	bool ComponentID::operator != (const ComponentID &other) const
+	{
+		return _id != other._id;
+	}
 
-bool ComponentID::operator < (const ComponentID &other) const
-{
-    return _id < other._id;
-}
+	bool ComponentID::operator < (const ComponentID &other) const
+	{
+		return _id < other._id;
+	}
 
-bool ComponentID::operator <= (const ComponentID &other) const
-{
-	return _id <= other._id;
-}
+	bool ComponentID::operator <= (const ComponentID &other) const
+	{
+		return _id <= other._id;
+	}
 
-bool ComponentID::operator > (const ComponentID &other) const
-{
-	return _id > other._id;
-}
+	bool ComponentID::operator > (const ComponentID &other) const
+	{
+		return _id > other._id;
+	}
 
-bool ComponentID::operator >= (const ComponentID &other) const
-{
-	return _id >= other._id;
-}
+	bool ComponentID::operator >= (const ComponentID &other) const
+	{
+		return _id >= other._id;
+	}
+#endif
 
 ComponentID::operator bool() const
 {

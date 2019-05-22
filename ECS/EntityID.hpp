@@ -16,12 +16,16 @@ namespace ECSTest
         EntityID() = default;
         explicit EntityID(ui32 id);
 		[[nodiscard]] ui32 Hash() const;
+#ifdef SPACESHIP_SUPPORTED
+		[[nodiscard]] auto operator <=> (const EntityID &other) const = default;
+#else
 		[[nodiscard]] bool operator == (const EntityID &other) const;
 		[[nodiscard]] bool operator != (const EntityID &other) const;
 		[[nodiscard]] bool operator < (const EntityID &other) const;
 		[[nodiscard]] bool operator <= (const EntityID &other) const;
 		[[nodiscard]] bool operator > (const EntityID &other) const;
 		[[nodiscard]] bool operator >= (const EntityID &other) const;
+#endif
 		[[nodiscard]] bool IsValid() const;
 		[[nodiscard]] explicit operator bool() const;
 	};
@@ -35,8 +39,8 @@ namespace ECSTest
 		[[nodiscard]] EntityID Generate();
 		[[nodiscard]] EntityID LastGenerated() const;
         EntityIDGenerator() = default;
-        EntityIDGenerator(EntityIDGenerator &&source);
-        EntityIDGenerator &operator = (EntityIDGenerator &&source);
+        EntityIDGenerator(EntityIDGenerator &&source) noexcept;
+        EntityIDGenerator &operator = (EntityIDGenerator &&source) noexcept;
     };
 }
 

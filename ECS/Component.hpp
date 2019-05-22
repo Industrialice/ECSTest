@@ -42,12 +42,16 @@ namespace ECSTest
         explicit ComponentID(ui32 id);
 		[[nodiscard]] ui32 ID() const;
 		[[nodiscard]] bool IsValid() const;
+#ifdef SPACESHIP_SUPPORTED
+		[[nodiscard]] auto operator <=> (const ComponentID &other) const = default;
+#else
 		[[nodiscard]] bool operator == (const ComponentID &other) const;
 		[[nodiscard]] bool operator != (const ComponentID &other) const;
 		[[nodiscard]] bool operator < (const ComponentID &other) const;
 		[[nodiscard]] bool operator <= (const ComponentID &other) const;
 		[[nodiscard]] bool operator > (const ComponentID &other) const;
 		[[nodiscard]] bool operator >= (const ComponentID &other) const;
+#endif
 		[[nodiscard]] explicit operator bool() const;
 	};
 

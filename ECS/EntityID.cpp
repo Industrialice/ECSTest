@@ -12,35 +12,37 @@ ui32 EntityID::Hash() const
 	return _id;
 }
 
-bool EntityID::operator == (const EntityID &other) const
-{
-	return _id == other._id;
-}
+#ifndef SPACESHIP_SUPPORTED
+	bool EntityID::operator == (const EntityID &other) const
+	{
+		return _id == other._id;
+	}
 
-bool EntityID::operator != (const EntityID &other) const
-{
-	return _id != other._id;
-}
+	bool EntityID::operator != (const EntityID &other) const
+	{
+		return _id != other._id;
+	}
 
-bool EntityID::operator < (const EntityID &other) const
-{
-	return _id < other._id;
-}
+	bool EntityID::operator < (const EntityID &other) const
+	{
+		return _id < other._id;
+	}
 
-bool EntityID::operator <= (const EntityID &other) const
-{
-	return _id <= other._id;
-}
+	bool EntityID::operator <= (const EntityID &other) const
+	{
+		return _id <= other._id;
+	}
 
-bool EntityID::operator > (const EntityID &other) const
-{
-	return _id > other._id;
-}
+	bool EntityID::operator > (const EntityID &other) const
+	{
+		return _id > other._id;
+	}
 
-bool EntityID::operator >= (const EntityID &other) const
-{
-	return _id >= other._id;
-}
+	bool EntityID::operator >= (const EntityID &other) const
+	{
+		return _id >= other._id;
+	}
+#endif
 
 bool EntityID::IsValid() const
 {
@@ -64,10 +66,10 @@ EntityID EntityIDGenerator::LastGenerated() const
     return EntityID(_current.load() - 1);
 }
 
-EntityIDGenerator::EntityIDGenerator(EntityIDGenerator &&source) : _current{source._current.load()}
+EntityIDGenerator::EntityIDGenerator(EntityIDGenerator &&source) noexcept : _current{source._current.load()}
 {}
 
-EntityIDGenerator &EntityIDGenerator::operator = (EntityIDGenerator &&source)
+EntityIDGenerator &EntityIDGenerator::operator = (EntityIDGenerator &&source) noexcept
 {
     ASSUME(this != &source);
     _current.store(source._current.load());

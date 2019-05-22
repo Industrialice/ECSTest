@@ -604,7 +604,7 @@ void SystemsManagerST::AddEntityToArchetypeGroup(const ArchetypeFull &archetype,
 	{
 		if (group.components[index].isUnique == false)
 		{
-			MemOps::Set(group.components[index].ids.get() + group.entitiesCount * group.components[index].stride, ComponentID::invalidId, sizeof(ComponentID) * group.components[index].stride);
+			MemOps::Set(group.components[index].ids.get() + group.entitiesCount * group.components[index].stride, ComponentID::invalidId & 0xFF, sizeof(ComponentID) * group.components[index].stride);
 		}
 	}
 
