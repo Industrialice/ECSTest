@@ -32,7 +32,9 @@ namespace ECSEngine
 	};
 
     struct SkinnedMeshRenderer : Component<SkinnedMeshRenderer>
-    {};
+    {
+		char nullChar = '\0';
+	};
 
     struct Window
     {

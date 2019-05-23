@@ -47,7 +47,10 @@ namespace
     };
 
     struct TempComponent : Component<TempComponent>
-    {};
+    {
+		char nullChar = '\0';
+	};
+	static_assert(sizeof(TempComponent) == 1);
 
     struct GeneratorInfoComponent : Component<GeneratorInfoComponent>
     {
