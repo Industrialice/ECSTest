@@ -65,7 +65,7 @@ namespace ECSTest
         [[nodiscard]] virtual ManagerInfo GetManagerInfo() const = 0;
         virtual void SetLogger(const shared_ptr<LoggerType> &logger) = 0;
         virtual void Register(unique_ptr<System> system, Pipeline pipeline) = 0;
-        virtual void Unregister(StableTypeId systemType) = 0;
+        virtual void Unregister(TypeId systemType) = 0;
         virtual void Start(EntityIDGenerator &&idGenerator, vector<WorkerThread> &&workers, vector<unique_ptr<IEntitiesStream>> &&streams) = 0;
         virtual void Pause(bool isWaitForStop) = 0; // you can call it multiple times, for example first time as Pause(false), and then as Pause(true) to wait for paused
         virtual void Resume() = 0;

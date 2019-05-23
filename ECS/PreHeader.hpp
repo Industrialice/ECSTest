@@ -52,6 +52,7 @@ using std::declval;
 using std::make_pair;
 using std::make_shared;
 using std::make_unique;
+using std::make_array;
 using std::nullopt;
 using std::tuple_element_t;
 using std::enable_if_t;
@@ -85,5 +86,3 @@ struct AlignedMallocDeleter
 };
 
 class UnitTests;
-
-using Funcs::make_array;

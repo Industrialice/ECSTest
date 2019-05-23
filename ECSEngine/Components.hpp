@@ -4,34 +4,34 @@
 
 namespace ECSEngine
 {
-    COMPONENT(Position)
+    struct Position : Component<Position>
     {
 		Vector3 position = {0, 0, 0};
     };
 
-    COMPONENT(Rotation)
+    struct Rotation : Component<Rotation>
     {
 		Quaternion rotation{};
     };
 
-    COMPONENT(Scale)
+    struct Scale : Component<Scale>
     {
 		Vector3 scale = {1, 1, 1};
     };
 
-    COMPONENT(Parent)
+    struct Parent : Component<Parent>
     {
 		EntityID parent{};
     };
 
-	TAG_COMPONENT(HasChildren);
+	struct HasChildren : TagComponent<HasChildren> {};
 
-    COMPONENT(MeshRenderer)
+    struct MeshRenderer : Component<MeshRenderer>
     {
 		ui32 index = 0;
 	};
 
-    COMPONENT(SkinnedMeshRenderer)
+    struct SkinnedMeshRenderer : Component<SkinnedMeshRenderer>
     {};
 
     struct Window
@@ -61,7 +61,7 @@ namespace ECSEngine
         variant<std::monostate, Window> target{};
     };
 
-    COMPONENT(Camera)
+    struct Camera : Component<Camera>
     {
         f32 fov;
         f32 size;

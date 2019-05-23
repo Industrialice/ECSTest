@@ -177,13 +177,13 @@ namespace ECSTest
 
     private:
         shared_ptr<const vector<EntityWithComponents>> _source{};
-        StableTypeId _type{};
+        TypeId _type{};
         string_view _sourceName{};
 
-        MessageStreamComponentAdded(StableTypeId type, const shared_ptr<const vector<EntityWithComponents>> &source, string_view sourceName) : _type(type), _source(source), _sourceName(sourceName)
+        MessageStreamComponentAdded(TypeId type, const shared_ptr<const vector<EntityWithComponents>> &source, string_view sourceName) : _type(type), _source(source), _sourceName(sourceName)
         {
             ASSUME(_source->size());
-			ASSUME(_type != StableTypeId{});
+			ASSUME(_type != TypeId{});
         }
 
         [[nodiscard]] string_view SourceName() const
@@ -202,7 +202,7 @@ namespace ECSTest
             return _source->data() + _source->size();
         }
 
-        [[nodiscard]] StableTypeId Type() const
+        [[nodiscard]] TypeId Type() const
         {
             return _type;
         }
@@ -240,7 +240,7 @@ namespace ECSTest
         MessageStreamComponentChanged(const shared_ptr<const InfoWithData> &source, ComponentDescription componentDesc, string_view sourceName) : _source(source), _componentDesc(componentDesc), _sourceName(sourceName)
         {
             ASSUME(_source->entityIds.size());
-			ASSUME(componentDesc.type != StableTypeId{});
+			ASSUME(componentDesc.type != TypeId{});
         }
 
         [[nodiscard]] string_view SourceName() const
@@ -339,7 +339,7 @@ namespace ECSTest
 			return {*this, T::GetTypeId() != _componentDesc.type};
 		}
 
-		[[nodiscard]] StableTypeId Type() const
+		[[nodiscard]] TypeId Type() const
 		{
 			return _componentDesc.type;
 		}
@@ -370,13 +370,13 @@ namespace ECSTest
 
     private:
         shared_ptr<const ComponentsInfo> _source{};
-        StableTypeId _type{};
+        TypeId _type{};
         string_view _sourceName{};
 
-        MessageStreamComponentRemoved(StableTypeId type, const shared_ptr<const ComponentsInfo> &source, string_view sourceName) : _type(type), _source(source), _sourceName(sourceName)
+        MessageStreamComponentRemoved(TypeId type, const shared_ptr<const ComponentsInfo> &source, string_view sourceName) : _type(type), _source(source), _sourceName(sourceName)
         {
             ASSUME(_source->entityIds.size());
-			ASSUME(_type != StableTypeId{});
+			ASSUME(_type != TypeId{});
         }
 
         [[nodiscard]] string_view SourceName() const
@@ -471,7 +471,7 @@ namespace ECSTest
 			return {*this, T::GetTypeId() != _type};
 		}
 
-        [[nodiscard]] StableTypeId Type() const
+        [[nodiscard]] TypeId Type() const
         {
             return _type;
         }
@@ -531,7 +531,7 @@ namespace ECSTest
         friend class MessageBuilder;
         friend UnitTests;
 
-        vector<pair<StableTypeId, shared_ptr<vector<MessageStreamComponentAdded::EntityWithComponents>>>> _data{};
+        vector<pair<TypeId, shared_ptr<vector<MessageStreamComponentAdded::EntityWithComponents>>>> _data{};
     };
 
     class MessageStreamsBuilderComponentChanged
@@ -541,7 +541,7 @@ namespace ECSTest
         friend class MessageBuilder;
         friend UnitTests;
 
-        vector<pair<StableTypeId, pair<ComponentDescription, shared_ptr<MessageStreamComponentChanged::InfoWithData>>>> _data{};
+        vector<pair<TypeId, pair<ComponentDescription, shared_ptr<MessageStreamComponentChanged::InfoWithData>>>> _data{};
     };
 
     class MessageStreamsBuilderComponentRemoved
@@ -551,7 +551,7 @@ namespace ECSTest
         friend class MessageBuilder;
         friend UnitTests;
 
-        vector<pair<StableTypeId, shared_ptr<MessageStreamComponentRemoved::ComponentsInfo>>> _data{};
+        vector<pair<TypeId, shared_ptr<MessageStreamComponentRemoved::ComponentsInfo>>> _data{};
     };
 
     class MessageStreamsBuilderEntityRemoved
@@ -598,7 +598,7 @@ namespace ECSTest
             AddComponent(entityID, sc);
         }
 
-        template <typename T, typename = enable_if_t<is_base_of_v<Component, T> == false>, typename = void> void AddComponent(EntityID, const T &)
+        template <typename T, typename = enable_if_t<is_base_of_v<_BaseComponentClass, T> == false>, typename = void> void AddComponent(EntityID, const T &)
         {
             static_assert(false, "Passed value is not a component");
         }
@@ -616,7 +616,7 @@ namespace ECSTest
             AddComponent(entityID, sc);
         }
 
-        template <typename T, typename = enable_if_t<is_base_of_v<Component, T> == false>, typename = void> void AddComponent(EntityID, const T &, ComponentID = {})
+        template <typename T, typename = enable_if_t<is_base_of_v<_BaseComponentClass, T> == false>, typename = void> void AddComponent(EntityID, const T &, ComponentID = {})
         {
             static_assert(false, "Passed value is not a component");
         }
@@ -635,7 +635,7 @@ namespace ECSTest
 			ComponentChanged(entityID, sc);
 		}
 
-        template <typename T, typename = enable_if_t<is_base_of_v<Component, T> == false>, typename = void> void ComponentChanged(EntityID, const T &)
+        template <typename T, typename = enable_if_t<is_base_of_v<_BaseComponentClass, T> == false>, typename = void> void ComponentChanged(EntityID, const T &)
         {
             static_assert(false, "Passed value is not a component");
         }
@@ -653,7 +653,7 @@ namespace ECSTest
             ComponentChanged(entityID, sc);
         }
 
-        template <typename T, typename = enable_if_t<is_base_of_v<Component, T> == false>, typename = void> void ComponentChanged(EntityID, const T &, ComponentID)
+        template <typename T, typename = enable_if_t<is_base_of_v<_BaseComponentClass, T> == false>, typename = void> void ComponentChanged(EntityID, const T &, ComponentID)
         {
             static_assert(false, "Passed value is not a component");
         }
@@ -663,7 +663,7 @@ namespace ECSTest
             RemoveComponent(entityID, T::GetTypeId(), {});
         }
 
-        template <typename T, typename = enable_if_t<is_base_of_v<Component, T> == false>, typename = void> void RemoveComponent(EntityID, const T &)
+        template <typename T, typename = enable_if_t<is_base_of_v<_BaseComponentClass, T> == false>, typename = void> void RemoveComponent(EntityID, const T &)
         {
             static_assert(false, "Passed value is not a component");
         }
@@ -673,7 +673,7 @@ namespace ECSTest
             RemoveComponent(entityID, T::GetTypeId(), id);
         }
 
-        template <typename T, typename = enable_if_t<is_base_of_v<Component, T> == false>, typename = void> void RemoveComponent(EntityID, const T &, ComponentID)
+        template <typename T, typename = enable_if_t<is_base_of_v<_BaseComponentClass, T> == false>, typename = void> void RemoveComponent(EntityID, const T &, ComponentID)
         {
             static_assert(false, "Passed value is not a component");
         }
@@ -682,7 +682,7 @@ namespace ECSTest
         void AddComponent(EntityID entityID, const SerializedComponent &sc);
         void ComponentChanged(EntityID entityID, const SerializedComponent &sc);
 		void ComponentChangedHint(const ComponentDescription &desc, uiw count);
-        void RemoveComponent(EntityID entityID, StableTypeId type, ComponentID componentID);
+        void RemoveComponent(EntityID entityID, TypeId type, ComponentID componentID);
         void RemoveEntity(EntityID entityID);
         void RemoveEntity(EntityID entityID, Archetype archetype);
     

@@ -7,27 +7,27 @@ namespace
     constexpr bool IsMTECS = false;
     constexpr ui32 EntitiesToTest = 1000;
 
-    COMPONENT(CosineResultComponent)
+    struct CosineResultComponent : Component<CosineResultComponent>
     {
         f32 value;
     };
 
-    COMPONENT(SinusResultComponent)
+    struct SinusResultComponent : Component<SinusResultComponent>
     {
         f32 value;
     };
 
-    COMPONENT(SourceComponent)
+    struct SourceComponent : Component<SourceComponent>
     {
         f32 value;
     };
 
-    TAG_COMPONENT(Group0Tag);
-    TAG_COMPONENT(Group1Tag);
-    TAG_COMPONENT(Group2Tag);
-    TAG_COMPONENT(Group3Tag);
+	struct Group0Tag : TagComponent<Group0Tag> {};
+	struct Group1Tag : TagComponent<Group1Tag> {};
+	struct Group2Tag : TagComponent<Group2Tag> {};
+	struct Group3Tag : TagComponent<Group3Tag> {};
 
-    DIRECT_SYSTEM(System0)
+    struct System0 : DirectSystem<System0>
     {
         void Accept(Array<CosineResultComponent> &cosine, Array<SinusResultComponent> &sinus, const Array<SourceComponent> &sources, RequiredComponent<Group0Tag>)
         {
@@ -40,7 +40,7 @@ namespace
         }
     };
 
-    DIRECT_SYSTEM(System1)
+    struct System1 : DirectSystem<System1>
     {
 		void Accept(Array<CosineResultComponent> &cosine, Array<SinusResultComponent> &sinus, const Array<SourceComponent> &sources, RequiredComponent<Group1Tag>)
         {
@@ -53,7 +53,7 @@ namespace
         }
     };
 
-    DIRECT_SYSTEM(System2)
+    struct System2 : DirectSystem<System2>
     {
 		void Accept(Array<CosineResultComponent> &cosine, Array<SinusResultComponent> &sinus, const Array<SourceComponent> &sources, RequiredComponent<Group2Tag>)
         {
@@ -66,7 +66,7 @@ namespace
         }
     };
 
-    DIRECT_SYSTEM(System3)
+    struct System3 : DirectSystem<System3>
     {
 		void Accept(Array<CosineResultComponent> &cosine, Array<SinusResultComponent> &sinus, const Array<SourceComponent> &sources, RequiredComponent<Group3Tag>)
         {

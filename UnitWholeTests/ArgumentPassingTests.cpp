@@ -12,16 +12,16 @@ namespace
 
 	struct ComponentBase
 	{
-		array<StableTypeId, 16> types{};
+		array<TypeId, 16> types{};
 		uiw typesCount = 0;
 
-		void AddType(StableTypeId type)
+		void AddType(TypeId type)
 		{
 			ASSUME(typesCount < 15);
 			types[typesCount++] = type;
 		}
 
-		bool Contains(StableTypeId type) const
+		bool Contains(TypeId type) const
 		{
 			for (uiw index = 0; index < typesCount; ++index)
 			{
@@ -43,27 +43,27 @@ namespace
 		}
 	};
 
-	COMPONENT(Component0), ComponentBase
+	struct Component0 : Component<Component0>, ComponentBase
 	{
 	};
 
-	COMPONENT(Component1), ComponentBase
+	struct Component1 : Component<Component1>, ComponentBase
 	{
 	};
 
-	NONUNIQUE_COMPONENT(Component2), ComponentBase
+	struct Component2 : NonUniqueComponent<Component2>, ComponentBase
 	{
 	};
 
-	TAG_COMPONENT(Tag0);
-	TAG_COMPONENT(Tag1);
-	TAG_COMPONENT(Tag2);
-	TAG_COMPONENT(Tag3);
+	struct Tag0 : TagComponent<Tag0> {};
+	struct Tag1 : TagComponent<Tag1> {};
+	struct Tag2 : TagComponent<Tag2> {};
+	struct Tag3 : TagComponent<Tag3> {};
 
-	TAG_COMPONENT(StaticTag);
-	TAG_COMPONENT(StaticPositionTag);
+	struct StaticTag : TagComponent<StaticTag> {};
+	struct StaticPositionTag : TagComponent<StaticPositionTag> {};
 
-	DIRECT_SYSTEM(System0)
+	struct System0 : DirectSystem<System0>
 	{
 		void Accept(RequiredComponent<Tag0, Tag1>, SubtractiveComponent<Tag2, Tag3>, const Array<Component0> &data)
 		{
@@ -79,7 +79,7 @@ namespace
 		}
 	};
 
-	DIRECT_SYSTEM(System1)
+	struct System1 : DirectSystem<System1>
 	{
 		void Accept(const Array<Component0> &component0, const Array<EntityID> &ids, Array<Component1> &component1, Environment &env, const NonUnique<Component2> &component2)
 		{
@@ -99,7 +99,7 @@ namespace
 		}
 	};
 
-	DIRECT_SYSTEM(System2)
+	struct System2 : DirectSystem<System2>
 	{
 		void Accept(const Array<Component0> &component0, const Array<Component1> *component1, SubtractiveComponent<Component2, Tag0>, const Array<EntityID> &ids)
 		{
@@ -122,7 +122,7 @@ namespace
 		}
 	};
 
-	DIRECT_SYSTEM(System3)
+	struct System3 : DirectSystem<System3>
 	{
 		void Accept(const Array<Component0> *component0, const Array<Component1> *component1, RequiredComponentAny<Component0, Component1>)
 		{
@@ -161,7 +161,7 @@ namespace
 		}
 	};
 
-	DIRECT_SYSTEM(System4)
+	struct System4 : DirectSystem<System4>
 	{
 		void Accept(RequiredComponent<Tag0, Tag1>, SubtractiveComponent<Tag2, Tag3>, Environment &env, const Array<Component0> &c0, const Array<Component1> *c1, const Array<EntityID> &ids, const NonUnique<Component2> *c2, RequiredComponentAny<Component1, Component2>)
 		{
@@ -187,9 +187,9 @@ namespace
 		}
 	};
 
-	INDIRECT_SYSTEM(System5)
+	struct System5 : IndirectSystem<System5>
 	{
-		using IndirectSystem::ProcessMessages;
+		using BaseIndirectSystem::ProcessMessages;
 
 		void Accept(RequiredComponent<Tag0, Tag1>, SubtractiveComponent<Tag2, Tag3>, OptionalComponent<StaticTag, StaticPositionTag>, const Array<Component0> &c0, const Array<Component1> *c1, const NonUnique<Component2> *c2, RequiredComponentAny<Component1, Component2>);
 
@@ -245,9 +245,9 @@ namespace
 		std::set<EntityID> _staticEntities{}, _staticPositionEntities{};
 	};
 
-	INDIRECT_SYSTEM(System6)
+	struct System6 : IndirectSystem<System6>
 	{
-		using IndirectSystem::ProcessMessages;
+		using BaseIndirectSystem::ProcessMessages;
 
 		void Accept();
 
@@ -304,7 +304,7 @@ namespace
 	{
 		stream.HintTotal(EntitiesToTest);
 
-		static constexpr array<StableTypeId, 7> types =
+		static constexpr array<TypeId, 7> types =
 		{
 			Component0::GetTypeId(),
 			Component1::GetTypeId(),
@@ -315,14 +315,14 @@ namespace
 			Tag3::GetTypeId()
 		};
 
-		vector<StableTypeId> left, generatedTypes;
+		vector<TypeId> left, generatedTypes;
 
-		auto generate = [](StableTypeId type, EntitiesStream::EntityData &entity, Array<StableTypeId> generatedTypes)
+		auto generate = [](TypeId type, EntitiesStream::EntityData &entity, Array<TypeId> generatedTypes)
 		{
 			if (type == Component0::GetTypeId() || type == Component1::GetTypeId() || type == Component2::GetTypeId())
 			{
 				ComponentBase base;
-				for (StableTypeId generatedType : generatedTypes)
+				for (TypeId generatedType : generatedTypes)
 				{
 					base.AddType(generatedType);
 				}
@@ -376,11 +376,11 @@ namespace
 			for (; count; --count)
 			{
 				iw typeIndex = rand() % left.size();
-				StableTypeId type = left[typeIndex];
+				TypeId type = left[typeIndex];
 				left.erase(left.begin() + typeIndex);
 				generatedTypes.push_back(type);
 			}
-			for (StableTypeId type : generatedTypes)
+			for (TypeId type : generatedTypes)
 			{
 				generate(type, entity, ToArray(generatedTypes));
 			}

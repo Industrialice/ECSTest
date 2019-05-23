@@ -157,6 +157,8 @@ public:
     
     virtual void Update(Environment &env) override
     {
+		ASSUME(env.targetSystem == GetTypeId());
+
         for (auto &camera : _cameras)
         {
             for (uiw windowIndex = 0; windowIndex < camera.data.rt.size(); ++windowIndex)

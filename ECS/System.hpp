@@ -17,7 +17,7 @@ namespace ECSTest
 			const f32 timeSinceLastFrame;
             const ui32 frameNumber;
 			const TimeDifference timeSinceStarted;
-            const StableTypeId targetSystem; // useful when the same class used to implement different systems
+            const TypeId targetSystem; // useful when the same class used to implement different systems
             EntityIDGenerator &entityIdGenerator;
             ComponentIDGenerator &componentIdGenerator;
             MessageBuilder &messageBuilder;
@@ -27,7 +27,7 @@ namespace ECSTest
 
 		struct ComponentRequest
 		{
-			StableTypeId type{};
+			TypeId type{};
 			bool isWriteAccess = false;
 			RequirementForComponent requirement = RequirementForComponent::Required;
 		};
@@ -52,12 +52,12 @@ namespace ECSTest
 
 		virtual ~System() = default;
 		[[nodiscard]] virtual const Requests &RequestedComponents() const = 0;
-		[[nodiscard]] virtual StableTypeId GetTypeId() const = 0;
+		[[nodiscard]] virtual TypeId GetTypeId() const = 0;
         [[nodiscard]] virtual string_view GetTypeName() const = 0;
-		[[nodiscard]] virtual struct IndirectSystem *AsIndirectSystem();
-		[[nodiscard]] virtual const struct IndirectSystem *AsIndirectSystem() const;
-		[[nodiscard]] virtual struct DirectSystem *AsDirectSystem();
-		[[nodiscard]] virtual const struct DirectSystem *AsDirectSystem() const;
+		[[nodiscard]] virtual struct BaseIndirectSystem *AsIndirectSystem();
+		[[nodiscard]] virtual const struct BaseIndirectSystem *AsIndirectSystem() const;
+		[[nodiscard]] virtual struct BaseDirectSystem *AsDirectSystem();
+		[[nodiscard]] virtual const struct BaseDirectSystem *AsDirectSystem() const;
         [[nodiscard]] IKeyController *GetKeyController();
         [[nodiscard]] const IKeyController *GetKeyController() const;
         void SetKeyController(const shared_ptr<IKeyController> &controller);
@@ -67,10 +67,10 @@ namespace ECSTest
         virtual void OnDestroy(Environment &env) {}
 	};
 
-	struct IndirectSystem : public System
+	struct BaseIndirectSystem : public System
 	{
-		[[nodiscard]] virtual IndirectSystem *AsIndirectSystem() override final;
-		[[nodiscard]] virtual const IndirectSystem *AsIndirectSystem() const override final;
+		[[nodiscard]] virtual BaseIndirectSystem *AsIndirectSystem() override final;
+		[[nodiscard]] virtual const BaseIndirectSystem *AsIndirectSystem() const override final;
         virtual void ProcessMessages(System::Environment &env, const MessageStreamEntityAdded &stream) { SOFTBREAK; }
         virtual void ProcessMessages(System::Environment &env, const MessageStreamComponentAdded &stream) { SOFTBREAK; }
         virtual void ProcessMessages(System::Environment &env, const MessageStreamComponentChanged &stream) { SOFTBREAK; }
@@ -79,10 +79,10 @@ namespace ECSTest
         virtual void Update(Environment &env) { SOFTBREAK; }
 	};
 
-	struct DirectSystem : public System
+	struct BaseDirectSystem : public System
 	{
-		[[nodiscard]] virtual DirectSystem *AsDirectSystem() override final;
-		[[nodiscard]] virtual const DirectSystem *AsDirectSystem() const override final;
+		[[nodiscard]] virtual BaseDirectSystem *AsDirectSystem() override final;
+		[[nodiscard]] virtual const BaseDirectSystem *AsDirectSystem() const override final;
 		virtual void AcceptUntyped(void **array) = 0;
 	};
 }

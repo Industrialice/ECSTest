@@ -13,34 +13,34 @@ namespace
     constexpr bool IsPreGenerateTransform = false;
     constexpr bool IsMultiThreadedECS = false;
 
-    COMPONENT(Name)
+    struct Name : Component<Name>
     {
         array<char, 32> name;
     };
 
-    COMPONENT(Transform)
+    struct Transform : Component<Transform>
     {
         Vector3 position;
     };
 
-    COMPONENT(AverageHeight)
+    struct AverageHeight : Component<AverageHeight>
     {
         f32 height;
         ui32 sources;
     };
 
-    COMPONENT(HeightFixerInfo)
+    struct HeightFixerInfo : Component<HeightFixerInfo>
     {
         ui32 runTimes;
         ui32 heightsFixed;
     };
 
-    COMPONENT(NegativeHeightCooldown)
+    struct NegativeHeightCooldown : Component<NegativeHeightCooldown>
     {
         f32 cooldown;
     };
 
-    COMPONENT(SpeedOfFall)
+    struct SpeedOfFall : Component<SpeedOfFall>
     {
         f32 speed;
     };
@@ -53,10 +53,10 @@ namespace
         return {(f32)distr(eng), (f32)distr(eng), (f32)distr(eng)};
     }
 
-    INDIRECT_SYSTEM(TransformGeneratorSystem)
+    struct TransformGeneratorSystem : IndirectSystem<TransformGeneratorSystem>
     {
         void Accept(Array<Name> &, SubtractiveComponent<Transform>);
-		using IndirectSystem::ProcessMessages;
+		using BaseIndirectSystem::ProcessMessages;
 
         virtual void Update(Environment &env) override
         {
@@ -109,7 +109,7 @@ namespace
         vector<EntityID> _entitiesToGenerate{};
     };
 
-    INDIRECT_SYSTEM(TransformHeightFixerSystem)
+    struct TransformHeightFixerSystem : IndirectSystem<TransformHeightFixerSystem>
     {
         void Accept(Array<Transform> &, const Array<NegativeHeightCooldown> *, Array<HeightFixerInfo> *);
 
@@ -245,7 +245,7 @@ namespace
         EntityID _infoId{};
     };
 
-    INDIRECT_SYSTEM(TransformFallingIndirectSystem)
+    struct TransformFallingIndirectSystem : IndirectSystem<TransformFallingIndirectSystem>
     {
     private:
         struct Components
@@ -347,7 +347,7 @@ namespace
         std::map<EntityID, Components> _entities{};
     };
 
-    DIRECT_SYSTEM(TransformFallingDirectSystem)
+    struct TransformFallingDirectSystem : DirectSystem<TransformFallingDirectSystem>
     {
 		void Accept(Array<Transform> &transforms, Array<SpeedOfFall> *speeds, Environment &env)
         {
@@ -364,7 +364,7 @@ namespace
         }
     };
 
-    INDIRECT_SYSTEM(AverageHeightAnalyzerSystem)
+    struct AverageHeightAnalyzerSystem : IndirectSystem<AverageHeightAnalyzerSystem>
     {
         void Accept(const Array<Transform> &, Array<AverageHeight> *);
 
@@ -462,7 +462,7 @@ namespace
         EntityID _entityID{};
     };
 
-    INDIRECT_SYSTEM(CooldownUpdater)
+    struct CooldownUpdater : IndirectSystem<CooldownUpdater>
     {
         void Accept(Array<NegativeHeightCooldown> &);
 
@@ -573,7 +573,7 @@ namespace
             printf("\n-------------\n\n");
         }
 
-        std::map<StableTypeId, ui32> componentCounts{};
+        std::map<TypeId, ui32> componentCounts{};
 
         while (auto entity = stream.Next())
         {

@@ -111,7 +111,7 @@ void MessageBuilder::AddComponent(EntityID entityID, const SerializedComponent &
 {
     ASSUME(sc.isUnique != sc.id.IsValid());
 
-    const auto &entry = [this](StableTypeId type) -> const shared_ptr<vector<MessageStreamComponentAdded::EntityWithComponents>> &
+    const auto &entry = [this](TypeId type) -> const shared_ptr<vector<MessageStreamComponentAdded::EntityWithComponents>> &
     {
         for (const auto &[key, value] : _componentAddedStreams._data)
         {
@@ -206,9 +206,9 @@ void MessageBuilder::ComponentChangedHint(const ComponentDescription &desc, uiw 
 	}
 }
 
-void MessageBuilder::RemoveComponent(EntityID entityID, StableTypeId type, ComponentID componentID)
+void MessageBuilder::RemoveComponent(EntityID entityID, TypeId type, ComponentID componentID)
 {
-    const auto &entry = [this](StableTypeId type) -> const shared_ptr<MessageStreamComponentRemoved::ComponentsInfo> &
+    const auto &entry = [this](TypeId type) -> const shared_ptr<MessageStreamComponentRemoved::ComponentsInfo> &
     {
         for (const auto &[key, value] : _componentRemovedStreams._data)
         {

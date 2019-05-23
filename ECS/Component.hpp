@@ -15,7 +15,7 @@ namespace ECSTest
 
 	struct ComponentDescription
 	{
-		StableTypeId type{};
+		TypeId type{};
 		ui16 sizeOf{};
 		ui16 alignmentOf{};
 		bool isUnique{};
@@ -24,7 +24,7 @@ namespace ECSTest
 
 	struct ArchetypeDefiningRequirement
 	{
-		StableTypeId type{};
+		TypeId type{};
 		ui32 group{};
 		RequirementForComponent requirement{};
 	};
@@ -68,14 +68,14 @@ namespace ECSTest
         ComponentIDGenerator &operator = (ComponentIDGenerator &&source);
     };
 
-    class Component
+    class _BaseComponentClass
     {};
 
-    template <bool isUnique, bool isTag, typename Type, typename FinalType> class EMPTY_BASES _BaseComponent : public Component, public Type
+    template <bool isUnique, bool isTag, typename ComponentType> class EMPTY_BASES _BaseComponent : public _BaseComponentClass, public TypeIdentifiable<ComponentType>
     {
     public:
-        using Type::GetTypeId;
-        using Type::GetTypeName;
+        using TypeIdentifiable<ComponentType>::GetTypeId;
+        using TypeIdentifiable<ComponentType>::GetTypeName;
 
 		[[nodiscard]] static constexpr bool IsUnique()
         {
@@ -90,21 +90,23 @@ namespace ECSTest
 		[[nodiscard]] static constexpr ComponentDescription Description()
 		{
 			ComponentDescription desc;
-			desc.alignmentOf = alignof(FinalType);
+			desc.alignmentOf = alignof(ComponentType);
 			desc.isTag = isTag;
 			desc.isUnique = isUnique;
-			desc.sizeOf = sizeof(FinalType);
+			desc.sizeOf = sizeof(ComponentType);
 			desc.type = GetTypeId();
 			return desc;
 		}
     };
 
-	#define _CREATE_COMPONENT(name, isUnique, isTag) struct name final : public _BaseComponent<isUnique, isTag, NAME_TO_STABLE_ID(name), name>
+	template <typename ComponentType> struct EMPTY_BASES Component : public _BaseComponent<true, false, ComponentType>
+	{};
 
-    // TODO: replace it with a single COMPONENT macro that optionally accepts properties?
-    #define COMPONENT(name) _CREATE_COMPONENT(name, true, false)
-    #define NONUNIQUE_COMPONENT(name) _CREATE_COMPONENT(name, false, false)
-    #define TAG_COMPONENT(name) _CREATE_COMPONENT(name, true, true) {}
+	template <typename ComponentType> struct EMPTY_BASES TagComponent : public _BaseComponent<true, true, ComponentType>
+	{};
+
+	template <typename ComponentType> struct EMPTY_BASES NonUniqueComponent : public _BaseComponent<false, false, ComponentType>
+	{};
 
 	struct _SubtractiveComponentBase
 	{};

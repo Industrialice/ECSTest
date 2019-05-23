@@ -40,23 +40,23 @@ namespace
         }
     };
 
-    COMPONENT(GeneratedComponent)
+    struct GeneratedComponent : Component<GeneratedComponent>
     {
         ui32 value;
         ui32 tagsCount;
     };
 
-    COMPONENT(TempComponent)
+    struct TempComponent : Component<TempComponent>
     {};
 
-    COMPONENT(GeneratorInfoComponent)
+    struct GeneratorInfoComponent : Component<GeneratorInfoComponent>
     {
         ui32 tagComponentsGenerated = 0;
         ui64 tagConnectionHash = 0;
         ui64 tagIDHash = 0;
     };
 
-    COMPONENT(ConsumerInfoComponent)
+    struct ConsumerInfoComponent : Component<ConsumerInfoComponent>
     {
         ui32 entityAdded = 0;
         ui32 entityRemoved = 0;
@@ -70,12 +70,12 @@ namespace
         ui64 tagIDHash = 0;
     };
 
-    COMPONENT(OtherComponent)
+    struct OtherComponent : Component<OtherComponent>
     {
         ui64 value;
     };
 
-    NONUNIQUE_COMPONENT(TagComponent)
+    struct ComponentWithTag : NonUniqueComponent<ComponentWithTag>
     {
         enum class ConnectedTo
         {
@@ -86,11 +86,11 @@ namespace
         optional<ComponentID> id;
     };
 
-    TAG_COMPONENT(FilterTag);
+	struct FilterTag : TagComponent<FilterTag> {};
 
-    INDIRECT_SYSTEM(GeneratorSystem)
+    struct GeneratorSystem : IndirectSystem<GeneratorSystem>
     {
-        void Accept(Array<GeneratedComponent> *, SubtractiveComponent<ConsumerInfoComponent>, SubtractiveComponent<OtherComponent>, NonUnique<TagComponent> *, Array<GeneratorInfoComponent> *);
+        void Accept(Array<GeneratedComponent> *, SubtractiveComponent<ConsumerInfoComponent>, SubtractiveComponent<OtherComponent>, NonUnique<ComponentWithTag> *, Array<GeneratorInfoComponent> *);
 
         virtual void Update(Environment &env) override
         {
@@ -105,8 +105,8 @@ namespace
                     for (i32 index = 0, count = rand() % 4; index < count; ++index)
                     {
                         ++c.tagsCount;
-                        TagComponent tag;
-                        tag.connectedTo = TagComponent::ConnectedTo::Germany;
+                        ComponentWithTag tag;
+                        tag.connectedTo = ComponentWithTag::ConnectedTo::Germany;
                         if (rand() % 2)
                         {
                             tag.id = env.componentIdGenerator.Generate();
@@ -139,9 +139,9 @@ namespace
 
                 if (_toTagChange.size())
                 {
-                    TagComponent tag = _toTagChange.front().second;
-                    ASSUME(tag.connectedTo == TagComponent::ConnectedTo::Germany);
-                    tag.connectedTo = TagComponent::ConnectedTo::China;
+                    ComponentWithTag tag = _toTagChange.front().second;
+                    ASSUME(tag.connectedTo == ComponentWithTag::ConnectedTo::Germany);
+                    tag.connectedTo = ComponentWithTag::ConnectedTo::China;
                     env.messageBuilder.ComponentChanged(_toTagChange.front().first, tag, _toTagChange.front().second.id.value());
                     _toTagChange.pop();
                 }
@@ -211,7 +211,7 @@ namespace
     private:
         ui32 _leftToGenerate = EntitiesToAdd;
         std::queue<pair<EntityID, ui32>> _toComponentChange{};
-        std::queue<pair<EntityID, TagComponent>> _toTagChange{};
+        std::queue<pair<EntityID, ComponentWithTag>> _toTagChange{};
         std::queue<EntityID> _toComponentRemove{};
         std::queue<EntityID> _toEntityRemove{};
         Pipeline _pipeline{};
@@ -219,9 +219,9 @@ namespace
         GeneratorInfoComponent _info{}, _infoPassed{};
     };
 
-    INDIRECT_SYSTEM(ConsumerIndirectSystem)
+    struct ConsumerIndirectSystem : IndirectSystem<ConsumerIndirectSystem>
     {
-        void Accept(const Array<GeneratedComponent> &, const Array<TempComponent> *, const NonUnique<TagComponent> *, Array<ConsumerInfoComponent> *, RequiredComponent<FilterTag>);
+        void Accept(const Array<GeneratedComponent> &, const Array<TempComponent> *, const NonUnique<ComponentWithTag> *, Array<ConsumerInfoComponent> *, RequiredComponent<FilterTag>);
 
         virtual void Update(Environment &env) override
         {
@@ -254,13 +254,13 @@ namespace
 
                 for (auto &attached : entity.components)
                 {
-                    if (attached.type == TagComponent::GetTypeId())
+                    if (attached.type == ComponentWithTag::GetTypeId())
                     {
                         ASSUME(attached.id);
                         ASSUME(attached.isUnique == false);
                         ++_info.tagComponentsReceived;
 
-                        auto &t = attached.Cast<TagComponent>();
+                        auto &t = attached.Cast<ComponentWithTag>();
                         _info.tagConnectionHash ^= Hash::Integer((ui64)t.connectedTo);
 
                         _info.tagIDHash ^= Hash::Integer((ui64)t.id.value_or(ComponentID(0)).ID());
@@ -305,15 +305,15 @@ namespace
                 }
                 ++_info.generatedComponentChanged;
             }
-            for (auto entity : stream.Enumerate<TagComponent>())
+            for (auto entity : stream.Enumerate<ComponentWithTag>())
             {
 				const auto &c = entity.component;
-                ASSUME(c.connectedTo == TagComponent::ConnectedTo::Germany || c.connectedTo == TagComponent::ConnectedTo::China);
+                ASSUME(c.connectedTo == ComponentWithTag::ConnectedTo::Germany || c.connectedTo == ComponentWithTag::ConnectedTo::China);
                 ASSUME(!c.id || c.id.value() == entity.component.id);
                 ++_info.tagComponentChanged;
             }
 
-			ASSUME(stream.Type() == GeneratedComponent::GetTypeId() || stream.Type() == TagComponent::GetTypeId());
+			ASSUME(stream.Type() == GeneratedComponent::GetTypeId() || stream.Type() == ComponentWithTag::GetTypeId());
         }
 
         virtual void ProcessMessages(Environment &env, const MessageStreamComponentRemoved &stream) override
@@ -361,9 +361,9 @@ namespace
         std::map<EntityID, EntityInfo> _entityInfos{};
     };
 
-    DIRECT_SYSTEM(ConsumerDirectSystem)
+    struct ConsumerDirectSystem : DirectSystem<ConsumerDirectSystem>
     {
-		void Accept(const Array<GeneratedComponent> &generatedComponents, Environment &env, const Array<EntityID> &ids, const NonUnique<TagComponent> *tags)
+		void Accept(const Array<GeneratedComponent> &generatedComponents, Environment &env, const Array<EntityID> &ids, const NonUnique<ComponentWithTag> *tags)
         {
 			ASSUME(env.targetSystem == GetTypeId());
             ASSUME(ids.size() > 0);
@@ -399,10 +399,10 @@ namespace
         ui64 ValueGenerator{};
     }
 
-    INDIRECT_SYSTEM(OtherIndirectSystem)
+    struct OtherIndirectSystem : IndirectSystem<OtherIndirectSystem>
     {
         void Accept(Array<OtherComponent> &);
-		using IndirectSystem::ProcessMessages;
+		using BaseIndirectSystem::ProcessMessages;
 
         virtual void Update(Environment &env) override
         {
@@ -464,7 +464,7 @@ namespace
         std::map<EntityID, OtherComponent> _localData{};
     };
 
-    DIRECT_SYSTEM(EmptyDirectReadSystem)
+    struct EmptyDirectReadSystem : DirectSystem<EmptyDirectReadSystem>
     {
 		void Accept(const Array<OtherComponent> &components, const Array<EntityID> &ids, Environment &env)
         {
@@ -479,7 +479,7 @@ namespace
         }
     };
 
-    DIRECT_SYSTEM(EmptyDirectWriteSystem)
+    struct EmptyDirectWriteSystem : DirectSystem<EmptyDirectWriteSystem>
     {
 		void Accept(Environment &env, Array<OtherComponent> &components, const Array<EntityID> &ids)
         {

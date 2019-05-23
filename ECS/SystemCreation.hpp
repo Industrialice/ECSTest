@@ -223,7 +223,7 @@ namespace ECSTest
 			constexpr bool isNonUnique = GetComponentType<pureType>::isNonUnique;
 
             constexpr bool isRefOrPtr = is_reference_v<T> || is_pointer_v<T>;
-            static_assert((isSubtractive || isRequired || isRequiredAny) || isRefOrPtr, "Type must be either reference or pointer");
+            static_assert((isSubtractive || isRequired || isRequiredAny || isOptional) || isRefOrPtr, "Type must be either reference or pointer");
 			static_assert(!isRefOrPtr || !isSubtractive, "SubtractiveComponent cannot be passed by reference or pointer");
 			static_assert(!isRefOrPtr || !isRequired, "RequiredComponent cannot be passed by reference or pointer");
 			static_assert(!isRefOrPtr || !isOptional, "OptionalComponent cannot be passed by reference or pointer");
@@ -271,7 +271,7 @@ namespace ECSTest
 			constexpr bool isRequiredAny = GetComponentType<pureType>::isRequiredAny;
             constexpr bool isNonUnique = GetComponentType<pureType>::isNonUnique;
             constexpr bool isArray = GetComponentType<pureType>::isArray;
-            constexpr auto isComponent = is_base_of_v<Component, componentType>;
+            constexpr auto isComponent = is_base_of_v<_BaseComponentClass, componentType>;
 			constexpr bool isConst = is_const_v<GetComponentType<pureType>::type>;
 
 			if constexpr (is_same_v<componentType, System::Environment>)
@@ -389,7 +389,7 @@ namespace ECSTest
 			}
         }
 
-        template <typename T> static constexpr StableTypeId ArgumentToTypeId()
+        template <typename T> static constexpr TypeId ArgumentToTypeId()
         {
             using TPure = remove_pointer_t<remove_reference_t<T>>;
             using componentType = typename GetComponentType<remove_cv_t<TPure>>::type;
@@ -413,7 +413,7 @@ namespace ECSTest
 			{
 				return componentType::ComponentType::GetTypeId();
 			}
-            else if constexpr (is_base_of_v<Component, componentType>)
+            else if constexpr (is_base_of_v<_BaseComponentClass, componentType>)
             {
                 return componentType::GetTypeId();
             }
@@ -424,13 +424,13 @@ namespace ECSTest
             }
         }
 
-        template <typename T, uiw... Indexes> static constexpr array<StableTypeId, sizeof...(Indexes)> ArgumentsToTypeIds()
+        template <typename T, uiw... Indexes> static constexpr array<TypeId, sizeof...(Indexes)> ArgumentsToTypeIds()
         {
             return {ArgumentToTypeId<tuple_element_t<Indexes, T>>()...};
         }
 
         // makes sure the argument type appears only once
-        template <iw size> static constexpr bool IsTypesAliased(const array<StableTypeId, size> &types)
+        template <iw size> static constexpr bool IsTypesAliased(const array<TypeId, size> &types)
         {
             for (iw i = 0; i < size - 1; ++i)
             {
@@ -664,7 +664,7 @@ namespace ECSTest
 
 		template <typename T, uiw Group, uiw... Indexes> static constexpr auto RequiredAnyGroupToTuple(index_sequence<Indexes...>)
 		{
-			return make_tuple(pair<StableTypeId, ui32>(tuple_element_t<Indexes, GetComponentType<T>::expanded>::GetTypeId(), (ui32)Group)...);
+			return make_tuple(pair<TypeId, ui32>(tuple_element_t<Indexes, GetComponentType<T>::expanded>::GetTypeId(), (ui32)Group)...);
 		}
 
 		// TODO: more checks
@@ -672,14 +672,14 @@ namespace ECSTest
 		{
 			if constexpr (IsRequiredAnyGroupsFailed<T, Indexes...>())
 			{
-				return array<pair<StableTypeId, ui32>, 0>{};
+				return array<pair<TypeId, ui32>, 0>{};
 			}
 			else
 			{
 				constexpr auto converted = Funcs::TupleToArray(tuple_cat(RequiredAnyGroupToTuple<tuple_element_t<Indexes, T>, Indexes>(make_index_sequence<GetComponentType<tuple_element_t<Indexes, T>>::argumentCount>())...));
 				if constexpr (converted.empty())
 				{
-					return array<pair<StableTypeId, ui32>, 0>{};
+					return array<pair<TypeId, ui32>, 0>{};
 				}
 				else
 				{
@@ -688,7 +688,7 @@ namespace ECSTest
 			}
 		}
 
-		template <uiw NonAnySize, uiw AnySize> [[nodiscard]] static constexpr array<ArchetypeDefiningRequirement, NonAnySize + AnySize > ToArchetypeDefiningRequirement(const array<System::ComponentRequest, NonAnySize> &nonAnyComponents, const array<pair<StableTypeId, ui32>, AnySize> &anyComponents)
+		template <uiw NonAnySize, uiw AnySize> [[nodiscard]] static constexpr array<ArchetypeDefiningRequirement, NonAnySize + AnySize > ToArchetypeDefiningRequirement(const array<System::ComponentRequest, NonAnySize> &nonAnyComponents, const array<pair<TypeId, ui32>, AnySize> &anyComponents)
 		{
 			array<ArchetypeDefiningRequirement, NonAnySize + AnySize> output{};
 			for (uiw index = 0; index < NonAnySize; ++index)
@@ -759,17 +759,17 @@ namespace ECSTest
 		}
     };
 
-	template <typename Type, typename SystemType> struct _IndirectSystemTypeIdentifiable : public IndirectSystem, public Type
+	template <typename SystemType> struct IndirectSystem : public BaseIndirectSystem, public TypeIdentifiable<SystemType>
 	{
 	public:
-		[[nodiscard]] virtual StableTypeId GetTypeId() const override final
+		[[nodiscard]] virtual TypeId GetTypeId() const override final
 		{
-			return Type::GetTypeId();
+			return TypeIdentifiable<SystemType>::GetTypeId();
 		}
 		
 		[[nodiscard]] virtual string_view GetTypeName() const override final
 		{
-			return Type::GetTypeName();
+			return TypeIdentifiable<SystemType>::GetTypeName();
 		}
 			
 		virtual const Requests &RequestedComponents() const override final
@@ -786,17 +786,17 @@ namespace ECSTest
 		}
 	};
 
-	template <typename Type, typename SystemType> struct _DirectSystemTypeIdentifiable : public DirectSystem, public Type
+	template <typename SystemType> struct DirectSystem : public BaseDirectSystem, public TypeIdentifiable<SystemType>
 	{
 	public:
-		[[nodiscard]] virtual StableTypeId GetTypeId() const override final
+		[[nodiscard]] virtual TypeId GetTypeId() const override final
 		{
-			return Type::GetTypeId();
+			return TypeIdentifiable<SystemType>::GetTypeId();
 		}
 
 		[[nodiscard]] virtual string_view GetTypeName() const override final
 		{
-			return Type::GetTypeName();
+			return TypeIdentifiable<SystemType>::GetTypeName();
 		}
 
 		static constexpr const Requests &AcquireRequestedComponents()
@@ -816,7 +816,4 @@ namespace ECSTest
 			_SystemHelperFuncs::CallAccept<types>((SystemType *)this, array, make_index_sequence<count>());
 		}
 	};
-
-	#define INDIRECT_SYSTEM(name) struct name : public _IndirectSystemTypeIdentifiable<NAME_TO_STABLE_ID(name), name>
-	#define DIRECT_SYSTEM(name) struct name : public _DirectSystemTypeIdentifiable<NAME_TO_STABLE_ID(name), name>
 }

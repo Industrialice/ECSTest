@@ -25,3 +25,26 @@ matrix4x4: _ProjectionMatrix
 matrix4x4: _ViewProjectionMatrix
 vec3: _CameraPosition
 vec2: _Time (total time; time delta)
+
+Common vertex attributes:
+
+{"Position", R32G32B32_Float or R16G16B16_Int} 
+{"UV0".."UV7", R32G32_Float or R16G16_Float}
+{"Normal", R32G32B32_Float or R32G32_Float}
+{"Binormal", R32G32B32_Float or R32G32_Float}
+{"Color", R8G8B8 or R8G8B8A8}
+
+Every target declares what vertex attributes it supports, the redundant attributes
+get stripped from the source meshes.
+
+Each texture source is stored in a lossless format like PNG. It has following attributes:
+Type: Default, Normal
+Space: sRGB, Linear
+Generate mips: true, false
+Wrap mode: WrapModet
+Filter mode: FilterModet
+Max size: 2^(0..14)
+Anisotropy level: 2^(0..4)
+Compression: None, Low Quality, Normal Quality, High Quality
+
+There are conversion rules defined for each target.

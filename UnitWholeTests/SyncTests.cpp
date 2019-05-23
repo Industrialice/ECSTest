@@ -17,26 +17,26 @@ namespace
         ui32 receivedTest2ChangedCount = 0;
     }
 
-    COMPONENT(TestComponent0)
+    struct TestComponent0 : Component<TestComponent0>
     {
         ui32 value;
     };
 
-    COMPONENT(TestComponent1)
+    struct TestComponent1 : Component<TestComponent1>
     {
         ui32 value;
     };
 
-    NONUNIQUE_COMPONENT(TestComponent2)
+    struct TestComponent2 : NonUniqueComponent<TestComponent2>
     {
         ui32 value;
     };
 
     // cannot run in parallel with TestIndirectSystem2
-    INDIRECT_SYSTEM(TestIndirectSystem0)
+    struct TestIndirectSystem0 : IndirectSystem<TestIndirectSystem0>
     {
 		void Accept(Array<TestComponent0> &);
-		using IndirectSystem::ProcessMessages;
+		using BaseIndirectSystem::ProcessMessages;
 
         virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override
         {
@@ -71,10 +71,10 @@ namespace
         std::set<EntityID> _entities{};
     };
 
-    INDIRECT_SYSTEM(TestIndirectSystem1)
+    struct TestIndirectSystem1 : IndirectSystem<TestIndirectSystem1>
     {
 		void Accept(const Array<TestComponent0> &, const Array<TestComponent1> &, const NonUnique<TestComponent2> *);
-		using IndirectSystem::ProcessMessages;
+		using BaseIndirectSystem::ProcessMessages;
 
         virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override
         {
@@ -108,10 +108,10 @@ namespace
     };
 
     // cannot run in parallel with TestIndirectSystem0
-    INDIRECT_SYSTEM(TestIndirectSystem2)
+    struct TestIndirectSystem2 : IndirectSystem<TestIndirectSystem2>
     {
 		void Accept(Array<TestComponent0> &);
-		using IndirectSystem::ProcessMessages;
+		using BaseIndirectSystem::ProcessMessages;
 
         virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override
         {}
@@ -140,10 +140,10 @@ namespace
         ui32 _entitiesToAdd = 100;
     };
 
-    INDIRECT_SYSTEM(MonitoringSystem)
+    struct MonitoringSystem : IndirectSystem<MonitoringSystem>
     {
 		void Accept();
-		using IndirectSystem::ProcessMessages;
+		using BaseIndirectSystem::ProcessMessages;
 
         virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override
         {

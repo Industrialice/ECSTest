@@ -4,7 +4,7 @@ using namespace ECSTest;
 
 namespace
 {
-	NONUNIQUE_COMPONENT(ComponentArtist)
+	struct ComponentArtist : NonUniqueComponent<ComponentArtist>
 	{
 		enum class Areas : ui8
 		{
@@ -18,42 +18,42 @@ namespace
 	};
 	static_assert(sizeof(ComponentArtist) == 1);
 
-	COMPONENT(ComponentFirstName)
+	struct ComponentFirstName : Component<ComponentFirstName>
 	{
 		array<char, 32> name;
 	};
 	static_assert(sizeof(ComponentFirstName) == 32);
 
-	COMPONENT(ComponentLastName)
+	struct ComponentLastName : Component<ComponentLastName>
 	{
 		array<char, 32> name;
 	};
 	static_assert(sizeof(ComponentLastName) == 32);
 
-	COMPONENT(ComponentDateOfBirth)
+	struct ComponentDateOfBirth : Component<ComponentDateOfBirth>
 	{
 		ui32 dateOfBirth; // days since 01/01/2000
 	};
 	static_assert(sizeof(ComponentDateOfBirth) == 4);
 
-	COMPONENT(ComponentSpouse)
+	struct ComponentSpouse : Component<ComponentSpouse>
 	{
 		EntityID spouse;
 		ui32 dateOfMarriage; // days since 01/01/2000
 	};
 	static_assert(sizeof(ComponentSpouse) == sizeof(EntityID) + 4);
 
-	COMPONENT(ComponentCompany)
+	struct ComponentCompany : Component<ComponentCompany>
 	{
 		array<char, 32> name;
 	};
 	static_assert(sizeof(ComponentCompany) == 32);
 
-	COMPONENT(EmptyComponent)
+	struct EmptyComponent : Component<EmptyComponent>
 	{};
 	static_assert(sizeof(EmptyComponent) == 1);
 
-	NONUNIQUE_COMPONENT(ComponentProgrammer)
+	struct ComponentProgrammer : NonUniqueComponent<ComponentProgrammer>
 	{
 		enum class Languages : ui8
 		{
@@ -74,13 +74,13 @@ namespace
 	};
 	static_assert(sizeof(ComponentProgrammer) == 2);
 
-	COMPONENT(ComponentEmployee)
+	struct ComponentEmployee : Component<ComponentEmployee>
 	{
 		EntityID employer;
 	};
 	static_assert(sizeof(ComponentEmployee) == sizeof(EntityID));
 
-	NONUNIQUE_COMPONENT(ComponentDesigner)
+	struct ComponentDesigner : NonUniqueComponent<ComponentDesigner>
 	{
 		enum class Areas : ui8
 		{
@@ -93,32 +93,32 @@ namespace
 	};
 	static_assert(sizeof(ComponentDesigner) == 1);
 
-	COMPONENT(ComponentGender)
+	struct ComponentGender : Component<ComponentGender>
 	{
 		bool isMale;
 	};
 	static_assert(sizeof(ComponentGender) == sizeof(bool));
 
-	TAG_COMPONENT(TagTest0);
-	TAG_COMPONENT(TagTest1);
-	TAG_COMPONENT(TagTest2);
-	TAG_COMPONENT(TagTest3);
-	TAG_COMPONENT(TagTest4);
-	TAG_COMPONENT(TagTest5);
+	struct TagTest0 : TagComponent<TagTest0> {};
+	struct TagTest1 : TagComponent<TagTest1> {};
+	struct TagTest2 : TagComponent<TagTest2> {};
+	struct TagTest3 : TagComponent<TagTest3> {};
+	struct TagTest4 : TagComponent<TagTest4> {};
+	struct TagTest5 : TagComponent<TagTest5> {};
 
 	static_assert(sizeof(TagTest0) == 1);
 
 	static void ArchetypeTests(bool isSuppressLogs)
 	{
-		StableTypeId types0[] = {ComponentArtist::GetTypeId(), ComponentArtist::GetTypeId()};
-		auto shor = Archetype::Create<StableTypeId>(ToArray(types0));
+		TypeId types0[] = {ComponentArtist::GetTypeId(), ComponentArtist::GetTypeId()};
+		auto shor = Archetype::Create<TypeId>(ToArray(types0));
 
-		StableTypeId types1[] = {ComponentArtist::GetTypeId()};
-		auto shor2 = Archetype::Create<StableTypeId>(ToArray(types1));
+		TypeId types1[] = {ComponentArtist::GetTypeId()};
+		auto shor2 = Archetype::Create<TypeId>(ToArray(types1));
 
 		ASSUME(shor == shor2);
 
-		using typeId = pair<StableTypeId, ComponentID>;
+		using typeId = pair<TypeId, ComponentID>;
 		typeId types2[] = {{ComponentArtist::GetTypeId(), ComponentID(0)}, {ComponentArtist::GetTypeId(), ComponentID(1)}};
 		auto arc = ArchetypeFull::Create<typeId, typeId, &typeId::first, &typeId::second>(ToArray(types2));
 
@@ -140,14 +140,14 @@ namespace
 		}
 	}
 
-	template <uiw size> static Archetype GenerateArchetype(const array<StableTypeId, size> &source)
+	template <uiw size> static Archetype GenerateArchetype(const array<TypeId, size> &source)
 	{
-		return Archetype::Create<StableTypeId>(ToArray(source));
+		return Archetype::Create<TypeId>(ToArray(source));
 	}
 
-	template <uiw size> static vector<StableTypeId> ToTypes(const array<StableTypeId, size> &source)
+	template <uiw size> static vector<TypeId> ToTypes(const array<TypeId, size> &source)
 	{
-		vector<StableTypeId> result;
+		vector<TypeId> result;
 		for (auto &req : source)
 		{
 			result.push_back(req);
@@ -172,12 +172,12 @@ namespace
 		return result;
 	}
 
-	template <uiw size> static bool IsReflectedEqual(Array<const StableTypeId> reflected, const array<StableTypeId, size> &entity)
+	template <uiw size> static bool IsReflectedEqual(Array<const TypeId> reflected, const array<TypeId, size> &entity)
 	{
-		vector<StableTypeId> reflectedSorted = {reflected.begin(), reflected.end()};
+		vector<TypeId> reflectedSorted = {reflected.begin(), reflected.end()};
 		std::sort(reflectedSorted.begin(), reflectedSorted.end());
 
-		vector<StableTypeId> entitySorted = {entity.begin(), entity.end()};
+		vector<TypeId> entitySorted = {entity.begin(), entity.end()};
 		std::sort(entitySorted.begin(), entitySorted.end());
 
 		return reflectedSorted.size() == entitySorted.size() && std::equal(entitySorted.begin(), entitySorted.end(), reflectedSorted.begin());
@@ -185,7 +185,7 @@ namespace
 
 	static void ReflectorTests(bool isSuppressLogs)
 	{
-		array<StableTypeId, 5> ent0 =
+		array<TypeId, 5> ent0 =
 		{
 			ComponentArtist::GetTypeId(),
 			ComponentFirstName::GetTypeId(),
@@ -195,7 +195,7 @@ namespace
 		};
 		auto arch0 = GenerateArchetype(Funcs::SortCompileTime(ent0));
 
-		array<StableTypeId, 3> ent1 =
+		array<TypeId, 3> ent1 =
 		{
 			ComponentCompany::GetTypeId(),
 			ComponentProgrammer::GetTypeId(),
@@ -204,7 +204,7 @@ namespace
 		auto arch1 = GenerateArchetype(Funcs::SortCompileTime(ent1));
 
 		// same as ent1, but different order
-		array<StableTypeId, 3> ent2 =
+		array<TypeId, 3> ent2 =
 		{
 			ComponentProgrammer::GetTypeId(),
 			ComponentCompany::GetTypeId(),
@@ -213,7 +213,7 @@ namespace
 		auto arch2 = GenerateArchetype(Funcs::SortCompileTime(ent2));
 		ASSUME(arch1 == arch2);
 
-		array<StableTypeId, 5> ent3 =
+		array<TypeId, 5> ent3 =
 		{
 			ComponentSpouse::GetTypeId(),
 			ComponentLastName::GetTypeId(),
@@ -223,7 +223,7 @@ namespace
 		};
 		auto arch3 = GenerateArchetype(Funcs::SortCompileTime(ent3));
 
-		array<StableTypeId, 4> ent4 =
+		array<TypeId, 4> ent4 =
 		{
 			ComponentProgrammer::GetTypeId(),
 			ComponentDesigner::GetTypeId(),
@@ -232,7 +232,7 @@ namespace
 		};
 		auto arch4 = GenerateArchetype(Funcs::SortCompileTime(ent4));
 
-		array<StableTypeId, 5> ent5 =
+		array<TypeId, 5> ent5 =
 		{
 			ComponentProgrammer::GetTypeId(),
 			ComponentDesigner::GetTypeId(),
@@ -242,7 +242,7 @@ namespace
 		};
 		auto arch5 = GenerateArchetype(Funcs::SortCompileTime(ent5));
 
-		auto archEmpty = GenerateArchetype(array<StableTypeId, 0>{});
+		auto archEmpty = GenerateArchetype(array<TypeId, 0>{});
 
 		// ent0 fits
 		array<System::ComponentRequest, 3> req0 =
@@ -274,7 +274,7 @@ namespace
 		ArchetypeReflector reflector;
 		reflector.AddToLibrary(arch0, ToTypes(Funcs::SortCompileTime(ent0)));
 		reflector.AddToLibrary(arch1, ToTypes(Funcs::SortCompileTime(ent1)));
-		reflector.AddToLibrary(archEmpty, ToTypes(array<StableTypeId, 0>{}));
+		reflector.AddToLibrary(archEmpty, ToTypes(array<TypeId, 0>{}));
 
 		auto reflected = reflector.Reflect(arch0);
 		ASSUME(IsReflectedEqual(reflected, Funcs::SortCompileTime(ent0)));
@@ -283,7 +283,7 @@ namespace
 		ASSUME(IsReflectedEqual(reflected, Funcs::SortCompileTime(ent1)));
 
 		reflected = reflector.Reflect(archEmpty);
-		ASSUME(IsReflectedEqual(reflected, array<StableTypeId, 0>{}));
+		ASSUME(IsReflectedEqual(reflected, array<TypeId, 0>{}));
 
 		reflector.StartTrackingMatchingArchetypes(0, ToArray(ToRequired(req0)));
 		reflector.StartTrackingMatchingArchetypes(1, ToArray(ToRequired(req1)));
@@ -340,38 +340,38 @@ namespace
 		}
 	}
 
-	DIRECT_SYSTEM(TestSystem)
+	struct TestSystem : DirectSystem<TestSystem>
 	{
 		void Accept(NonUnique<ComponentArtist> &, RequiredComponent<TagTest0, TagTest1>, const NonUnique<ComponentProgrammer> &, Array<ComponentSpouse> &, Environment &env, const Array<EntityID> &, const Array<ComponentCompany> &, Array<ComponentEmployee> *, const Array<ComponentGender> *, RequiredComponent<ComponentDateOfBirth>, SubtractiveComponent<ComponentDesigner>)
 		{}
 	};
 
-	INDIRECT_SYSTEM(TestSystem2)
+	struct TestSystem2 : DirectSystem<TestSystem2>
 	{
 		void Accept(RequiredComponent<TagTest0, TagTest1, TagTest2>, SubtractiveComponent<TagTest3, TagTest4, TagTest5>)
 		{}
 	};
 
-	INDIRECT_SYSTEM(TestSystem3)
+	struct TestSystem3 : DirectSystem<TestSystem3>
 	{
 		void Accept()
 		{}
 	};
 
-	INDIRECT_SYSTEM(TestSystem4)
+	struct TestSystem4 : DirectSystem<TestSystem4>
 	{
 		void Accept(Array<ComponentSpouse> &, const Array<ComponentCompany> &, Array<ComponentEmployee> *, const Array<ComponentGender> *, RequiredComponentAny<ComponentEmployee, ComponentGender>, OptionalComponent<ComponentDateOfBirth, ComponentDesigner>)
 		{}
 	};
 
-	template <typename... Types> constexpr array<StableTypeId, sizeof...(Types)> MakeArray()
+	template <typename... Types> constexpr array<TypeId, sizeof...(Types)> MakeArray()
 	{
 		return {Types::GetTypeId()...};
 	}
 
 	struct TypeAndGroup
 	{
-		StableTypeId type = 0;
+		TypeId type = 0;
 		ui32 group = 0;
 	};
 
@@ -476,9 +476,6 @@ namespace
 		static_assert(TestSystem3::AcquireRequestedComponents().idsArgumentIndex == nullopt);
 		static_assert(TestSystem3::AcquireRequestedComponents().environmentArgumentIndex == nullopt);
 
-		auto test = TestSystem4::AcquireRequestedComponents().archetypeDefiningInfoOnly;
-		int a = 0;
-
 		static_assert(matches(TestSystem4::AcquireRequestedComponents().requiredWithoutData, MakeArray<>()));
 		static_assert(matches(TestSystem4::AcquireRequestedComponents().requiredWithData, MakeArray<ComponentSpouse, ComponentCompany>()));
 		static_assert(matches(TestSystem4::AcquireRequestedComponents().required, MakeArray<ComponentSpouse, ComponentCompany>()));
@@ -535,12 +532,12 @@ public:
 
 			if (rand() % 10 == 0)
 			{
-				StableTypeId types[] =
+				TypeId types[] =
 				{
 					ComponentFirstName::GetTypeId(),
 					ComponentArtist::GetTypeId()
 				};
-				Archetype arch = Archetype::Create<StableTypeId>(ToArray(types));
+				Archetype arch = Archetype::Create<TypeId>(ToArray(types));
 				builder.RemoveEntity(gen.LastGenerated(), arch);
 				auto[it, result] = entitiesRemoved.insert(gen.LastGenerated());
 				ASSUME(result);

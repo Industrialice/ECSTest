@@ -256,7 +256,7 @@ void SystemsManagerST::Register(unique_ptr<System> system, Pipeline pipeline)
 	}
 }
 
-void SystemsManagerST::Unregister(StableTypeId systemType)
+void SystemsManagerST::Unregister(TypeId systemType)
 {
 	if (_entitiesLocations.size())
 	{
@@ -477,7 +477,7 @@ auto SystemsManagerST::AddNewArchetypeGroup(const ArchetypeFull &archetype, Arra
 
 	_archetypeGroups[archetype.ToShort()].emplace_back(std::ref(group));
 
-	vector<StableTypeId> uniqueTypes;
+	vector<TypeId> uniqueTypes;
 	for (const auto &component : components)
 	{
         if (component.isTag == false)
@@ -539,7 +539,7 @@ auto SystemsManagerST::AddNewArchetypeGroup(const ArchetypeFull &archetype, Arra
 	group.entities.reset(Allocator::Malloc::Allocate<EntityID>(group.reservedCount));
     
     // add tag components
-    vector<StableTypeId> tagTypes;
+    vector<TypeId> tagTypes;
     for (const auto &component : components)
     {
         if (component.isTag)
@@ -548,7 +548,7 @@ auto SystemsManagerST::AddNewArchetypeGroup(const ArchetypeFull &archetype, Arra
         }
     }
     group.tagsCount = (ui16)tagTypes.size();
-    group.tags = make_unique<StableTypeId[]>(group.tagsCount);
+    group.tags = make_unique<TypeId[]>(group.tagsCount);
     std::copy(tagTypes.begin(), tagTypes.end(), group.tags.get());
 
 	// also add that archetype to the library
@@ -944,7 +944,7 @@ void SystemsManagerST::ExecutePipeline(PipelineData &pipeline, TimeDifference ti
     ++pipeline.executionFrame;
 }
 
-void SystemsManagerST::ProcessMessagesAndClear(IndirectSystem &system, ManagedIndirectSystem::MessageQueue &messageQueue, System::Environment &env)
+void SystemsManagerST::ProcessMessagesAndClear(BaseIndirectSystem &system, ManagedIndirectSystem::MessageQueue &messageQueue, System::Environment &env)
 {
 	for (const auto &stream : messageQueue.entityAddedStreams)
 	{
@@ -970,7 +970,7 @@ void SystemsManagerST::ProcessMessagesAndClear(IndirectSystem &system, ManagedIn
     messageQueue.clear();
 }
 
-void SystemsManagerST::ExecuteIndirectSystem(IndirectSystem &system, ManagedIndirectSystem::MessageQueue &messageQueue, ControlsQueue &controlsReceivedQueue, ControlsQueue &controlsToSendQueue, System::Environment &env)
+void SystemsManagerST::ExecuteIndirectSystem(BaseIndirectSystem &system, ManagedIndirectSystem::MessageQueue &messageQueue, ControlsQueue &controlsReceivedQueue, ControlsQueue &controlsToSendQueue, System::Environment &env)
 {
     ProcessControlsQueueAndClear(system, controlsReceivedQueue);
 
@@ -999,7 +999,7 @@ void SystemsManagerST::ExecuteIndirectSystem(IndirectSystem &system, ManagedIndi
     PassMessagesToIndirectSystemsAndClear(env.messageBuilder, &system);
 }
 
-void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, ControlsQueue &controlsReceivedQueue, ControlsQueue &controlsToSendQueue, System::Environment &env)
+void SystemsManagerST::ExecuteDirectSystem(BaseDirectSystem &system, ControlsQueue &controlsReceivedQueue, ControlsQueue &controlsToSendQueue, System::Environment &env)
 {
     ProcessControlsQueueAndClear(system, controlsReceivedQueue);
 
@@ -1131,7 +1131,7 @@ void SystemsManagerST::ExecuteDirectSystem(DirectSystem &system, ControlsQueue &
                 }
 
                 // check if there're indirect systems that require this component
-                auto isRequestedByIndirect = [this](StableTypeId type)
+                auto isRequestedByIndirect = [this](TypeId type)
                 {
                     for (auto &pipeline : _pipelines)
                     {
@@ -1330,7 +1330,7 @@ void SystemsManagerST::UpdateECSFromMessages(MessageBuilder &messageBuilder)
         }
     };
 
-    auto addOrRemoveComponent = [this, removeEntity](EntityID entityID, StableTypeId typeToRemove, ComponentID componentIDToRemove, optional<SerializedComponent> componentToAdd)
+    auto addOrRemoveComponent = [this, removeEntity](EntityID entityID, TypeId typeToRemove, ComponentID componentIDToRemove, optional<SerializedComponent> componentToAdd)
     {
         auto entityLocation = _entitiesLocations.find(entityID);
         ASSUME(entityLocation != _entitiesLocations.end()); // requested entity that doesn't exist
@@ -1388,7 +1388,7 @@ void SystemsManagerST::UpdateECSFromMessages(MessageBuilder &messageBuilder)
             _tempComponents.push_back(serialized);
         }
 
-		ASSUME(isFoundRemoveTarget || typeToRemove == StableTypeId{}); // trying to remove component that doesn't exist
+		ASSUME(isFoundRemoveTarget || typeToRemove == TypeId{}); // trying to remove component that doesn't exist
 
         ArchetypeGroup *newGroup;
         ArchetypeFull archetype = ComputeArchetype(ToArray(_tempComponents));

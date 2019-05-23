@@ -100,7 +100,7 @@ namespace ECSTest
         {};
         struct Custom
         {
-            StableTypeId type{};
+            TypeId type{};
             shared_ptr<void> data{};
         };
 

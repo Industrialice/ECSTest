@@ -9,10 +9,10 @@ namespace
 	constexpr bool IsPhysicsUsingComponentChangedHints = true;
 	constexpr bool IsShuffleUpdatesOrder = false;
     constexpr ui32 EntitiesToTest = 32768;
-    constexpr ui32 PhysicsUpdatesPerFrame = 5000;
+    constexpr ui32 PhysicsUpdatesPerFrame = 100;
     constexpr ui32 RendererDrawPerFrame = 100;
 
-    COMPONENT(Physics)
+    struct Physics : Component<Physics>
     {
         f32 mass;
         f32 linearDamping;
@@ -31,12 +31,12 @@ namespace
         f32 restOffset;
     };
 
-    COMPONENT(MeshRenderer)
+    struct MeshRenderer : Component<MeshRenderer>
     {
         array<char, 260> mesh;
     };
 
-    COMPONENT(Position)
+    struct Position : Component<Position>
     {
         Vector3 position;
 
@@ -44,7 +44,7 @@ namespace
         Position(const Vector3 &position) : position(position) {}
     };
 
-    COMPONENT(Rotation)
+    struct Rotation : Component<Rotation>
     {
         Quaternion rotation;
 
@@ -52,13 +52,13 @@ namespace
         Rotation(const Quaternion &rotation) : rotation(rotation) {}
     };
 
-    COMPONENT(MeshCollider)
+    struct MeshCollider : Component<MeshCollider>
     {
         bool isTrigger;
         array<char, 260> mesh;
     };
 
-    INDIRECT_SYSTEM(PhysicsSystem)
+    struct PhysicsSystem : IndirectSystem<PhysicsSystem>
     {
         void Accept(Array<Position> &, Array<Rotation> &, const Array<MeshCollider> &, const Array<Physics> &);
 
@@ -196,7 +196,7 @@ namespace
 		std::vector<EntityID> _updateIdsList{};
     };
 
-    INDIRECT_SYSTEM(RendererSystem)
+    struct RendererSystem : IndirectSystem<RendererSystem>
     {
         void Accept(const Array<Position> &, const Array<Rotation> &, const Array<MeshRenderer> &);
 

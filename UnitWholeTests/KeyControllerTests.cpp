@@ -19,19 +19,17 @@ namespace
     #define RENDERER_INDIRECT
 
     #ifdef PHYSICS_INDIRECT
-        #define PHYSICS_DECLARE INDIRECT_SYSTEM
-        #define PHYSICS_ACCEPT INDIRECT_ACCEPT_COMPONENTS
+        #define PHYSICS_DECLARE IndirectSystem
     #else
-        #define PHYSICS_DECLARE DIRECT_SYSTEM
-        #define PHYSICS_ACCEPT DIRECT_ACCEPT_COMPONENTS
+        #define PHYSICS_DECLARE DirectSystem
     #endif
 
-    COMPONENT(Position)
+    struct Position : Component<Position>
     {
         Vector3 position;
     };
 
-    PHYSICS_DECLARE(PhysicsSystem)
+    struct PhysicsSystem : PHYSICS_DECLARE<PhysicsSystem>
     {
         void Accept(Array<Position> &);
 
@@ -64,7 +62,7 @@ namespace
         }
 
     #ifdef PHYSICS_INDIRECT
-		using IndirectSystem::ProcessMessages;
+		using BaseIndirectSystem::ProcessMessages;
         virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override {}
         virtual void Update(Environment &env) override;
     #endif
@@ -85,7 +83,7 @@ namespace
         ++PhysicsSentKeys;
     }
 
-    INDIRECT_SYSTEM(RendererSystem)
+    struct RendererSystem : IndirectSystem<RendererSystem>
     {
 		void Accept(const Array<Position> &);
 
@@ -128,7 +126,7 @@ namespace
             ++RendererSentKeys;
         }
 
-		using IndirectSystem::ProcessMessages;
+		using BaseIndirectSystem::ProcessMessages;
         virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override {}
         virtual void ProcessMessages(Environment &env, const MessageStreamComponentChanged &stream) override {}
     };

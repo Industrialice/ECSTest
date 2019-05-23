@@ -18,7 +18,7 @@ static void LogRecipient(LogLevels::LogLevel logLevel, string_view nullTerminate
 static void FileLogRecipient(File &file, LogLevels::LogLevel logLevel, string_view nullTerminatedText, string_view senderName);
 static bool ReceiveInput(const ControlAction &action);
 
-DIRECT_SYSTEM(ScreenColorSystem)
+struct ScreenColorSystem : DirectSystem<ScreenColorSystem>
 {
 	void Accept(Array<Camera> &cameras, const Array<EntityID> &ids)
 	{

@@ -26,21 +26,21 @@ namespace ECSTest
 
     #ifdef CHECK_TYPES_IN_ARCHETYPES
         friend class ArchetypeReflector;
-        vector<StableTypeId> _storedTypes{};
+        vector<TypeId> _storedTypes{};
     #endif
 
     public:
-        template <typename T, typename E = T, StableTypeId E::*type = nullptr> [[nodiscard]] static Archetype Create(Array<const T> types)
+        template <typename T, typename E = T, TypeId E::*type = nullptr> [[nodiscard]] static Archetype Create(Array<const T> types)
         {
             Archetype result;
 
-            auto unduplicated = ALLOCA_TYPED(types.size(), StableTypeId);
+            auto unduplicated = ALLOCA_TYPED(types.size(), TypeId);
             uiw count = 0;
 
             for (const T &t : types)
             {
                 bool isAdd = true;
-                StableTypeId tType;
+                TypeId tType;
 
                 if constexpr (type == nullptr)
                 {
@@ -101,12 +101,12 @@ namespace ECSTest
 
     #ifdef CHECK_TYPES_IN_ARCHETYPES
         friend class ArchetypeReflector;
-        vector<StableTypeId> _storedTypes{};
-        vector<StableTypeId> _storedTypesFull{};
+        vector<TypeId> _storedTypes{};
+        vector<TypeId> _storedTypesFull{};
     #endif
 
     public:
-        template <typename T, typename E, StableTypeId E::*type, ComponentID T::*id> [[nodiscard]] static ArchetypeFull Create(Array<const T> types)
+        template <typename T, typename E, TypeId E::*type, ComponentID T::*id> [[nodiscard]] static ArchetypeFull Create(Array<const T> types)
         {
             ArchetypeFull result;
             

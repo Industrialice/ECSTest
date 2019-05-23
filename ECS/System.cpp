@@ -3,22 +3,22 @@
 
 using namespace ECSTest;
 
-IndirectSystem *System::AsIndirectSystem()
+BaseIndirectSystem *System::AsIndirectSystem()
 {
 	return nullptr;
 }
 
-const IndirectSystem *System::AsIndirectSystem() const
+const BaseIndirectSystem *System::AsIndirectSystem() const
 {
 	return nullptr;
 }
 
-DirectSystem *System::AsDirectSystem()
+BaseDirectSystem *System::AsDirectSystem()
 {
 	return nullptr;
 }
 
-const DirectSystem *System::AsDirectSystem() const
+const BaseDirectSystem *System::AsDirectSystem() const
 {
 	return nullptr;
 }
@@ -38,22 +38,22 @@ void System::SetKeyController(const shared_ptr<IKeyController> &controller)
     _keyController = controller;
 }
 
-IndirectSystem *IndirectSystem::AsIndirectSystem()
+BaseIndirectSystem *BaseIndirectSystem::AsIndirectSystem()
 {
 	return this;
 }
 
-const IndirectSystem *IndirectSystem::AsIndirectSystem() const
+const BaseIndirectSystem *BaseIndirectSystem::AsIndirectSystem() const
 {
 	return this;
 }
 
-DirectSystem *DirectSystem::AsDirectSystem()
+BaseDirectSystem *BaseDirectSystem::AsDirectSystem()
 {
 	return this;
 }
 
-const DirectSystem *DirectSystem::AsDirectSystem() const
+const BaseDirectSystem *BaseDirectSystem::AsDirectSystem() const
 {
 	return this;
 }

@@ -22,7 +22,7 @@ namespace ECSTest
         [[nodiscard]] virtual ManagerInfo GetManagerInfo() const override;
         virtual void SetLogger(const shared_ptr<LoggerType> &logger) override;
         virtual void Register(unique_ptr<System> system, Pipeline pipeline) override;
-		virtual void Unregister(StableTypeId systemType) override;
+		virtual void Unregister(TypeId systemType) override;
 		virtual void Start(EntityIDGenerator &&idGenerator, vector<WorkerThread> &&workers, vector<unique_ptr<IEntitiesStream>> &&streams) override;
 		virtual void Pause(bool isWaitForStop) override; // you can call it multiple times, for example first time as Pause(false), and then as Pause(true) to wait for paused
 		virtual void Resume() override;
@@ -37,7 +37,7 @@ namespace ECSTest
 		{
 			struct ComponentArray
 			{
-				StableTypeId type{}; // of each component
+				TypeId type{}; // of each component
 				ui16 stride{}; // Components of that type per entity, 1 if there's only one. Any access to a particular component must be performed using index * stride
 				ui16 sizeOf{}; // of each component
 				ui16 alignmentOf{}; // of each component
@@ -48,7 +48,7 @@ namespace ECSTest
 
 			unique_ptr<ComponentArray[]> components{}; // essentially a 2D array where rows count = uniqueTypedComponentsCount, columns count is computed per row as entitiesCount * stride
 			unique_ptr<EntityID[]> entities{};
-            unique_ptr<StableTypeId[]> tags{}; // tag components of this archetype group
+            unique_ptr<TypeId[]> tags{}; // tag components of this archetype group
             ui16 tagsCount{};
 			ui16 uniqueTypedComponentsCount{};
 			ui16 reservedCount{}; // final reserved count is computed as reservedCount * stride
@@ -71,12 +71,12 @@ namespace ECSTest
 
 		struct ManagedDirectSystem : ManagedSystem
 		{
-			unique_ptr<DirectSystem> system{};
+			unique_ptr<BaseDirectSystem> system{};
 		};
 
 		struct ManagedIndirectSystem : ManagedSystem
 		{
-			unique_ptr<IndirectSystem> system{};
+			unique_ptr<BaseIndirectSystem> system{};
 			// contains messages that the system needs to process before it starts its update
 			struct MessageQueue
 			{
@@ -102,7 +102,7 @@ namespace ECSTest
 			optional<TimeDifference> executionStep{};
 			MovableAtomic<TimeDifference> timeSpentExecuting{};
             TimeMoment lastExecutedTime{};
-			vector<StableTypeId> writeComponents{}; // list of components requested for write by the systems of this pipeline
+			vector<TypeId> writeComponents{}; // list of components requested for write by the systems of this pipeline
 		};
 
 		// used by all pipelines to perform execution
@@ -159,9 +159,9 @@ namespace ECSTest
 		void StartScheduler(vector<unique_ptr<IEntitiesStream>> &streams);
 		void SchedulerLoop();
 		void ExecutePipeline(PipelineData &pipeline, TimeDifference timeSinceLastFrame);
-		static void ProcessMessagesAndClear(IndirectSystem &system, ManagedIndirectSystem::MessageQueue &messageQueue, System::Environment &env);
-        void ExecuteIndirectSystem(IndirectSystem &system, ManagedIndirectSystem::MessageQueue &messageQueue, ControlsQueue &controlsReceivedQueue, ControlsQueue &controlsToSendQueue, System::Environment &env);
-        void ExecuteDirectSystem(DirectSystem &system, ControlsQueue &controlsReceivedQueue, ControlsQueue &controlsToSendQueue, System::Environment &env);
+		static void ProcessMessagesAndClear(BaseIndirectSystem &system, ManagedIndirectSystem::MessageQueue &messageQueue, System::Environment &env);
+        void ExecuteIndirectSystem(BaseIndirectSystem &system, ManagedIndirectSystem::MessageQueue &messageQueue, ControlsQueue &controlsReceivedQueue, ControlsQueue &controlsToSendQueue, System::Environment &env);
+        void ExecuteDirectSystem(BaseDirectSystem &system, ControlsQueue &controlsReceivedQueue, ControlsQueue &controlsToSendQueue, System::Environment &env);
         static void ProcessControlsQueueAndClear(System &system, ControlsQueue &controlsQueue);
         void PassControlsToOtherSystemsAndClear(ControlsQueue &controlsQueue, System *systemToIgnore);
         void PatchComponentAddedMessages(MessageBuilder &messageBuilder);

@@ -11,7 +11,7 @@ bool ArchetypeReflector::Contains(const Archetype &archetype) const
 	return contains;
 }
 
-void ArchetypeReflector::AddToLibrary(const Archetype &archetype, vector<StableTypeId> &&types)
+void ArchetypeReflector::AddToLibrary(const Archetype &archetype, vector<TypeId> &&types)
 {
 #ifdef CHECK_TYPES_IN_ARCHETYPES
     ASSUME(std::equal(archetype._storedTypes.begin(), archetype._storedTypes.end(), types.begin(), types.end()));
@@ -37,7 +37,7 @@ void ArchetypeReflector::AddToLibrary(const Archetype &archetype, vector<StableT
     unlocker.Unlock();
 }
 
-Array<const StableTypeId> ArchetypeReflector::Reflect(const Archetype &archetype) const
+Array<const TypeId> ArchetypeReflector::Reflect(const Archetype &archetype) const
 {
 	auto unlocker = _lock.Lock(DIWRSpinLock::LockType::Read);
 	auto it = _library.find(archetype);
@@ -128,7 +128,7 @@ const vector<Archetype> &ArchetypeReflector::FindMatchingArchetypes(uiw id) cons
     return ref;
 }
 
-bool ArchetypeReflector::Satisfies(Array<const StableTypeId> value, Array<const ArchetypeDefiningRequirement> request)
+bool ArchetypeReflector::Satisfies(Array<const TypeId> value, Array<const ArchetypeDefiningRequirement> request)
 {
 #ifdef DEBUG
 	{
