@@ -762,12 +762,12 @@ namespace ECSTest
 	template <typename SystemType> struct IndirectSystem : public BaseIndirectSystem, public TypeIdentifiable<SystemType>
 	{
 	public:
-		[[nodiscard]] virtual TypeId GetTypeId() const override final
+		[[nodiscard]] virtual TypeId GetTypeId() const override
 		{
 			return TypeIdentifiable<SystemType>::GetTypeId();
 		}
 		
-		[[nodiscard]] virtual string_view GetTypeName() const override final
+		[[nodiscard]] virtual string_view GetTypeName() const override
 		{
 			return TypeIdentifiable<SystemType>::GetTypeName();
 		}
@@ -779,7 +779,7 @@ namespace ECSTest
 
 		static constexpr const Requests &AcquireRequestedComponents()
 		{
-			// saving the rusult to a local leads to ICE in MSVC 15.9.11
+			// saving the rusult to a local leads to ICE in MSVC 16.1.0
 			static_assert(_SystemHelperFuncs::AcquireRequestedComponents<decltype(&SystemType::Accept)>().idsArgumentIndex == nullopt, "Indirect systems can't request EntityID");
 			static_assert(_SystemHelperFuncs::AcquireRequestedComponents<decltype(&SystemType::Accept)>().environmentArgumentIndex == nullopt, "Indirect systems don't need to request Environment");
 			return _SystemHelperFuncs::AcquireRequestedComponents<decltype(&SystemType::Accept)>();

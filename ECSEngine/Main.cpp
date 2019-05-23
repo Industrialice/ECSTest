@@ -96,6 +96,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
     }
 
     manager->Stop(true);
+	manager = {};
 
     SENDLOG(Info, WinMain, "Engine has finished\n");
 

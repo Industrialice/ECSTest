@@ -10,8 +10,15 @@ namespace ECSEngine
         RendererDX11System() = default;
 
     public:
-		using TypeIdentifiable<RendererDX11System>::GetTypeId;
-		using TypeIdentifiable<RendererDX11System>::GetTypeName;
+		[[nodiscard]] virtual TypeId GetTypeId() const override
+		{
+			return TypeIdentifiable<RendererDX11System>::GetTypeId();
+		}
+
+		[[nodiscard]] virtual string_view GetTypeName() const override
+		{
+			return TypeIdentifiable<RendererDX11System>::GetTypeName();
+		}
 
         static unique_ptr<Renderer> New();
     };
