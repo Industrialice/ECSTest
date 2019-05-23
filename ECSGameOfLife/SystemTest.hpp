@@ -1,14 +1,14 @@
 #pragma once
 
-#include <System.hpp>
-
 #include "ComponentProgrammer.hpp"
 
 namespace ECSTest
 {
-    INDIRECT_SYSTEM(SystemTest)
+    struct SystemTest : IndirectSystem<SystemTest>
     {
-        INDIRECT_ACCEPT_COMPONENTS(const Array<ComponentProgrammer> &artist);
+		using IndirectSystem::ProcessMessages;
+
+		void Accept(const NonUnique<ComponentProgrammer> &);
 
     private:
         struct ProgrammerEntry
@@ -16,6 +16,11 @@ namespace ECSTest
             EntityID parent;
             ComponentProgrammer component;
         };
+
+		virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override;
+		virtual void ProcessMessages(Environment &env, const MessageStreamComponentChanged &stream) override;
+		virtual void ProcessMessages(Environment &env, const MessageStreamEntityRemoved &stream) override;
+		virtual void Update(Environment &env) override;
 
         std::map<ComponentID, ProgrammerEntry> _programmers;
     };

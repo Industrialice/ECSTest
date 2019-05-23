@@ -4,7 +4,7 @@
 
 namespace ECSTest
 {
-	COMPONENT(ComponentCompany)
+	struct ComponentCompany : Component<ComponentCompany>
     {
         array<char, 32> name;
     };

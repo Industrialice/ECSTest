@@ -4,7 +4,7 @@
 
 namespace ECSTest
 {
-	COMPONENT(ComponentGender)
+	struct ComponentGender : Component<ComponentGender>
     {
         bool isMale;
     };

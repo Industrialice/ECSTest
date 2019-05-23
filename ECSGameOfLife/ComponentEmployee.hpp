@@ -5,7 +5,7 @@
 
 namespace ECSTest
 {
-    COMPONENT(ComponentEmployee)
+    struct ComponentEmployee : Component<ComponentEmployee>
     {
         EntityID employer;
     };

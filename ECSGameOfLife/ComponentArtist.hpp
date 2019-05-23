@@ -4,7 +4,7 @@
 
 namespace ECSTest
 {
-	NONUNIQUE_COMPONENT(ComponentArtist)
+	struct ComponentArtist : NonUniqueComponent<ComponentArtist>
     {
         enum class Areas : ui8
         {

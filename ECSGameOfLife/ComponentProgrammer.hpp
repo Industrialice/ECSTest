@@ -4,7 +4,7 @@
 
 namespace ECSTest
 {
-	NONUNIQUE_COMPONENT(ComponentProgrammer)
+	struct ComponentProgrammer : NonUniqueComponent<ComponentProgrammer>
     {
         enum class Languages : ui8
         {

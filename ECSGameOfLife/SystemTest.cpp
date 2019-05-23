@@ -3,7 +3,7 @@
 
 using namespace ECSTest;
 
-void SystemTest::ProcessMessages(const MessageStreamEntityAdded &stream)
+void SystemTest::ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream)
 {
     for (auto &item : stream)
     {
@@ -24,27 +24,19 @@ void SystemTest::ProcessMessages(const MessageStreamEntityAdded &stream)
     }
 }
 
-void SystemTest::ProcessMessages(const MessageStreamComponentChanged &stream)
+void SystemTest::ProcessMessages(Environment &env, const MessageStreamComponentChanged &stream)
 {
-    for (auto &item : stream)
+    for (const auto &item : stream.Enumerate<ComponentProgrammer>())
     {
-        //printf("SystemTest received %u:%u:%u in MessageStreamComponentChanged\n", item.entityID.Hash(), (ui32)item.component.type.Hash(), item.component.id);
-    }
-
-    if (stream.Type() == ComponentProgrammer::GetTypeId())
-    {
-        for (auto &item : stream)
-        {
-            auto rei = *(ComponentProgrammer *)item.component.data;
-            auto search = _programmers.find(item.component.id);
-            ASSUME(search != _programmers.end());
-            printf("SystemTest receieved change from %u to %u for component %u\n", (ui32)search->second.component.language, (ui32)rei.language, item.component.id.ID());
-            search->second.component = rei;
-        }
+        auto rei = item.component;
+        auto search = _programmers.find(item.componentID);
+        ASSUME(search != _programmers.end());
+        printf("SystemTest receieved change from %u to %u for component %u\n", (ui32)search->second.component.language, (ui32)rei.language, item.componentID.ID());
+        search->second.component = rei;
     }
 }
 
-void SystemTest::ProcessMessages(const MessageStreamEntityRemoved &stream)
+void SystemTest::ProcessMessages(Environment &env, const MessageStreamEntityRemoved &stream)
 {
     for (auto &item : stream)
     {
@@ -52,7 +44,7 @@ void SystemTest::ProcessMessages(const MessageStreamEntityRemoved &stream)
     }
 }
 
-void SystemTest::Update(Environment &env, MessageBuilder &messageBuilder)
+void SystemTest::Update(Environment &env)
 {
     auto threadId = std::this_thread::get_id();
 

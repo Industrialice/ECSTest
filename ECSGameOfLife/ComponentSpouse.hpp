@@ -5,7 +5,7 @@
 
 namespace ECSTest
 {
-	COMPONENT(ComponentSpouse)
+	struct ComponentSpouse : Component<ComponentSpouse>
     {
         EntityID spouse;
         ui32 dateOfMarriage; // days since 01/01/2000

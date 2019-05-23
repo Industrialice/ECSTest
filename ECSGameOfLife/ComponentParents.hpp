@@ -5,7 +5,7 @@
 
 namespace ECSTest
 {
-	COMPONENT(ComponentParents)
+	struct ComponentParents : Component<ComponentParents>
 	{
 		EntityID father;
 		EntityID mother;

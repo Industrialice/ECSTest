@@ -4,7 +4,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
     <IncludePath>../ECS;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)\$(Platform)_$(Configuration)\;$(VisualStudioDir)\Projects\StdLib2018\$(Configuration)_$(Platform)\;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(SolutionDir)$(Configuration)_$(PlatformTarget)\;$(VisualStudioDir)\Projects\StdLib2018\$(Configuration)_$(Platform)\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <Link />

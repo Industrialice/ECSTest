@@ -1,5 +1,7 @@
 #pragma once
 
+#include "System.hpp"
+
 namespace ECSTest
 {
     constexpr bool operator < (const System::ComponentRequest &left, const System::ComponentRequest &right)

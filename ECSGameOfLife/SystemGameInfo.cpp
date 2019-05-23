@@ -15,7 +15,7 @@
 
 using namespace ECSTest;
 
-void SystemGameInfo::ProcessMessages(const MessageStreamEntityAdded &stream)
+void SystemGameInfo::ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream)
 {
     for (auto &item : stream)
     {
@@ -36,15 +36,15 @@ void SystemGameInfo::ProcessMessages(const MessageStreamEntityAdded &stream)
     }
 }
 
-void SystemGameInfo::ProcessMessages(const MessageStreamComponentChanged &stream)
+void SystemGameInfo::ProcessMessages(Environment &env, const MessageStreamComponentChanged &stream)
 {
-    for (auto &item : stream)
-    {
-        printf("SystemGameInfo received %u:%u:%u in MessageStreamComponentChanged\n", item.entityID.Hash(), (ui32)item.component.type.Hash(), item.component.id.ID());
-    }
+    //for (auto &item : stream)
+    //{
+    //    printf("SystemGameInfo received %u:%u:%u in MessageStreamComponentChanged\n", item.entityID.Hash(), (ui32)item.component.type.Hash(), item.component.id.ID());
+    //}
 }
 
-void SystemGameInfo::ProcessMessages(const MessageStreamEntityRemoved &stream)
+void SystemGameInfo::ProcessMessages(Environment &env, const MessageStreamEntityRemoved &stream)
 {
     for (auto &item : stream)
     {
@@ -52,23 +52,23 @@ void SystemGameInfo::ProcessMessages(const MessageStreamEntityRemoved &stream)
     }
 }
 
-void SystemGameInfo::Update(Environment &env, MessageBuilder &messageBuilder)
+void SystemGameInfo::Update(Environment &env)
 {
     auto threadId = std::this_thread::get_id();
 
     //printf("updating SystemGameInfo on thread %u\n", *(ui32 *)&threadId);
 
-    auto id = env.idGenerator.Generate();
-    auto &builder = messageBuilder.AddEntity(id);
+    auto id = env.entityIdGenerator.Generate();
+    auto &builder = env.messageBuilder.AddEntity(id);
 
     ComponentArtist artist;
     artist.area = ComponentArtist::Areas::Concept;
     builder.AddComponent(artist);
 
-    StableTypeId types[] = {ComponentArtist::GetTypeId()};
-    Archetype archetype = Archetype::Create<StableTypeId>(ToArray(types));
+    TypeId types[] = {ComponentArtist::GetTypeId()};
+    Archetype archetype = Archetype::Create<TypeId>(ToArray(types));
 
-    messageBuilder.RemoveEntity(archetype, id);
+    env.messageBuilder.RemoveEntity(id, archetype);
 
     for (uiw index = 0; index < 10; ++index)
     {
@@ -84,6 +84,6 @@ void SystemGameInfo::Update(Environment &env, MessageBuilder &messageBuilder)
         changed.language = ComponentProgrammer::Languages::Java;
         changed.skillLevel = entry.skillLevel;
 
-        messageBuilder.ComponentChanged(entry.parent, changed, entry.componentId);
+        env.messageBuilder.ComponentChanged(entry.parent, changed, entry.componentId);
     }
 }

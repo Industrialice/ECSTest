@@ -1,5 +1,5 @@
 #include "PreHeader.hpp"
-#include <EntitiesStream.hpp>
+#include <IEntitiesStream.hpp>
 #include <SystemsManager.hpp>
 #include <stdio.h>
 #include <tuple>
@@ -21,7 +21,7 @@
 
 using namespace ECSTest;
 
-class GameOfLifeEntities : public EntitiesStream
+class GameOfLifeEntities : public IEntitiesStream
 {
 public:
 	struct EntityData
@@ -60,9 +60,9 @@ public:
 
 template <typename T> void StreamComponent(const T &component, GameOfLifeEntities::EntityData &preStreamed)
 {
-	EntitiesStream::ComponentDesc desc;
+	IEntitiesStream::ComponentDesc desc;
 	auto componentData = make_unique<ui8[]>(sizeof(T));
-	memcpy(componentData.get(), &component, sizeof(T));
+	MemOps::Copy((T *)componentData.get(), &component, 1);
 	desc.alignmentOf = alignof(T);
 	desc.isUnique = T::IsUnique();
     desc.isTag = T::IsTag();
@@ -335,18 +335,18 @@ int main()
     StdLib::Initialization::Initialize({});
 
     auto stream = make_unique<GameOfLifeEntities>();
-    auto manager = SystemsManager::New(false);
+    auto manager = SystemsManager::New(false, nullptr);
     EntityIDGenerator idGenerator;
 
 	GenerateScene(idGenerator, *manager, *stream);
 
-	auto gameInfoPipelineGroup = manager->CreatePipeline(1000'0000, true);
+	auto gameInfoPipelineGroup = manager->CreatePipeline(1_s, true);
 	manager->Register(make_unique<SystemGameInfo>(), gameInfoPipelineGroup);
     manager->Register(make_unique<SystemTest>(), gameInfoPipelineGroup);
 
 	vector<WorkerThread> workers(SystemInfo::LogicalCPUCores());
 
-    vector<unique_ptr<EntitiesStream>> streams;
+    vector<unique_ptr<IEntitiesStream>> streams;
     streams.push_back(move(stream));
     manager->Start(move(idGenerator), move(workers), move(streams));
     std::this_thread::sleep_for(2500ms);
