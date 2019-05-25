@@ -18,7 +18,7 @@
 #include <experimental/coroutine>
 #include <experimental/generator>
 
-#include <StdMiscellaneousLib.hpp>
+#include <StdMiscLib.hpp>
 #include <MatrixMathTypes.hpp>
 #include <Logger.hpp>
 using namespace StdLib;

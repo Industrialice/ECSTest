@@ -5,7 +5,7 @@
 	#define NOVIRTUALKEYCODES
 	#define NOWINMESSAGES
 	#define NOWINSTYLES
-	#define NOSYSMETRICS
+	//#define NOSYSMETRICS
 	#define NOMENUS
 	#define NOICONS
 	#define NOKEYSTATES

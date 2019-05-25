@@ -39,12 +39,12 @@ get stripped from the source meshes.
 
 Each texture source is stored in a lossless format like PNG. It has following attributes:
 Type: Default, Normal
-Space: sRGB, Linear
-Generate mips: true, false
+Color space: sRGB, Linear
 Wrap mode: WrapModet
 Filter mode: FilterModet
-Max size: 2^(0..14)
 Anisotropy level: 2^(0..4)
+Max size: 2^(0..14)
+Generate mips: true, false
 Compression: None, Low Quality, Normal Quality, High Quality
 
 There are conversion rules defined for each target.

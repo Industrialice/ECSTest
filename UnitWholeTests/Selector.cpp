@@ -21,6 +21,26 @@ static void DoTest(void func())
 
 int main()
 {
+	StdLib::Initialization::Initialize({});
+
+	#ifdef PLATFORM_WINDOWS
+		auto console = NativeConsole(true);
+		if (console)
+		{
+			ui32 screenWidth = GetSystemMetrics(SM_CXSCREEN);
+			ui32 screenHeight = GetSystemMetrics(SM_CYSCREEN);
+			ui32 preferredWidth = screenWidth / 4;
+			ui32 preferredHeight = screenHeight / 4;
+			ui32 width = std::max(preferredWidth, 750u);
+			ui32 height = std::max(preferredHeight, 450u);
+			console.
+				BufferSize(std::nullopt, 150).
+				Size(width, height).
+				Position((screenWidth - (i32)width) / 2, (screenHeight - (i32)height) / 2).
+				SnapToWindowSize(true);
+		}
+	#endif
+
 	PerformUnitTests(true);
 
 	printf("0. All\n");

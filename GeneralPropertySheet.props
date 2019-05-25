@@ -3,7 +3,7 @@
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <IncludePath>$(VisualStudioDir)\Projects\StdLib2018\Core\;$(VisualStudioDir)\Projects\StdLib2018\PlatformAbstraction\;$(VisualStudioDir)\Projects\StdLib2018\Miscellaneous\;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
+    <IncludePath>$(VisualStudioDir)\Projects\StdLib2018\Core\;$(VisualStudioDir)\Projects\StdLib2018\Platform\;$(VisualStudioDir)\Projects\StdLib2018\Misc\;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
     <LibraryPath>$(VisualStudioDir)\Projects\StdLib2018\$(Configuration)_$(PlatformTarget)\;$(LibraryPath)</LibraryPath>
     <OutDir>$(SolutionDir)$(Configuration)_$(PlatformTarget)\</OutDir>
   </PropertyGroup>
@@ -27,7 +27,7 @@
       <SDLCheck>false</SDLCheck>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>Core.lib;PlatformAbstraction.lib;Miscellaneous.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Core.lib;Platform.lib;Misc.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup />
