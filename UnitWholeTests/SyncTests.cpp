@@ -5,17 +5,75 @@
 
 using namespace ECSTest;
 
-namespace
+class SyncTestsClass
 {
-    namespace MonitoringStats
-    {
-        ui32 receivedEntityAddedCount = 0;
-        ui32 receivedComponentChangedCount = 0;
-        ui32 receivedEntityRemovedCount = 0;
-        ui32 receivedTest0ChangedCount = 0;
-        ui32 receivedTest1ChangedCount = 0;
-        ui32 receivedTest2ChangedCount = 0;
-    }
+	struct MonitoringStats
+	{
+		static inline ui32 receivedEntityAddedCount;
+		static inline ui32 receivedComponentChangedCount;
+		static inline ui32 receivedEntityRemovedCount;
+		static inline ui32 receivedTest0ChangedCount;
+		static inline ui32 receivedTest1ChangedCount;
+		static inline ui32 receivedTest2ChangedCount;
+	};
+
+public:
+	SyncTestsClass()
+	{
+		MonitoringStats::receivedEntityAddedCount = 0;
+		MonitoringStats::receivedComponentChangedCount = 0;
+		MonitoringStats::receivedEntityRemovedCount = 0;
+		MonitoringStats::receivedTest0ChangedCount = 0;
+		MonitoringStats::receivedTest1ChangedCount = 0;
+		MonitoringStats::receivedTest2ChangedCount = 0;
+
+		constexpr bool isMT = false;
+
+		auto stream = make_unique<EntitiesStream>();
+		auto manager = SystemsManager::New(isMT, nullptr);
+		EntityIDGenerator entityIdGenerator;
+
+		GenerateScene(entityIdGenerator, *manager, *stream);
+
+		auto testPipeline0 = manager->CreatePipeline(1_ms, false);
+		auto testPipeline1 = manager->CreatePipeline(1.5_ms, false);
+
+		manager->Register<TestIndirectSystem0>(testPipeline0);
+
+		manager->Register<TestIndirectSystem1>(testPipeline0);
+
+		manager->Register<TestIndirectSystem2>(testPipeline0);
+
+		manager->Register<MonitoringSystem>(testPipeline1);
+
+		vector<WorkerThread> workers;
+		if (isMT)
+		{
+			workers.resize(SystemInfo::LogicalCPUCores());
+		}
+
+		manager->Start(move(entityIdGenerator), move(workers), move(stream));
+
+		std::this_thread::sleep_for(2000ms);
+
+		manager->Pause(true);
+
+		auto ecsstream = manager->StreamOut();
+
+		PrintStreamInfo(*ecsstream, true);
+
+		manager->Resume();
+
+		std::this_thread::sleep_for(500ms);
+
+		manager->Pause(true);
+
+		ecsstream = manager->StreamOut();
+
+		PrintStreamInfo(*ecsstream, false);
+
+		manager->Stop(true);
+	}
 
     struct TestComponent0 : Component<TestComponent0>
     {
@@ -195,8 +253,6 @@ namespace
         {}
     };
 
-    using namespace ECSTest;
-
     static void GenerateScene(EntityIDGenerator &entityIdGenerator, SystemsManager &manager, EntitiesStream &stream)
     {
 		stream.HintTotal(100);
@@ -286,56 +342,10 @@ namespace
         printf("  test2 components: %u\n", test2Count);
         printf("\n");
     }
-}
+};
 
 void SyncTests()
 {
     StdLib::Initialization::Initialize({});
-
-    constexpr bool isMT = false;
-
-    auto stream = make_unique<EntitiesStream>();
-    auto manager = SystemsManager::New(isMT, nullptr);
-    EntityIDGenerator entityIdGenerator;
-
-    GenerateScene(entityIdGenerator, *manager, *stream);
-
-    auto testPipeline0 = manager->CreatePipeline(1_ms, false);
-    auto testPipeline1 = manager->CreatePipeline(1.5_ms, false);
-
-    manager->Register<TestIndirectSystem0>(testPipeline0);
-
-    manager->Register<TestIndirectSystem1>(testPipeline0);
-
-    manager->Register<TestIndirectSystem2>(testPipeline0);
-
-    manager->Register<MonitoringSystem>(testPipeline1);
-
-    vector<WorkerThread> workers;
-    if (isMT)
-    {
-        workers.resize(SystemInfo::LogicalCPUCores());
-    }
-
-    manager->Start(move(entityIdGenerator), move(workers), move(stream));
-    
-    std::this_thread::sleep_for(2000ms);
-
-    manager->Pause(true);
-
-    auto ecsstream = manager->StreamOut();
-
-    PrintStreamInfo(*ecsstream, true);
-
-    manager->Resume();
-
-    std::this_thread::sleep_for(500ms);
-
-    manager->Pause(true);
-
-    ecsstream = manager->StreamOut();
-
-    PrintStreamInfo(*ecsstream, false);
-
-    manager->Stop(true);
+	SyncTestsClass test;
 }

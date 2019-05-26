@@ -6,12 +6,69 @@
 
 using namespace ECSTest;
 
-namespace
+class FallingClass
 {
-    constexpr ui32 EntitiesToTest = 100;
-    constexpr bool IsUseDirectForFalling = false;
-    constexpr bool IsPreGenerateTransform = false;
-    constexpr bool IsMultiThreadedECS = false;
+    static constexpr ui32 EntitiesToTest = 100;
+	static constexpr bool IsUseDirectForFalling = false;
+	static constexpr bool IsPreGenerateTransform = false;
+	static constexpr bool IsMultiThreadedECS = false;
+
+public:
+	FallingClass()
+	{
+		auto logger = make_shared<Logger<string_view, true>>();
+		auto handle0 = logger->OnMessage(LogRecipient);
+
+		auto stream = make_unique<EntitiesStream>();
+		auto manager = SystemsManager::New(IsMultiThreadedECS, logger);
+		EntityIDGenerator entityIdGenerator;
+
+		GenerateScene(entityIdGenerator, *manager, *stream);
+
+		auto testPipeline0 = manager->CreatePipeline(5_ms, false);
+		auto testPipeline1 = manager->CreatePipeline(6.5_ms, false);
+
+		manager->Register<TransformGeneratorSystem>(testPipeline0);
+		manager->Register<TransformHeightFixerSystem>(testPipeline0);
+		if (IsUseDirectForFalling)
+		{
+			manager->Register<TransformFallingDirectSystem>(testPipeline0);
+		}
+		else
+		{
+			manager->Register<TransformFallingIndirectSystem>(testPipeline0);
+		}
+		manager->Register<AverageHeightAnalyzerSystem>(testPipeline1);
+		manager->Register<CooldownUpdater>(testPipeline1);
+
+		vector<WorkerThread> workers;
+		if (IsMultiThreadedECS)
+		{
+			workers.resize(SystemInfo::LogicalCPUCores());
+		}
+
+		manager->Start(move(entityIdGenerator), move(workers), move(stream));
+
+		std::this_thread::sleep_for(2000ms);
+
+		manager->Pause(true);
+
+		auto ecsstream = manager->StreamOut();
+
+		PrintStreamInfo(*ecsstream, true);
+
+		manager->Resume();
+
+		std::this_thread::sleep_for(1500ms);
+
+		manager->Pause(true);
+
+		ecsstream = manager->StreamOut();
+
+		PrintStreamInfo(*ecsstream, false);
+
+		manager->Stop(true);
+	}
 
     struct Name : Component<Name>
     {
@@ -532,8 +589,6 @@ namespace
         std::map<EntityID, NegativeHeightCooldown> _cooldowns{};
     };
 
-    using namespace ECSTest;
-
     static void GenerateScene(EntityIDGenerator &entityIdGenerator, SystemsManager &manager, EntitiesStream &stream)
     {
 		stream.HintTotal(EntitiesToTest);
@@ -617,62 +672,10 @@ namespace
             printf("%s count %u\n", id.Name(), count);
         }
     }
-}
+};
 
 void Falling()
 {
     StdLib::Initialization::Initialize({});
-
-    auto logger = make_shared<Logger<string_view, true>>();
-    auto handle0 = logger->OnMessage(LogRecipient);
-    
-    auto stream = make_unique<EntitiesStream>();
-    auto manager = SystemsManager::New(IsMultiThreadedECS, logger);
-    EntityIDGenerator entityIdGenerator;
-
-    GenerateScene(entityIdGenerator, *manager, *stream);
-
-    auto testPipeline0 = manager->CreatePipeline(5_ms, false);
-    auto testPipeline1 = manager->CreatePipeline(6.5_ms, false);
-
-    manager->Register<TransformGeneratorSystem>(testPipeline0);
-    manager->Register<TransformHeightFixerSystem>(testPipeline0);
-	if (IsUseDirectForFalling)
-	{
-		manager->Register<TransformFallingDirectSystem>(testPipeline0);
-	}
-	else
-	{
-		manager->Register<TransformFallingIndirectSystem>(testPipeline0);
-	}
-	manager->Register<AverageHeightAnalyzerSystem>(testPipeline1);
-    manager->Register<CooldownUpdater>(testPipeline1);
-
-    vector<WorkerThread> workers;
-    if (IsMultiThreadedECS)
-    {
-        workers.resize(SystemInfo::LogicalCPUCores());
-    }
-
-    manager->Start(move(entityIdGenerator), move(workers), move(stream));
-
-    std::this_thread::sleep_for(2000ms);
-
-    manager->Pause(true);
-
-    auto ecsstream = manager->StreamOut();
-
-    PrintStreamInfo(*ecsstream, true);
-
-    manager->Resume();
-
-    std::this_thread::sleep_for(1500ms);
-
-    manager->Pause(true);
-
-    ecsstream = manager->StreamOut();
-
-    PrintStreamInfo(*ecsstream, false);
-
-    manager->Stop(true);
+	FallingClass test;
 }

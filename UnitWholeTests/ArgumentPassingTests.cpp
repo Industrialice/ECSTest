@@ -2,13 +2,65 @@
 
 using namespace ECSTest;
 
-namespace
+class ArgumentPassingTestsClass
 {
-	constexpr bool IsMTECS = false;
-	constexpr ui32 EntitiesToTest = 2500;
-	std::atomic<bool> IsSystem0Visited = false;
-	std::atomic<bool> IsSystem1Visited = false;
-	std::atomic<bool> IsSystem2Visisted = false;
+	static constexpr bool IsMTECS = false;
+	static constexpr ui32 EntitiesToTest = 2500;
+	static inline std::atomic<bool> IsSystem0Visited;
+	static inline std::atomic<bool> IsSystem1Visited;
+	static inline std::atomic<bool> IsSystem2Visisted;
+
+public:
+	ArgumentPassingTestsClass()
+	{
+		IsSystem0Visited = false;
+		IsSystem1Visited = false;
+		IsSystem2Visisted = false;
+
+		auto logger = make_shared<Logger<string_view, true>>();
+		auto handle0 = logger->OnMessage(LogRecipient);
+
+		auto idGenerator = EntityIDGenerator{};
+		auto manager = SystemsManager::New(IsMTECS, logger);
+		auto stream = make_unique<EntitiesStream>();
+
+		auto before = TimeMoment::Now();
+		GenerateScene(idGenerator, *manager, *stream);
+		auto after = TimeMoment::Now();
+		printf("Generating scene took %.2lfs\n", (after - before).ToSec());
+
+		auto pipeline = manager->CreatePipeline(nullopt, false);
+
+		manager->Register<System0>(pipeline);
+		manager->Register<System1>(pipeline);
+		manager->Register<System2>(pipeline);
+		manager->Register<System3>(pipeline);
+		manager->Register<System4>(pipeline);
+		manager->Register<System5>(pipeline);
+		manager->Register<System6>(pipeline);
+
+		vector<WorkerThread> workers;
+		if (IsMTECS)
+		{
+			workers.resize(SystemInfo::LogicalCPUCores());
+		}
+
+		manager->Start(move(idGenerator), move(workers), move(stream));
+
+		for (;;)
+		{
+			auto info = manager->GetPipelineInfo(pipeline);
+			if (info.executedTimes > 2)
+			{
+				break;
+			}
+			std::this_thread::yield();
+		}
+
+		manager->Stop(true);
+
+		ASSUME(IsSystem0Visited && IsSystem1Visited && IsSystem2Visisted);
+	}
 
 	struct ComponentBase
 	{
@@ -387,53 +439,11 @@ namespace
 			stream.AddEntity(entityIdGenerator.Generate(), move(entity));
 		}
 	}
-}
+};
 
 void ArgumentPassingTests()
 {
 	StdLib::Initialization::Initialize({});
 
-	auto logger = make_shared<Logger<string_view, true>>();
-	auto handle0 = logger->OnMessage(LogRecipient);
-
-	auto idGenerator = EntityIDGenerator{};
-	auto manager = SystemsManager::New(IsMTECS, logger);
-	auto stream = make_unique<EntitiesStream>();
-
-	auto before = TimeMoment::Now();
-	GenerateScene(idGenerator, *manager, *stream);
-	auto after = TimeMoment::Now();
-	printf("Generating scene took %.2lfs\n", (after - before).ToSec());
-
-	auto pipeline = manager->CreatePipeline(nullopt, false);
-
-	manager->Register<System0>(pipeline);
-	manager->Register<System1>(pipeline);
-	manager->Register<System2>(pipeline);
-	manager->Register<System3>(pipeline);
-	manager->Register<System4>(pipeline);
-	manager->Register<System5>(pipeline);
-	manager->Register<System6>(pipeline);
-
-	vector<WorkerThread> workers;
-	if (IsMTECS)
-	{
-		workers.resize(SystemInfo::LogicalCPUCores());
-	}
-
-	manager->Start(move(idGenerator), move(workers), move(stream));
-
-	for (;;)
-	{
-		auto info = manager->GetPipelineInfo(pipeline);
-		if (info.executedTimes > 2)
-		{
-			break;
-		}
-		std::this_thread::yield();
-	}
-
-	manager->Stop(true);
-
-	ASSUME(IsSystem0Visited && IsSystem1Visited && IsSystem2Visisted);
+	ArgumentPassingTestsClass test;
 }

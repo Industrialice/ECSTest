@@ -6,11 +6,69 @@
 
 using namespace ECSTest;
 
-namespace
+class InteractionTestsClass
 {
-    constexpr ui32 EntitiesToAdd = 50;
-    constexpr bool IsMultiThreadedECS = false;
-    constexpr ui32 WaitForExecutedFrames = 150;
+    static constexpr ui32 EntitiesToAdd = 50;
+	static constexpr bool IsMultiThreadedECS = false;
+	static constexpr ui32 WaitForExecutedFrames = 150;
+
+	struct OtherComponent : Component<OtherComponent>
+	{
+		ui64 value;
+	};
+	
+	static inline std::map<EntityID, OtherComponent> CurrentData{};
+	static inline ui64 ValueGenerator{};
+
+public:
+	InteractionTestsClass()
+	{
+		CurrentData = {};
+		ValueGenerator = {};
+
+		auto logger = make_shared<Logger<string_view, true>>();
+		auto handle0 = logger->OnMessage(LogRecipient);
+
+		auto manager = SystemsManager::New(IsMultiThreadedECS, logger);
+		EntityIDGenerator entityIdGenerator;
+
+		auto testPipeline0 = manager->CreatePipeline(/*5_ms*/nullopt, false);
+		auto testPipeline1 = manager->CreatePipeline(/*6.5_ms*/nullopt, false);
+
+		manager->Register<GeneratorSystem>(testPipeline0);
+		manager->Register<EmptyDirectReadSystem>(testPipeline0);
+		manager->Register<ConsumerIndirectSystem>(testPipeline1);
+		manager->Register<ConsumerDirectSystem>(testPipeline1);
+		manager->Register<EmptyDirectWriteSystem>(testPipeline1);
+		manager->Register<OtherIndirectSystem>(testPipeline1);
+
+		vector<WorkerThread> workers;
+		if (IsMultiThreadedECS)
+		{
+			workers.resize(SystemInfo::LogicalCPUCores());
+		}
+
+		manager->Start(move(entityIdGenerator), move(workers));
+
+		for (;;)
+		{
+			auto info0 = manager->GetPipelineInfo(testPipeline0);
+			auto info1 = manager->GetPipelineInfo(testPipeline1);
+			if (info0.executedTimes > WaitForExecutedFrames && info1.executedTimes > WaitForExecutedFrames)
+			{
+				break;
+			}
+			std::this_thread::yield();
+		}
+
+		manager->Pause(true);
+
+		auto ecsstream = manager->StreamOut();
+
+		PrintStreamInfo(*ecsstream, true);
+
+		manager->Stop(true);
+	}
 
     class Pipeline
     {
@@ -71,11 +129,6 @@ namespace
         ui32 tagComponentsWithIdReceived = 0;
         ui64 tagConnectionHash = 0;
         ui64 tagIDHash = 0;
-    };
-
-    struct OtherComponent : Component<OtherComponent>
-    {
-        ui64 value;
     };
 
     struct ComponentWithTag : NonUniqueComponent<ComponentWithTag>
@@ -396,12 +449,6 @@ namespace
         }
     };
 
-    namespace
-    {
-        std::map<EntityID, OtherComponent> CurrentData{};
-        ui64 ValueGenerator{};
-    }
-
     struct OtherIndirectSystem : IndirectSystem<OtherIndirectSystem>
     {
         void Accept(Array<OtherComponent> &);
@@ -499,8 +546,6 @@ namespace
         }
     };
 
-    using namespace ECSTest;
-
     static void PrintStreamInfo(IEntitiesStream &stream, bool isFirstPass)
     {
         if (!isFirstPass)
@@ -554,55 +599,10 @@ namespace
         ASSUME(tagReceivedHash == tagSentConnectionHash);
         ASSUME(tagReceivedIDHash == tagSentIDHash);
     }
-}
+};
 
 void InteractionTests()
 {
     StdLib::Initialization::Initialize({});
-
-    auto logger = make_shared<Logger<string_view, true>>();
-    auto handle0 = logger->OnMessage(LogRecipient);
-
-    auto manager = SystemsManager::New(IsMultiThreadedECS, logger);
-    EntityIDGenerator entityIdGenerator;
-
-    auto testPipeline0 = manager->CreatePipeline(/*5_ms*/nullopt, false);
-    auto testPipeline1 = manager->CreatePipeline(/*6.5_ms*/nullopt, false);
-
-    manager->Register<GeneratorSystem>(testPipeline0);
-    manager->Register<EmptyDirectReadSystem>(testPipeline0);
-    manager->Register<ConsumerIndirectSystem>(testPipeline1);
-    manager->Register<ConsumerDirectSystem>(testPipeline1);
-    manager->Register<EmptyDirectWriteSystem>(testPipeline1);
-    manager->Register<OtherIndirectSystem>(testPipeline1);
-
-    vector<WorkerThread> workers;
-    if (IsMultiThreadedECS)
-    {
-        workers.resize(SystemInfo::LogicalCPUCores());
-    }
-
-    manager->Start(move(entityIdGenerator), move(workers));
-
-    for (;;)
-    {
-        auto info0 = manager->GetPipelineInfo(testPipeline0);
-        auto info1 = manager->GetPipelineInfo(testPipeline1);
-        if (info0.executedTimes > WaitForExecutedFrames && info1.executedTimes > WaitForExecutedFrames)
-        {
-            break;
-        }
-        std::this_thread::yield();
-    }
-
-    manager->Pause(true);
-
-    auto ecsstream = manager->StreamOut();
-
-    PrintStreamInfo(*ecsstream, true);
-
-    manager->Stop(true);
-
-	CurrentData = {};
-	ValueGenerator = 0;
+	InteractionTestsClass test;
 }

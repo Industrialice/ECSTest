@@ -2,15 +2,103 @@
 
 using namespace ECSTest;
 
-namespace
+class Benchmark2Class
 {
-    constexpr bool IsMTECS = false;
-	constexpr bool IsPhysicsFPSRestricted = false;
-	constexpr bool IsPhysicsUsingComponentChangedHints = true;
-	constexpr bool IsShuffleUpdatesOrder = false;
-    constexpr ui32 EntitiesToTest = 32768;
-    constexpr ui32 PhysicsUpdatesPerFrame = 100;
-    constexpr ui32 RendererDrawPerFrame = 100;
+    static constexpr bool IsMTECS = false;
+	static constexpr bool IsPhysicsFPSRestricted = false;
+	static constexpr bool IsPhysicsUsingComponentChangedHints = true;
+	static constexpr bool IsShuffleUpdatesOrder = false;
+	static constexpr ui32 EntitiesToTest = 32768;
+	static constexpr ui32 PhysicsUpdatesPerFrame = 100;
+	static constexpr ui32 RendererDrawPerFrame = 100;
+
+public:
+	Benchmark2Class()
+	{
+		printf("ECS multithreaded: %s\n", IsMTECS ? "yes" : "no");
+		printf("IsPhysicsFPSRestricted: %s\n", IsPhysicsFPSRestricted ? "yes" : "no");
+		printf("IsPhysicsUsingComponentChangedHints: %s\n", IsPhysicsUsingComponentChangedHints ? "yes" : "no");
+		printf("IsShuffleUpdatesOrder: %s\n", IsShuffleUpdatesOrder ? "yes" : "no");
+		printf("EntitiesToTest: %u\n", EntitiesToTest);
+		printf("PhysicsUpdatesPerFrame: %u\n", PhysicsUpdatesPerFrame);
+		printf("RendererDrawPerFrame: %u\n", RendererDrawPerFrame);
+
+		auto logger = make_shared<Logger<string_view, true>>();
+		auto handle0 = logger->OnMessage(LogRecipient);
+
+		auto idGenerator = EntityIDGenerator{};
+		auto manager = SystemsManager::New(IsMTECS, logger);
+		auto stream = make_unique<EntitiesStream>();
+
+		auto before = TimeMoment::Now();
+		GenerateScene(idGenerator, *manager, *stream);
+		auto after = TimeMoment::Now();
+		printf("Generating scene took %.2lfs\n", (after - before).ToSec_f64());
+
+		auto physicsPipeline = manager->CreatePipeline(IsPhysicsFPSRestricted ? optional(SecondsFP64(1.0 / 60.0)) : nullopt, false);
+		auto rendererPipeline = manager->CreatePipeline(nullopt, false);
+
+		manager->Register<PhysicsSystem>(physicsPipeline);
+		manager->Register<RendererSystem>(rendererPipeline);
+
+		vector<WorkerThread> workers;
+		if (IsMTECS)
+		{
+			workers.resize(SystemInfo::LogicalCPUCores());
+		}
+
+		manager->Start(move(idGenerator), move(workers), move(stream));
+
+		TimeDifference lastDifference;
+		ui32 lastExecutedRenderer = 0, lastExecutedPhysics = 0;
+		TimeDifference rendererLastSpent, physicsLastSpent;
+
+		std::vector<f32> fpsHistory{};
+		char backBuf[512];
+		MemOps::Set(backBuf, '\b', sizeof(backBuf));
+		int lastPrinted = 510;
+
+		for (;;)
+		{
+			auto managerInfo = manager->GetManagerInfo();
+			auto timeDiff = managerInfo.timeSinceStart - lastDifference;
+			if (timeDiff >= 1_s)
+			{
+				auto rendererInfo = manager->GetPipelineInfo(rendererPipeline);
+				ui32 rexecDiff = rendererInfo.executedTimes - lastExecutedRenderer;
+
+				auto physicsInfo = manager->GetPipelineInfo(physicsPipeline);
+				ui32 pexecDiff = physicsInfo.executedTimes - lastExecutedPhysics;
+
+				f32 diffRev = 1.0f / timeDiff.ToSec();
+
+				f32 rfps = (f32)rexecDiff * diffRev;
+				f32 pfps = (f32)pexecDiff * diffRev;
+
+				f32 rendererSpent = (rendererInfo.timeSpentExecuting - rendererLastSpent).ToMSec() * diffRev;
+				f32 physicsSpent = (physicsInfo.timeSpentExecuting - physicsLastSpent).ToMSec() * diffRev;
+
+				backBuf[lastPrinted + 1] = '\0';
+				printf(backBuf);
+				int printed = printf("renderer %.1ffps (%.2lfms, %.2lfms), physics %.1ffps (%.2lfms, %.2lfms)  ", rfps, rendererSpent, rendererSpent / rfps, pfps, physicsSpent, physicsSpent / pfps);
+				backBuf[lastPrinted + 1] = '\b';
+				lastPrinted = printed;
+
+				fpsHistory.push_back(rfps);
+				lastExecutedRenderer = rendererInfo.executedTimes;
+				rendererLastSpent = rendererInfo.timeSpentExecuting;
+				lastExecutedPhysics = physicsInfo.executedTimes;
+				physicsLastSpent = physicsInfo.timeSpentExecuting;
+				lastDifference = managerInfo.timeSinceStart;
+			}
+			std::this_thread::sleep_for(1ms);
+		}
+
+		manager->Stop(true);
+
+		f32 avg = std::accumulate(fpsHistory.begin(), fpsHistory.end(), 0.0f);
+		printf("\nAverage FPS: %.2lf\n", avg / fpsHistory.size());
+	}
 
     struct Physics : Component<Physics>
     {
@@ -385,93 +473,10 @@ namespace
             stream.AddEntity(id, move(entity));
         }
     }
-}
+};
 
 void Benchmark2()
 {
     StdLib::Initialization::Initialize({});
-
-	printf("ECS multithreaded: %s\n", IsMTECS ? "yes" : "no");
-	printf("IsPhysicsFPSRestricted: %s\n", IsPhysicsFPSRestricted ? "yes" : "no");
-	printf("IsPhysicsUsingComponentChangedHints: %s\n", IsPhysicsUsingComponentChangedHints ? "yes" : "no");
-	printf("IsShuffleUpdatesOrder: %s\n", IsShuffleUpdatesOrder ? "yes" : "no");
-	printf("EntitiesToTest: %u\n", EntitiesToTest);
-	printf("PhysicsUpdatesPerFrame: %u\n", PhysicsUpdatesPerFrame);
-	printf("RendererDrawPerFrame: %u\n", RendererDrawPerFrame);
-
-    auto logger = make_shared<Logger<string_view, true>>();
-    auto handle0 = logger->OnMessage(LogRecipient);
-
-    auto idGenerator = EntityIDGenerator{};
-    auto manager = SystemsManager::New(IsMTECS, logger);
-    auto stream = make_unique<EntitiesStream>();
-
-    auto before = TimeMoment::Now();
-    GenerateScene(idGenerator, *manager, *stream);
-    auto after = TimeMoment::Now();
-    printf("Generating scene took %.2lfs\n", (after - before).ToSec_f64());
-
-    auto physicsPipeline = manager->CreatePipeline(IsPhysicsFPSRestricted ? optional(SecondsFP64(1.0 / 60.0)) : nullopt, false);
-    auto rendererPipeline = manager->CreatePipeline(nullopt, false);
-
-    manager->Register<PhysicsSystem>(physicsPipeline);
-    manager->Register<RendererSystem>(rendererPipeline);
-
-    vector<WorkerThread> workers;
-    if (IsMTECS)
-    {
-        workers.resize(SystemInfo::LogicalCPUCores());
-    }
-
-    manager->Start(move(idGenerator), move(workers), move(stream));
-
-    TimeDifference lastDifference;
-    ui32 lastExecutedRenderer = 0, lastExecutedPhysics = 0;
-	TimeDifference rendererLastSpent, physicsLastSpent;
-
-    std::vector<f32> fpsHistory{};
-	char backBuf[512];
-	MemOps::Set(backBuf, '\b', sizeof(backBuf));
-	int lastPrinted = 510;
-
-    for (;;)
-    {
-        auto managerInfo = manager->GetManagerInfo();
-        auto timeDiff = managerInfo.timeSinceStart - lastDifference;
-        if (timeDiff >= 1_s)
-        {
-            auto rendererInfo = manager->GetPipelineInfo(rendererPipeline);
-            ui32 rexecDiff = rendererInfo.executedTimes - lastExecutedRenderer;
-            
-            auto physicsInfo = manager->GetPipelineInfo(physicsPipeline);
-            ui32 pexecDiff = physicsInfo.executedTimes - lastExecutedPhysics;
-
-			f32 diffRev = 1.0f / timeDiff.ToSec();
-
-            f32 rfps = (f32)rexecDiff * diffRev;
-            f32 pfps = (f32)pexecDiff * diffRev;
-
-			f32 rendererSpent = (rendererInfo.timeSpentExecuting - rendererLastSpent).ToMSec() * diffRev;
-			f32 physicsSpent = (physicsInfo.timeSpentExecuting - physicsLastSpent).ToMSec() * diffRev;
-
-			backBuf[lastPrinted + 1] = '\0';
-			printf(backBuf);
-			int printed = printf("renderer %.1ffps (%.2lfms, %.2lfms), physics %.1ffps (%.2lfms, %.2lfms)  ", rfps, rendererSpent, rendererSpent / rfps, pfps, physicsSpent, physicsSpent / pfps);
-			backBuf[lastPrinted + 1] = '\b';
-			lastPrinted = printed;
-            
-            fpsHistory.push_back(rfps);
-            lastExecutedRenderer = rendererInfo.executedTimes;
-			rendererLastSpent = rendererInfo.timeSpentExecuting;
-            lastExecutedPhysics = physicsInfo.executedTimes;
-			physicsLastSpent = physicsInfo.timeSpentExecuting;
-            lastDifference = managerInfo.timeSinceStart;
-        }
-		std::this_thread::sleep_for(1ms);
-    }
-
-    manager->Stop(true);
-
-    f32 avg = std::accumulate(fpsHistory.begin(), fpsHistory.end(), 0.0f);
-    printf("\nAverage FPS: %.2lf\n", avg / fpsHistory.size());
+	Benchmark2Class test;
 }

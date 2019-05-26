@@ -2,18 +2,75 @@
 
 using namespace ECSTest;
 
-namespace
+class KeyControllerTestsClass
 {
-    constexpr bool IsMTECS = false;
-    constexpr ui32 FramesToWait = 100;
+    static constexpr bool IsMTECS = false;
+    static constexpr ui32 FramesToWait = 100;
 
-    ui32 PhysicsSentKeys = 0;
-    ui32 PhysicsReceivedRendererKeys = 0;
-    ui32 PhysicsReceivedPhysicsKeys = 0;
+    static inline ui32 PhysicsSentKeys;
+	static inline ui32 PhysicsReceivedRendererKeys;
+	static inline ui32 PhysicsReceivedPhysicsKeys;
 
-    ui32 RendererSentKeys = 0;
-    ui32 RendererReceivedRendererKeys = 0;
-    ui32 RendererReceivedPhysicsKeys = 0;
+	static inline ui32 RendererSentKeys;
+	static inline ui32 RendererReceivedRendererKeys;
+	static inline ui32 RendererReceivedPhysicsKeys;
+
+public:
+	KeyControllerTestsClass()
+	{
+		PhysicsSentKeys = 0;
+		PhysicsReceivedRendererKeys = 0;
+		PhysicsReceivedPhysicsKeys = 0;
+
+		RendererSentKeys = 0;
+		RendererReceivedRendererKeys = 0;
+		RendererReceivedPhysicsKeys = 0;
+
+		auto logger = make_shared<Logger<string_view, true>>();
+		auto handle0 = logger->OnMessage(LogRecipient);
+		auto stream = make_unique<EntitiesStream>();
+
+		auto idGenerator = EntityIDGenerator{};
+		auto manager = SystemsManager::New(IsMTECS, logger);
+
+		GenerateScene(idGenerator, *manager, *stream);
+
+		auto pipeline = manager->CreatePipeline(nullopt, false);
+
+		auto physicsSystem = make_unique<PhysicsSystem>();
+		physicsSystem->SetKeyController(KeyController::New());
+
+		auto rendererSystem = make_unique<RendererSystem>();
+		rendererSystem->SetKeyController(KeyController::New());
+
+		manager->Register(move(physicsSystem), pipeline);
+		manager->Register(move(rendererSystem), pipeline);
+
+		vector<WorkerThread> workers;
+		if (IsMTECS)
+		{
+			workers.resize(SystemInfo::LogicalCPUCores());
+		}
+
+		manager->Start(move(idGenerator), move(workers), move(stream));
+
+		for (;;)
+		{
+			auto info = manager->GetPipelineInfo(pipeline);
+			if (info.executedTimes > FramesToWait)
+			{
+				break;
+			}
+			std::this_thread::yield();
+		}
+
+		manager->Stop(true);
+
+		ASSUME(PhysicsReceivedRendererKeys >= RendererSentKeys - 1);
+		ASSUME(PhysicsReceivedPhysicsKeys == PhysicsSentKeys);
+		ASSUME(RendererReceivedRendererKeys == RendererSentKeys);
+		ASSUME(RendererReceivedPhysicsKeys >= PhysicsSentKeys - 1);
+	}
 
     #define PHYSICS_INDIRECT
     #define RENDERER_INDIRECT
@@ -67,21 +124,6 @@ namespace
         virtual void Update(Environment &env) override;
     #endif
     };
-
-#ifdef PHYSICS_INDIRECT
-    void PhysicsSystem::Update(Environment &env)
-    #else
-    void PhysicsSystem::Update(Environment &env, Array<Position> &)
-    #endif
-    {
-        ControlAction::Key key;
-        key.key = KeyCode::C;
-        key.keyState = ControlAction::Key::KeyState::Released;
-
-        env.keyController->Dispatch({key, {}, DeviceTypes::MouseKeyboard});
-
-        ++PhysicsSentKeys;
-    }
 
     struct RendererSystem : IndirectSystem<RendererSystem>
     {
@@ -144,54 +186,25 @@ namespace
             stream.AddEntity(entityIdGenerator.Generate(), move(entity));
         }
     }
+};
+
+#ifdef PHYSICS_INDIRECT
+	void KeyControllerTestsClass::PhysicsSystem::Update(Environment &env)
+#else
+	void KeyControllerTestsClass::PhysicsSystem::Update(Environment &env, Array<Position> &)
+#endif
+{
+	ControlAction::Key key;
+	key.key = KeyCode::C;
+	key.keyState = ControlAction::Key::KeyState::Released;
+
+	env.keyController->Dispatch({key, {}, DeviceTypes::MouseKeyboard});
+
+	++PhysicsSentKeys;
 }
 
 void KeyControllerTests()
 {
     StdLib::Initialization::Initialize({});
-
-    auto logger = make_shared<Logger<string_view, true>>();
-    auto handle0 = logger->OnMessage(LogRecipient);
-    auto stream = make_unique<EntitiesStream>();
-
-    auto idGenerator = EntityIDGenerator{};
-    auto manager = SystemsManager::New(IsMTECS, logger);
-
-    GenerateScene(idGenerator, *manager, *stream);
-
-    auto pipeline = manager->CreatePipeline(nullopt, false);
-
-    auto physicsSystem = make_unique<PhysicsSystem>();
-    physicsSystem->SetKeyController(KeyController::New());
-
-    auto rendererSystem = make_unique<RendererSystem>();
-    rendererSystem->SetKeyController(KeyController::New());
-
-    manager->Register(move(physicsSystem), pipeline);
-    manager->Register(move(rendererSystem), pipeline);
-
-    vector<WorkerThread> workers;
-    if (IsMTECS)
-    {
-        workers.resize(SystemInfo::LogicalCPUCores());
-    }
-
-    manager->Start(move(idGenerator), move(workers), move(stream));
-
-    for (;;)
-    {
-        auto info = manager->GetPipelineInfo(pipeline);
-        if (info.executedTimes > FramesToWait)
-        {
-            break;
-        }
-        std::this_thread::yield();
-    }
-
-    manager->Stop(true);
-
-    ASSUME(PhysicsReceivedRendererKeys >= RendererSentKeys - 1);
-    ASSUME(PhysicsReceivedPhysicsKeys == PhysicsSentKeys);
-    ASSUME(RendererReceivedRendererKeys == RendererSentKeys);
-    ASSUME(RendererReceivedPhysicsKeys >= PhysicsSentKeys - 1);
+	KeyControllerTestsClass test;
 }

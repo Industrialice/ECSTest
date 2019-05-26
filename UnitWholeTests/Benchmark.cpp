@@ -2,10 +2,58 @@
 
 using namespace ECSTest;
 
-namespace
+class BenchmarkClass
 {
-    constexpr bool IsMTECS = false;
-    constexpr ui32 EntitiesToTest = 1000;
+    static constexpr bool IsMTECS = false;
+	static constexpr ui32 EntitiesToTest = 1000;
+
+public:
+	BenchmarkClass()
+	{
+		auto logger = make_shared<Logger<string_view, true>>();
+		auto handle0 = logger->OnMessage(LogRecipient);
+
+		auto idGenerator = EntityIDGenerator{};
+		auto manager = SystemsManager::New(IsMTECS, logger);
+		auto stream = make_unique<EntitiesStream>();
+
+		GenerateScene(idGenerator, *manager, *stream);
+
+		auto pipeline = manager->CreatePipeline(nullopt, false);
+
+		manager->Register<System0>(pipeline);
+		manager->Register<System1>(pipeline);
+		manager->Register<System2>(pipeline);
+		manager->Register<System3>(pipeline);
+
+		vector<WorkerThread> workers;
+		if (IsMTECS)
+		{
+			workers.resize(SystemInfo::LogicalCPUCores());
+		}
+
+		MesasureReference();
+
+		manager->Start(move(idGenerator), move(workers), move(stream));
+
+		for (;;)
+		{
+			auto info = manager->GetManagerInfo();
+			if (info.timeSinceStart >= 1_s)
+			{
+				break;
+			}
+			std::this_thread::sleep_for(1ms);
+		}
+
+		manager->Stop(true);
+		auto managerInfo = manager->GetManagerInfo();
+		auto pipelineInfo = manager->GetPipelineInfo(pipeline);
+
+		auto computed = pipelineInfo.executedTimes * 4 * EntitiesToTest;
+		auto time = managerInfo.timeSinceStart.ToSec_f64();
+		printf("%.2lfkk sin/cos per second (ECS %s)\n", (computed / time) / 1000 / 1000, IsMTECS ? "multithreaded" : "singlethreaded");
+	}
 
     struct CosineResultComponent : Component<CosineResultComponent>
     {
@@ -141,53 +189,10 @@ namespace
         auto time = diff.ToSec_f64();
         printf("%.2lfkk sin/cos per second (reference 1 thread)\n", (computed / time) / 1000 / 1000);
     }
-}
+};
 
 void Benchmark()
 {
     StdLib::Initialization::Initialize({});
-
-    auto logger = make_shared<Logger<string_view, true>>();
-    auto handle0 = logger->OnMessage(LogRecipient);
-
-    auto idGenerator = EntityIDGenerator{};
-    auto manager = SystemsManager::New(IsMTECS, logger);
-    auto stream = make_unique<EntitiesStream>();
-    
-    GenerateScene(idGenerator, *manager, *stream);
-
-    auto pipeline = manager->CreatePipeline(nullopt, false);
-
-    manager->Register<System0>(pipeline);
-    manager->Register<System1>(pipeline);
-    manager->Register<System2>(pipeline);
-    manager->Register<System3>(pipeline);
-
-    vector<WorkerThread> workers;
-    if (IsMTECS)
-    {
-        workers.resize(SystemInfo::LogicalCPUCores());
-    }
-
-    MesasureReference();
-
-    manager->Start(move(idGenerator), move(workers), move(stream));
-
-    for (;;)
-    {
-        auto info = manager->GetManagerInfo();
-        if (info.timeSinceStart >= 1_s)
-        {
-            break;
-        }
-		std::this_thread::sleep_for(1ms);
-    }
-
-    manager->Stop(true);
-    auto managerInfo = manager->GetManagerInfo();
-    auto pipelineInfo = manager->GetPipelineInfo(pipeline);
-
-    auto computed = pipelineInfo.executedTimes * 4 * EntitiesToTest;
-    auto time = managerInfo.timeSinceStart.ToSec_f64();
-    printf("%.2lfkk sin/cos per second (ECS %s)\n", (computed / time) / 1000 / 1000, IsMTECS ? "multithreaded" : "singlethreaded");
+	BenchmarkClass test;
 }
