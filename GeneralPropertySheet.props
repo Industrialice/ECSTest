@@ -3,8 +3,8 @@
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <IncludePath>$(VisualStudioDir)\Projects\StdLib2018\Core\;$(VisualStudioDir)\Projects\StdLib2018\Platform\;$(VisualStudioDir)\Projects\StdLib2018\Misc\;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
-    <LibraryPath>$(VisualStudioDir)\Projects\StdLib2018\$(Configuration)_$(PlatformTarget)\;$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)..\StdLib2018\Core\;$(SolutionDir)..\StdLib2018\Platform\;$(SolutionDir)..\StdLib2018\Misc\;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)..\StdLib2018\$(Configuration)_$(PlatformTarget)\;$(LibraryPath)</LibraryPath>
     <OutDir>$(SolutionDir)$(Configuration)_$(PlatformTarget)\</OutDir>
   </PropertyGroup>
   <ItemDefinitionGroup>
