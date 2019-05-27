@@ -136,7 +136,7 @@ public:
             }
             _entitiesToGenerate.clear();
 
-            env.logger.Message(LogLevels::Info, "Finished generating entities\n");
+            env.logger.Info("Finished generating entities\n");
         }
 
         virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override

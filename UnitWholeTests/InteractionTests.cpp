@@ -189,7 +189,7 @@ public:
                             return;
                         }
 
-                        env.logger.Message(LogLevels::Info, "Finished generating entities\n");
+                        env.logger.Info("Finished generating entities\n");
                     }
                 }
 
@@ -218,7 +218,7 @@ public:
                             return;
                         }
 
-                        env.logger.Message(LogLevels::Info, "Finished changing components\n");
+                        env.logger.Info("Finished changing components\n");
                     }
                 }
 
@@ -235,7 +235,7 @@ public:
                             return;
                         }
 
-                        env.logger.Message(LogLevels::Info, "Finished removing components\n");
+                        env.logger.Info("Finished removing components\n");
                     }
                 }
 

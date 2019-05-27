@@ -108,7 +108,7 @@ public:
                 {
                     SOFTBREAK;
                 }
-                //env.logger.Message(LogLevels::Info, "Received key %u\n", key->key);
+                //env.logger.Info("Received key %u\n", key->key);
             }
             else
             {
@@ -147,7 +147,7 @@ public:
                 {
                     SOFTBREAK;
                 }
-                //env.logger.Message(LogLevels::Info, "Received key %u\n", key->key);
+                //env.logger.Info("Received key %u\n", key->key);
             }
             else
             {

@@ -229,7 +229,7 @@ public:
 
     virtual void OnCreate(Environment &env) override
     {
-        env.logger.Message(LogLevels::Info, "Initializing\n");
+        env.logger.Info("Initializing\n");
 
         constexpr ui32 adaptersMask = ui32_max;
         constexpr D3D_FEATURE_LEVEL maxFeatureLevel = D3D_FEATURE_LEVEL_11_0;
@@ -238,7 +238,7 @@ public:
         HRESULT dxgiFactoryResult = CreateDXGIFactory1(__uuidof(IDXGIFactory1), (void **)&dxgiFactory);
         if (FAILED(dxgiFactoryResult))
         {
-            env.logger.Message(LogLevels::Error, "Failed to create DXGI factory, error %s\n", ConvertDX11ErrToString(dxgiFactoryResult));
+            env.logger.Error("Failed to create DXGI factory, error %s\n", ConvertDX11ErrToString(dxgiFactoryResult));
             return;
         }
 
@@ -263,7 +263,7 @@ public:
 		
         if (adapters.empty())
         {
-            env.logger.Message(LogLevels::Error, "Adapters list is empty, try another adaptersMask\n");
+            env.logger.Error("Adapters list is empty, try another adaptersMask\n");
             return;
         }
 
@@ -290,7 +290,7 @@ public:
 
         if (FAILED(result))
         {
-            env.logger.Message(LogLevels::Error, "Failed to create device, error %s\n", ConvertDX11ErrToString(result));
+            env.logger.Error("Failed to create device, error %s\n", ConvertDX11ErrToString(result));
             return;
         }
 
@@ -298,17 +298,17 @@ public:
 
         ASSUME(_device != nullptr && _context != nullptr);
         
-        env.logger.Message(LogLevels::Info, "Finished initialization\n");
+        env.logger.Info("Finished initialization\n");
     }
 
     virtual void OnDestroy(Environment &env) override
     {
-        env.logger.Message(LogLevels::Info, "Deinitializing\n");
+        env.logger.Info("Deinitializing\n");
 
         _context = {};
         _device = {};
 
-        env.logger.Message(LogLevels::Info, "Finished deinitialization\n");
+        env.logger.Info("Finished deinitialization\n");
     }
 
 private:
@@ -412,7 +412,7 @@ optional<HWND> CreateSystemWindow(LoggerWrapper &logger, const string &title, bo
 
     if (!RegisterClassA(&wc))
     {
-        logger.Message(LogLevels::Critical, "Failed to register class\n");
+        logger.Critical("Failed to register class\n");
         return nullopt;
     }
 
@@ -437,7 +437,7 @@ optional<HWND> CreateSystemWindow(LoggerWrapper &logger, const string &title, bo
     HWND hwnd = CreateWindowA(className.c_str(), title.c_str(), style, x, y, width, height, 0, 0, instance, 0);
     if (!hwnd)
     {
-        logger.Message(LogLevels::Critical, "Failed to create requested window\n");
+        logger.Critical("Failed to create requested window\n");
         return nullopt;
     }
 
@@ -611,7 +611,7 @@ DX11Window::DX11Window(Window &window, ID3D11Device *device, LoggerWrapper &logg
         hidInput = HIDInput();
         if (!hidInput->Register(*hwnd))
         {
-            logger.Message(LogLevels::Error, "Failed to registed HID, using VK\n");
+            logger.Error("Failed to registed HID, using VK\n");
             hidInput = {};
             vkInput = VKInput();
         }
@@ -651,7 +651,7 @@ bool DX11Window::MakeWindowAssociation(LoggerWrapper &logger)
         COMUniquePtr<IDXGIDevice> dxgiDevice;
         if (HRESULT hresult = device->QueryInterface(__uuidof(IDXGIDevice), (void**)&dxgiDevice) != S_OK)
         {
-            logger.Message(LogLevels::Error, "CreateWindowAssociation: failed to get DXGI device with error 0x%h %s\n", hresult, ConvertDX11ErrToString(hresult));
+            logger.Error("CreateWindowAssociation: failed to get DXGI device with error 0x%h %s\n", hresult, ConvertDX11ErrToString(hresult));
             procError();
             return false;
         }
@@ -659,7 +659,7 @@ bool DX11Window::MakeWindowAssociation(LoggerWrapper &logger)
         COMUniquePtr<IDXGIAdapter> dxgiAdapter;
         if (HRESULT hresult = dxgiDevice->GetParent(__uuidof(IDXGIAdapter), (void**)&dxgiAdapter) != S_OK)
         {
-            logger.Message(LogLevels::Error, "CreateWindowAssociation: failed to get DXGI adapter with error 0x%h %s\n", hresult, ConvertDX11ErrToString(hresult));
+            logger.Error("CreateWindowAssociation: failed to get DXGI adapter with error 0x%h %s\n", hresult, ConvertDX11ErrToString(hresult));
             procError();
             return false;
         }
@@ -667,28 +667,28 @@ bool DX11Window::MakeWindowAssociation(LoggerWrapper &logger)
         COMUniquePtr<IDXGIFactory> dxgiFactory;
         if (HRESULT hresult = dxgiAdapter->GetParent(__uuidof(IDXGIFactory), (void**)&dxgiFactory) != S_OK)
         {
-            logger.Message(LogLevels::Error, "CreateWindowAssociation: failed to get DXGI factory with error 0x%h %s\n", hresult, ConvertDX11ErrToString(hresult));
+            logger.Error("CreateWindowAssociation: failed to get DXGI factory with error 0x%h %s\n", hresult, ConvertDX11ErrToString(hresult));
             procError();
             return false;
         }
 
         if (HRESULT hresult = dxgiFactory->CreateSwapChain(device, &sd, (IDXGISwapChain **)&swapChain) != S_OK)
         {
-            logger.Message(LogLevels::Error, "CreateWindowAssociation: create swap chain for the current window failed with error 0x%h %s\n", hresult, ConvertDX11ErrToString(hresult));
+            logger.Error("CreateWindowAssociation: create swap chain for the current window failed with error 0x%h %s\n", hresult, ConvertDX11ErrToString(hresult));
             procError();
             return false;
         }
 
         if (HRESULT hresult = dxgiFactory->MakeWindowAssociation(*hwnd, DXGI_MWA_NO_WINDOW_CHANGES) != S_OK)
         {
-            logger.Message(LogLevels::Error, "CreateWindowAssociation: failed to make window association with error 0x%h %s\n", hresult, ConvertDX11ErrToString(hresult));
+            logger.Error("CreateWindowAssociation: failed to make window association with error 0x%h %s\n", hresult, ConvertDX11ErrToString(hresult));
         }
 
         currentFullScreen = false;
         currentWidth = window->width;
         currentHeight = window->height;
 
-        logger.Message(LogLevels::Info, "CreateWindowAssociation: created a new swap chain, size %u x %u\n", window->width, window->height);
+        logger.Info("CreateWindowAssociation: created a new swap chain, size %u x %u\n", window->width, window->height);
     }
 
     return HandleSizeFullScreenChanges(logger);
@@ -713,27 +713,27 @@ bool DX11Window::CreateWindowRenderTargetView(LoggerWrapper &logger)
 
     if (HRESULT hresult = swapChain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, 0) != S_OK)
     {
-        logger.Message(LogLevels::Error, "CreateWindowRenderTargetView: failed to resize swap chain's buffers with error 0x%h %s\n", hresult, ConvertDX11ErrToString(hresult));
+        logger.Error("CreateWindowRenderTargetView: failed to resize swap chain's buffers with error 0x%h %s\n", hresult, ConvertDX11ErrToString(hresult));
         return false;
     }
 
     COMUniquePtr<ID3D11Texture2D> backBufferTexture;
     if (HRESULT hresult = swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void **)&backBufferTexture) != S_OK)
     {
-        logger.Message(LogLevels::Error, "CreateWindowRenderTargetView: get back buffer for the current window's swap chain failed with error 0x%h %s\n", hresult, ConvertDX11ErrToString(hresult));
+        logger.Error("CreateWindowRenderTargetView: get back buffer for the current window's swap chain failed with error 0x%h %s\n", hresult, ConvertDX11ErrToString(hresult));
         return false;
     }
 
     if (HRESULT hresult = device->CreateRenderTargetView(backBufferTexture.get(), 0, (ID3D11RenderTargetView **)&renderTargetView) != S_OK)
     {
-        logger.Message(LogLevels::Error, "CreateWindowRenderTargetView: create render target view for the current window failed with error 0x%h %s\n", hresult, ConvertDX11ErrToString(hresult));
+        logger.Error("CreateWindowRenderTargetView: create render target view for the current window failed with error 0x%h %s\n", hresult, ConvertDX11ErrToString(hresult));
         return false;
     }
 
     currentWidth = window->width;
     currentHeight = window->height;
 
-    logger.Message(LogLevels::Info, "CreateWindowRenderTargetView: created swap chain's RTV, size is %ix%i\n", currentWidth, currentHeight);
+    logger.Info("CreateWindowRenderTargetView: created swap chain's RTV, size is %ix%i\n", currentWidth, currentHeight);
 
     return true;
 }
@@ -769,11 +769,11 @@ bool DX11Window::HandleSizeFullScreenChanges(LoggerWrapper &logger)
 
         if (HRESULT hresult = swapChain->ResizeTarget(&mode) != S_OK)
         {
-            logger.Message(LogLevels::Error, "HandleWindowSizeFullScreenChanges: swap chain's ResizeTarget failed, error 0x%h %s\n", hresult, ConvertDX11ErrToString(hresult));
+            logger.Error("HandleWindowSizeFullScreenChanges: swap chain's ResizeTarget failed, error 0x%h %s\n", hresult, ConvertDX11ErrToString(hresult));
         }
         else
         {
-            logger.Message(LogLevels::Info, "HandleWindowSizeFullScreenChanges: called ResizeTarget, size %u x %u\n", window->width, window->height);
+            logger.Info("HandleWindowSizeFullScreenChanges: called ResizeTarget, size %u x %u\n", window->width, window->height);
             currentWidth = window->width;
             currentHeight = window->height;
         }
@@ -786,23 +786,23 @@ bool DX11Window::HandleSizeFullScreenChanges(LoggerWrapper &logger)
         //  will trigger a WM_SIZE event that can change current window's size
         if (HRESULT hresult = swapChain->SetFullscreenState(window->isFullscreen ? TRUE : FALSE, 0) != S_OK)
         {
-            logger.Message(LogLevels::Error, "HandleWindowSizeFullScreenChanges: failed to change fullscreen state of the swap chain, error 0x%h %s\n", hresult, ConvertDX11ErrToString(hresult));
+            logger.Error("HandleWindowSizeFullScreenChanges: failed to change fullscreen state of the swap chain, error 0x%h %s\n", hresult, ConvertDX11ErrToString(hresult));
         }
         else
         {
             currentFullScreen = window->isFullscreen;
-            logger.Message(LogLevels::Info, "HandleWindowSizeFullScreenChanges: changed the swap chain's fullscreen state to %s\n", currentFullScreen ? "fullscreen" : "windowed");
+            logger.Info("HandleWindowSizeFullScreenChanges: changed the swap chain's fullscreen state to %s\n", currentFullScreen ? "fullscreen" : "windowed");
         }
 
         mode.RefreshRate.Denominator = 0;
         mode.RefreshRate.Numerator = 0;
         if (HRESULT hresult = swapChain->ResizeTarget(&mode) != S_OK)
         {
-            logger.Message(LogLevels::Error, "HandleWindowSizeFullScreenChanges: second swap chain's ResizeTarget failed, error 0x%h %s\n", hresult, ConvertDX11ErrToString(hresult));
+            logger.Error("HandleWindowSizeFullScreenChanges: second swap chain's ResizeTarget failed, error 0x%h %s\n", hresult, ConvertDX11ErrToString(hresult));
         }
         else
         {
-            logger.Message(LogLevels::Info, "HandleWindowSizeFullScreenChanges: called ResizeTarget, size %u x %u\n", window->width, window->height);
+            logger.Info("HandleWindowSizeFullScreenChanges: called ResizeTarget, size %u x %u\n", window->width, window->height);
         }
     }
 
