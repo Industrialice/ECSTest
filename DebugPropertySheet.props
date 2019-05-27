@@ -9,6 +9,7 @@
       <PreprocessorDefinitions>_ALLOW_RTCc_IN_STL;DEBUG;STDLIB_ENABLE_FILE_STATS;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SmallerTypeCheck>true</SmallerTypeCheck>
       <StringPooling>false</StringPooling>
+      <FloatingPointModel>Fast</FloatingPointModel>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup />
