@@ -120,7 +120,7 @@ namespace ECSTest
 
         template <typename T> [[nodiscard]] const T *Get() const
         {
-            if (auto *typed = std::get_if<T>(&action); typed)
+            if (auto *typed = get_if<T>(&action); typed)
             {
                 return typed;
             }
@@ -129,7 +129,7 @@ namespace ECSTest
 
         template <typename T> [[nodiscard]] T *Get()
         {
-            if (auto *typed = std::get_if<T>(&action); typed)
+            if (auto *typed = get_if<T>(&action); typed)
             {
                 return typed;
             }

@@ -25,7 +25,7 @@ namespace ECSTest
 			static constexpr bool isRequiredAny = false;
 			static constexpr bool isEntityID = false;
         };
-
+		
         template <typename... T> struct GetComponentType<SubtractiveComponent<T...>>
         {
 			static_assert(sizeof...(T) > 0, "Type list of SubtractiveComponent cannot be empty");
@@ -704,17 +704,17 @@ namespace ECSTest
 			return output;
 		}
 
-		template <typename AcceptType> static constexpr const System::Requests &AcquireRequestedComponents()
+		template <typename AcceptType> static constexpr auto AcquireRequestedComponents()
 		{
 			using rfc = RequirementForComponent;
 
 			using typesFull = typename FunctionInfo::Info<AcceptType>::args;
 
-			static constexpr auto environmentIndex = LocateEnvironmentArugument<typesFull>(make_index_sequence<tuple_size_v<typesFull>>());
-			static constexpr auto entityIDIndex = LocateEntityIDArugument<typesFull>(make_index_sequence<tuple_size_v<typesFull>>());
+			constexpr auto environmentIndex = LocateEnvironmentArugument<typesFull>(make_index_sequence<tuple_size_v<typesFull>>());
+			constexpr auto entityIDIndex = LocateEntityIDArugument<typesFull>(make_index_sequence<tuple_size_v<typesFull>>());
 			using typesWithoutEnvironment = conditional_t<environmentIndex.second != nullopt, Funcs::RemoveTupleElement<environmentIndex.second.value_or(0), typesFull>, typesFull>;
 
-			static constexpr auto entityIDIndexToRemove = LocateEntityIDArugument<typesWithoutEnvironment>(make_index_sequence<tuple_size_v<typesWithoutEnvironment>>());
+			constexpr auto entityIDIndexToRemove = LocateEntityIDArugument<typesWithoutEnvironment>(make_index_sequence<tuple_size_v<typesWithoutEnvironment>>());
 			using typesWithoutEntityID = conditional_t<entityIDIndexToRemove.second != nullopt, Funcs::RemoveTupleElement<entityIDIndexToRemove.second.value_or(0), typesWithoutEnvironment>, typesWithoutEnvironment>;
 
 			using transformedTypes = decltype(TransformArguments<typesWithoutEntityID>(make_index_sequence<tuple_size_v<typesWithoutEntityID>>()));
@@ -722,47 +722,71 @@ namespace ECSTest
 			using onlyAny = typename transformedTypes::onlyAny;
 			using withoutAnyUnpacked = typename decltype(UnpackArguments<withoutAny>(make_index_sequence<tuple_size_v<withoutAny>>()))::unpacked;
 
-			static constexpr auto componentsArray = TupleToComponentsArray<withoutAnyUnpacked>(make_index_sequence<tuple_size_v<withoutAnyUnpacked>>());
-			static constexpr auto sorted = Funcs::SortCompileTime(componentsArray);
-			static constexpr auto requiredWithoutData = FindMatchingComponents<FindMatchingComponentsCount(sorted, make_array(rfc::Required))>(sorted, make_array(rfc::Required));
-			static constexpr auto requiredWithData = FindMatchingComponents<FindMatchingComponentsCount(sorted, make_array(rfc::RequiredWithData))>(sorted, make_array(rfc::RequiredWithData));
-			static constexpr auto required = FindMatchingComponents<FindMatchingComponentsCount(sorted, make_array(rfc::RequiredWithData, rfc::Required))>(sorted, make_array(rfc::RequiredWithData, rfc::Required));
-			static constexpr auto requiredOrOptional = FindMatchingComponents<FindMatchingComponentsCount(sorted, make_array(rfc::RequiredWithData, rfc::Required, rfc::OptionalWithData, rfc::Optional))>(sorted, make_array(rfc::RequiredWithData, rfc::Required, rfc::OptionalWithData, rfc::Optional));
-			static constexpr auto withData = FindComponentsWithData<FindComponentsWithDataCount<false>(sorted), false>(sorted);
-			static constexpr auto optionalNoData = FindMatchingComponents<FindMatchingComponentsCount(sorted, make_array(rfc::Optional))>(sorted, make_array(rfc::Optional));
-			static constexpr auto optionalWithData = FindMatchingComponents<FindMatchingComponentsCount(sorted, make_array(rfc::OptionalWithData))>(sorted, make_array(rfc::OptionalWithData));
-			static constexpr auto subtractive = FindMatchingComponents<FindMatchingComponentsCount(sorted, make_array(rfc::Subtractive))>(sorted, make_array(rfc::Subtractive));
-			static constexpr auto writeAccess = FindComponentsWithData<FindComponentsWithDataCount<true>(sorted), true>(sorted);
-			static constexpr auto argumentPassingOrder = FindMatchingComponents<FindMatchingComponentsCount(componentsArray, make_array(rfc::RequiredWithData, rfc::OptionalWithData))>(componentsArray, make_array(rfc::RequiredWithData, rfc::OptionalWithData));
+			constexpr auto componentsArray = TupleToComponentsArray<withoutAnyUnpacked>(make_index_sequence<tuple_size_v<withoutAnyUnpacked>>());
+			constexpr auto sorted = Funcs::SortCompileTime(componentsArray);
+			constexpr auto requiredWithoutData = FindMatchingComponents<FindMatchingComponentsCount(sorted, make_array(rfc::Required))>(sorted, make_array(rfc::Required));
+			constexpr auto requiredWithData = FindMatchingComponents<FindMatchingComponentsCount(sorted, make_array(rfc::RequiredWithData))>(sorted, make_array(rfc::RequiredWithData));
+			constexpr auto required = FindMatchingComponents<FindMatchingComponentsCount(sorted, make_array(rfc::RequiredWithData, rfc::Required))>(sorted, make_array(rfc::RequiredWithData, rfc::Required));
+			constexpr auto requiredOrOptional = FindMatchingComponents<FindMatchingComponentsCount(sorted, make_array(rfc::RequiredWithData, rfc::Required, rfc::OptionalWithData, rfc::Optional))>(sorted, make_array(rfc::RequiredWithData, rfc::Required, rfc::OptionalWithData, rfc::Optional));
+			constexpr auto withData = FindComponentsWithData<FindComponentsWithDataCount<false>(sorted), false>(sorted);
+			constexpr auto optionalNoData = FindMatchingComponents<FindMatchingComponentsCount(sorted, make_array(rfc::Optional))>(sorted, make_array(rfc::Optional));
+			constexpr auto optionalWithData = FindMatchingComponents<FindMatchingComponentsCount(sorted, make_array(rfc::OptionalWithData))>(sorted, make_array(rfc::OptionalWithData));
+			constexpr auto subtractive = FindMatchingComponents<FindMatchingComponentsCount(sorted, make_array(rfc::Subtractive))>(sorted, make_array(rfc::Subtractive));
+			constexpr auto writeAccess = FindComponentsWithData<FindComponentsWithDataCount<true>(sorted), true>(sorted);
+			constexpr auto argumentPassingOrder = FindMatchingComponents<FindMatchingComponentsCount(componentsArray, make_array(rfc::RequiredWithData, rfc::OptionalWithData))>(componentsArray, make_array(rfc::RequiredWithData, rfc::OptionalWithData));
 			
-			static constexpr auto archetypeDefining = FindMatchingComponents<FindMatchingComponentsCount(sorted, make_array(rfc::RequiredWithData, rfc::Required, rfc::Subtractive))>(sorted, make_array(rfc::RequiredWithData, rfc::Required, rfc::Subtractive));
-			static constexpr auto requiredAnyArguments = RequiredAnyToComponentsArray<onlyAny>(make_index_sequence<tuple_size_v<onlyAny>>());
-			static constexpr auto archetypeDefiningInfoOnly = ToArchetypeDefiningRequirement(archetypeDefining, requiredAnyArguments);
+			constexpr auto archetypeDefining = FindMatchingComponents<FindMatchingComponentsCount(sorted, make_array(rfc::RequiredWithData, rfc::Required, rfc::Subtractive))>(sorted, make_array(rfc::RequiredWithData, rfc::Required, rfc::Subtractive));
+			constexpr auto requiredAnyArguments = RequiredAnyToComponentsArray<onlyAny>(make_index_sequence<tuple_size_v<onlyAny>>());
+			constexpr auto archetypeDefiningInfoOnly = ToArchetypeDefiningRequirement(archetypeDefining, requiredAnyArguments);
 
-			static constexpr System::Requests requests =
+			return tuple
 			{
-				ToArray(requiredWithoutData),
-				ToArray(requiredWithData),
-				ToArray(required),
-				ToArray(requiredOrOptional),
-				ToArray(withData),
-				ToArray(optionalNoData),
-				ToArray(optionalWithData),
-				ToArray(subtractive),
-				ToArray(writeAccess),
-				ToArray(sorted),
-				ToArray(argumentPassingOrder),
+				requiredWithoutData,
+				requiredWithData,
+				required,
+				requiredOrOptional,
+				withData,
+				optionalNoData,
+				optionalWithData,
+				subtractive,
+				writeAccess,
+				sorted,
+				argumentPassingOrder,
 				entityIDIndex.first,
 				environmentIndex.first,
-				ToArray(archetypeDefiningInfoOnly)
+				archetypeDefiningInfoOnly
 			};
+		}
 
-			return requests;
+		template <typename Tuple> static constexpr System::Requests ComponentsTupleToRequests(const Tuple &requestedComponentsTuple)
+		{
+			return 
+			{
+				ToArray(get<0>(requestedComponentsTuple)), // requiredWithoutData
+				ToArray(get<1>(requestedComponentsTuple)), // requiredWithData
+				ToArray(get<2>(requestedComponentsTuple)), // required
+				ToArray(get<3>(requestedComponentsTuple)), // requiredOrOptional
+				ToArray(get<4>(requestedComponentsTuple)), // withData
+				ToArray(get<5>(requestedComponentsTuple)), // optionalNoData
+				ToArray(get<6>(requestedComponentsTuple)), // optionalWithData
+				ToArray(get<7>(requestedComponentsTuple)), // subtractive
+				ToArray(get<8>(requestedComponentsTuple)), // writeAccess
+				ToArray(get<9>(requestedComponentsTuple)), // sorted
+				ToArray(get<10>(requestedComponentsTuple)), // argumentPassingOrder
+				get<11>(requestedComponentsTuple), // entityIDIndex
+				get<12>(requestedComponentsTuple), // environmentIndex
+				ToArray(get<13>(requestedComponentsTuple)) // archetypeDefiningInfoOnly
+			};
 		}
     };
 
 	template <typename SystemType> struct IndirectSystem : public BaseIndirectSystem, public TypeIdentifiable<SystemType>
 	{
+		static constexpr auto AcquireRequestedComponents()
+		{
+			return _SystemHelperFuncs::AcquireRequestedComponents<decltype(&SystemType::Accept)>();
+		}
+
 	public:
 		[[nodiscard]] virtual TypeId GetTypeId() const override
 		{
@@ -776,20 +800,19 @@ namespace ECSTest
 			
 		virtual const Requests &RequestedComponents() const override final
 		{
-			return AcquireRequestedComponents();
-		}
-
-		static constexpr const Requests &AcquireRequestedComponents()
-		{
-			// saving the rusult to a local leads to ICE in MSVC 16.1.0
-			static_assert(_SystemHelperFuncs::AcquireRequestedComponents<decltype(&SystemType::Accept)>().idsArgumentIndex == nullopt, "Indirect systems can't request EntityID");
-			static_assert(_SystemHelperFuncs::AcquireRequestedComponents<decltype(&SystemType::Accept)>().environmentArgumentIndex == nullopt, "Indirect systems don't need to request Environment");
-			return _SystemHelperFuncs::AcquireRequestedComponents<decltype(&SystemType::Accept)>();
+			static constexpr auto requestedComponentsTuple = AcquireRequestedComponents();
+			static constexpr Requests requestedComponentsArray = _SystemHelperFuncs::ComponentsTupleToRequests(requestedComponentsTuple);
+			return requestedComponentsArray;
 		}
 	};
 
 	template <typename SystemType> struct DirectSystem : public BaseDirectSystem, public TypeIdentifiable<SystemType>
 	{
+		static constexpr auto AcquireRequestedComponents()
+		{
+			return _SystemHelperFuncs::AcquireRequestedComponents<decltype(&SystemType::Accept)>();
+		}
+
 	public:
 		[[nodiscard]] virtual TypeId GetTypeId() const override final
 		{
@@ -801,14 +824,11 @@ namespace ECSTest
 			return TypeIdentifiable<SystemType>::GetTypeName();
 		}
 
-		static constexpr const Requests &AcquireRequestedComponents()
-		{
-			return _SystemHelperFuncs::AcquireRequestedComponents<decltype(&SystemType::Accept)>();
-		}
-
 		virtual const Requests &RequestedComponents() const override final
 		{
-			return AcquireRequestedComponents();
+			static constexpr auto requestedComponentsTuple = AcquireRequestedComponents();
+			static constexpr Requests requestedComponentsArray = _SystemHelperFuncs::ComponentsTupleToRequests(requestedComponentsTuple);
+			return requestedComponentsArray;
 		}
 
 		virtual void AcceptUntyped(void **array) override final

@@ -20,8 +20,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ECSEngine", "ECSEngine\ECSE
 		{F08091C1-62EE-4763-8C58-0684B250866A} = {F08091C1-62EE-4763-8C58-0684B250866A}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Helpers", "Helpers\Helpers.vcxproj", "{4DBAC193-2E7E-4A75-97A2-909DCB4D05C9}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -73,12 +71,6 @@ Global
 		{2D0FDE81-B779-4F58-8FBF-D6E26C5D6C85}.ReleaseXP|x64.ActiveCfg = ReleaseXP|x64
 		{2D0FDE81-B779-4F58-8FBF-D6E26C5D6C85}.ReleaseXP|x64.Build.0 = ReleaseXP|x64
 		{2D0FDE81-B779-4F58-8FBF-D6E26C5D6C85}.ReleaseXP|x86.ActiveCfg = ReleaseXP|Win32
-		{4DBAC193-2E7E-4A75-97A2-909DCB4D05C9}.Debug|x64.ActiveCfg = Debug|x64
-		{4DBAC193-2E7E-4A75-97A2-909DCB4D05C9}.Debug|x86.ActiveCfg = Debug|Win32
-		{4DBAC193-2E7E-4A75-97A2-909DCB4D05C9}.Release|x64.ActiveCfg = Release|x64
-		{4DBAC193-2E7E-4A75-97A2-909DCB4D05C9}.Release|x86.ActiveCfg = Release|Win32
-		{4DBAC193-2E7E-4A75-97A2-909DCB4D05C9}.ReleaseXP|x64.ActiveCfg = ReleaseXP|x64
-		{4DBAC193-2E7E-4A75-97A2-909DCB4D05C9}.ReleaseXP|x86.ActiveCfg = ReleaseXP|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
