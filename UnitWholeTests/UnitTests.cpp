@@ -446,8 +446,8 @@ namespace
 		static_assert(matches(testSystemRequests.all, MakeArray<ComponentArtist, ComponentProgrammer, ComponentSpouse, ComponentCompany, TagTest0, TagTest1, ComponentDateOfBirth, ComponentEmployee, ComponentGender, ComponentDesigner>()));
 		static_assert(matches(testSystemRequests.argumentPassingOrder, MakeArray<ComponentArtist, ComponentProgrammer, ComponentSpouse, ComponentCompany, ComponentEmployee, ComponentGender>(), false));
 		static_assert(testArchetypeDefining(testSystemRequests.archetypeDefiningInfoOnly, MakeArray<ComponentArtist, ComponentProgrammer, ComponentSpouse, ComponentCompany, TagTest0, TagTest1, ComponentDateOfBirth, ComponentDesigner>(), array<TypeAndGroup, 0>{}));
-		static_assert(testSystemRequests.idsArgumentIndex == 4);
-		static_assert(testSystemRequests.environmentArgumentIndex == 3);
+		static_assert(testSystemRequests.entityIDIndex == 4);
+		static_assert(testSystemRequests.environmentIndex == 3);
 
 		constexpr auto testSystem2RequestsTuple = TestSystem2::AcquireRequestedComponents();
 		constexpr auto testSystem2Requests = _SystemHelperFuncs::ComponentsTupleToRequests(testSystem2RequestsTuple);
@@ -464,8 +464,8 @@ namespace
 		static_assert(matches(testSystem2Requests.all, MakeArray<TagTest0, TagTest1, TagTest2, TagTest3, TagTest4, TagTest5>()));
 		static_assert(matches(testSystem2Requests.argumentPassingOrder, MakeArray<>(), false));
 		static_assert(testArchetypeDefining(testSystem2Requests.archetypeDefiningInfoOnly, MakeArray<TagTest0, TagTest1, TagTest2, TagTest3, TagTest4, TagTest5>(), array<TypeAndGroup, 0>{}));
-		static_assert(testSystem2Requests.idsArgumentIndex == nullopt);
-		static_assert(testSystem2Requests.environmentArgumentIndex == nullopt);
+		static_assert(testSystem2Requests.entityIDIndex == nullopt);
+		static_assert(testSystem2Requests.environmentIndex == nullopt);
 		
 		constexpr auto testSystem3RequestsTuple = TestSystem3::AcquireRequestedComponents();
 		constexpr auto testSystem3Requests = _SystemHelperFuncs::ComponentsTupleToRequests(testSystem3RequestsTuple);
@@ -482,8 +482,8 @@ namespace
 		static_assert(matches(testSystem3Requests.all, MakeArray<>()));
 		static_assert(matches(testSystem3Requests.argumentPassingOrder, MakeArray<>(), false));
 		static_assert(testArchetypeDefining(testSystem3Requests.archetypeDefiningInfoOnly, MakeArray<>(), array<TypeAndGroup, 0>{}));
-		static_assert(testSystem3Requests.idsArgumentIndex == nullopt);
-		static_assert(testSystem3Requests.environmentArgumentIndex == nullopt);
+		static_assert(testSystem3Requests.entityIDIndex == nullopt);
+		static_assert(testSystem3Requests.environmentIndex == nullopt);
 
 		constexpr auto testSystem4RequestsTuple = TestSystem4::AcquireRequestedComponents();
 		constexpr auto testSystem4Requests = _SystemHelperFuncs::ComponentsTupleToRequests(testSystem4RequestsTuple);
@@ -500,8 +500,8 @@ namespace
 		static_assert(matches(testSystem4Requests.all, MakeArray<ComponentSpouse, ComponentCompany, ComponentEmployee, ComponentGender, ComponentDateOfBirth, ComponentDesigner>()));
 		static_assert(matches(testSystem4Requests.argumentPassingOrder, MakeArray<ComponentSpouse, ComponentCompany, ComponentEmployee, ComponentGender>(), false));
 		static_assert(testArchetypeDefining(testSystem4Requests.archetypeDefiningInfoOnly, MakeArray<ComponentSpouse, ComponentCompany>(), make_array(TypeAndGroup{ComponentEmployee::GetTypeId(), 0}, TypeAndGroup{ComponentGender::GetTypeId(), 0})));
-		static_assert(testSystem4Requests.idsArgumentIndex == nullopt);
-		static_assert(testSystem4Requests.environmentArgumentIndex == nullopt);
+		static_assert(testSystem4Requests.entityIDIndex == nullopt);
+		static_assert(testSystem4Requests.environmentIndex == nullopt);
 	}
 }
 

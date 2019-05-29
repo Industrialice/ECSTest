@@ -45,8 +45,8 @@ namespace ECSTest
             Array<const ComponentRequest> writeAccess; // contains only components with write access (write access is ignored for subtractive components)
             Array<const ComponentRequest> all; // contains all requested components except RequiredComponentAny, the order is not preserved
             Array<const ComponentRequest> argumentPassingOrder; // contains components with data in the order they are declared
-            std::optional<ui32> idsArgumentIndex; // direct systems only; indicates whether EntityID array was also requested and if it was, contains its argument index, SubtractiveComponent, RequiredComponent or RequiredComponentAny are not accounted for
-			std::optional<ui32> environmentArgumentIndex; // same as for idsArgumentIndex, but for Environment variable
+            std::optional<ui32> entityIDIndex; // direct systems only; indicates whether EntityID array was also requested and if it was, contains its argument index, SubtractiveComponent, RequiredComponent or RequiredComponentAny are not accounted for
+			std::optional<ui32> environmentIndex; // same as for entityIDIndex, but for Environment variable
 			Array<const ArchetypeDefiningRequirement> archetypeDefiningInfoOnly; // contains elements from archetypeDefining, but without the access information
         };
 

@@ -802,6 +802,8 @@ namespace ECSTest
 		{
 			static constexpr auto requestedComponentsTuple = AcquireRequestedComponents();
 			static constexpr Requests requestedComponentsArray = _SystemHelperFuncs::ComponentsTupleToRequests(requestedComponentsTuple);
+			static_assert(requestedComponentsArray.entityIDIndex == nullopt, "Indirect systems cannot request EntityID");
+			static_assert(requestedComponentsArray.environmentIndex == nullopt, "Indirect systems cannot request Environment");
 			return requestedComponentsArray;
 		}
 	};

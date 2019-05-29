@@ -1011,7 +1011,7 @@ void SystemsManagerST::ExecuteDirectSystem(BaseDirectSystem &system, ControlsQue
 
     auto &requested = system.RequestedComponents();
 
-    uiw maxArgs = requested.withData.size() + (requested.idsArgumentIndex != nullopt) + (requested.environmentArgumentIndex != nullopt);
+    uiw maxArgs = requested.withData.size() + (requested.entityIDIndex != nullopt) + (requested.environmentIndex != nullopt);
 
 	_tempNonUniqueArgs.reserve(maxArgs);
     _tempArrayArgs.reserve(maxArgs);
@@ -1082,22 +1082,22 @@ void SystemsManagerST::ExecuteDirectSystem(BaseDirectSystem &system, ControlsQue
 
 			auto insertIds = [this, &requested, &group]
 			{
-				if (requested.idsArgumentIndex)
+				if (requested.entityIDIndex)
 				{
 					_tempArrayArgs.push_back({(ui8 *)group.get().entities.get(), group.get().entitiesCount});
-					_tempArgs.insert(_tempArgs.begin() + *requested.idsArgumentIndex, &_tempArrayArgs.back());
+					_tempArgs.insert(_tempArgs.begin() + *requested.entityIDIndex, &_tempArrayArgs.back());
 				}
 			};
 
 			auto insertEnv = [this, &requested, &env]
 			{
-				if (requested.environmentArgumentIndex)
+				if (requested.environmentIndex)
 				{
-					_tempArgs.insert(_tempArgs.begin() + *requested.environmentArgumentIndex, &env);
+					_tempArgs.insert(_tempArgs.begin() + *requested.environmentIndex, &env);
 				}
 			};
 
-			if (requested.idsArgumentIndex < requested.environmentArgumentIndex)
+			if (requested.entityIDIndex < requested.environmentIndex)
 			{
 				insertIds();
 				insertEnv();
