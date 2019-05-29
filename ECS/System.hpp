@@ -61,7 +61,7 @@ namespace ECSTest
         [[nodiscard]] IKeyController *GetKeyController();
         [[nodiscard]] const IKeyController *GetKeyController() const;
         void SetKeyController(const shared_ptr<IKeyController> &controller);
-        virtual bool ControlInput(Environment &env, const ControlAction &input) { SOFTBREAK; return false; }
+		[[nodiscard]] virtual bool ControlInput(Environment &env, const ControlAction &input) { SOFTBREAK; return false; }
         virtual void OnCreate(Environment &env) {}
         virtual void OnInitialized(Environment &env) {}
         virtual void OnDestroy(Environment &env) {}

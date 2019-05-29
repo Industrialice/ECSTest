@@ -204,7 +204,7 @@ namespace ECSTest
 			}
 		}
 
-		template <typename Types, uiw CurrentIndex, uiw... Indexes> static constexpr uiw GetArgumentIndexInArray(index_sequence<Indexes...>)
+		template <typename Types, uiw CurrentIndex, uiw... Indexes> [[nodiscard]] static constexpr uiw GetArgumentIndexInArray(index_sequence<Indexes...>)
 		{
 			uiw index = 0;
 			(CalculateIndexAdvance<Types, Indexes, CurrentIndex>(index), ...);
@@ -212,7 +212,7 @@ namespace ECSTest
 		}
 
         // converts void * into a properly typed T argument - a pointer or a reference
-        template <typename Types, uiw Index> static FORCEINLINE auto ConvertArgument(void **args) -> decltype(auto)
+        template <typename Types, uiw Index> [[nodiscard]] static FORCEINLINE auto ConvertArgument(void **args) -> decltype(auto)
         {
             using T = tuple_element_t<Index, Types>;
             using pureType = remove_cv_t<remove_pointer_t<remove_reference_t<T>>>;
@@ -391,7 +391,7 @@ namespace ECSTest
 			}
         }
 
-        template <typename T> static constexpr TypeId ArgumentToTypeId()
+        template <typename T> [[nodiscard]] static constexpr TypeId ArgumentToTypeId()
         {
             using TPure = remove_pointer_t<remove_reference_t<T>>;
             using componentType = typename GetComponentType<remove_cv_t<TPure>>::type;
@@ -426,13 +426,13 @@ namespace ECSTest
             }
         }
 
-        template <typename T, uiw... Indexes> static constexpr array<TypeId, sizeof...(Indexes)> ArgumentsToTypeIds()
+        template <typename T, uiw... Indexes> [[nodiscard]] static constexpr array<TypeId, sizeof...(Indexes)> ArgumentsToTypeIds()
         {
             return {ArgumentToTypeId<tuple_element_t<Indexes, T>>()...};
         }
 
         // makes sure the argument type appears only once
-        template <iw size> static constexpr bool IsTypesAliased(const array<TypeId, size> &types)
+        template <iw size> [[nodiscard]] static constexpr bool IsTypesAliased(const array<TypeId, size> &types)
         {
             for (iw i = 0; i < size - 1; ++i)
             {
@@ -447,7 +447,7 @@ namespace ECSTest
             return false;
         }
 
-		template <typename T> static constexpr RequirementForComponent GetRequirementForType()
+		template <typename T> [[nodiscard]] static constexpr RequirementForComponent GetRequirementForType()
 		{
 			if constexpr (is_reference_v<T>)
 			{
@@ -476,7 +476,7 @@ namespace ECSTest
 		}
 
         // converts argument type (like Array<Component> &) into System::ComponentRequest
-        template <typename T> static constexpr System::ComponentRequest ArgumentToComponent()
+        template <typename T> [[nodiscard]] static constexpr System::ComponentRequest ArgumentToComponent()
         {
             using TPure = remove_pointer_t<remove_reference_t<T>>;
             using componentType = typename GetComponentType<remove_cv_t<TPure>>::type;
@@ -491,7 +491,7 @@ namespace ECSTest
             }
         }
 		
-		template <typename T, uiw Index> static constexpr void LocateEntityIDIndex(ui32 &filtered, ui32 &actual, bool &isLocated)
+		template <typename T, uiw Index> [[nodiscard]] static constexpr void LocateEntityIDIndex(ui32 &filtered, ui32 &actual, bool &isLocated)
 		{
 			using TPure = remove_pointer_t<remove_reference_t<T>>;
 			using componentType = typename GetComponentType<remove_cv_t<TPure>>::type;
@@ -508,7 +508,7 @@ namespace ECSTest
 			}
 		}
 		
-		template <typename T, uiw... Indexes> static constexpr pair<optional<ui32>, optional<ui32>> LocateEntityIDArugument(index_sequence<Indexes...>)
+		template <typename T, uiw... Indexes> [[nodiscard]] static constexpr pair<optional<ui32>, optional<ui32>> LocateEntityIDArugument(index_sequence<Indexes...>)
 		{
 			ui32 filtered = 0, actual = 0;
 			bool isLocated = false;
@@ -517,14 +517,14 @@ namespace ECSTest
 			return isLocated ? type(filtered, actual) : type(nullopt, nullopt);
 		}
 
-		template <typename T, uiw... Indexes> static constexpr bool IsCheckingArgumentsFailed()
+		template <typename T, uiw... Indexes> [[nodiscard]] static constexpr bool IsCheckingArgumentsFailed()
 		{
 			bool isFailed = false;
 			(CheckArgumentType<tuple_element_t<Indexes, T>>(isFailed), ...);
 			return isFailed;
 		}
 
-        template <typename T, uiw... Indexes> static constexpr array<System::ComponentRequest, sizeof...(Indexes)> TupleToComponentsArray(index_sequence<Indexes...>)
+        template <typename T, uiw... Indexes> [[nodiscard]] static constexpr array<System::ComponentRequest, sizeof...(Indexes)> TupleToComponentsArray(index_sequence<Indexes...>)
         {
 			if constexpr (IsCheckingArgumentsFailed<T, Indexes...>())
 			{
@@ -539,7 +539,7 @@ namespace ECSTest
 			}
         }
 
-		template <typename T, uiw Index> static constexpr void LocateEnvironmentIndex(ui32 &filtered, ui32 &actual, bool &isLocated)
+		template <typename T, uiw Index> [[nodiscard]] static constexpr void LocateEnvironmentIndex(ui32 &filtered, ui32 &actual, bool &isLocated)
 		{
 			using TPure = remove_cv_t<remove_pointer_t<remove_reference_t<T>>>;
 			if constexpr (is_same_v<TPure, System::Environment>)
@@ -554,7 +554,7 @@ namespace ECSTest
 			}
 		}
 
-		template <typename T, uiw... Indexes> static constexpr pair<optional<ui32>, optional<ui32>> LocateEnvironmentArugument(index_sequence<Indexes...>)
+		template <typename T, uiw... Indexes> [[nodiscard]] static constexpr pair<optional<ui32>, optional<ui32>> LocateEnvironmentArugument(index_sequence<Indexes...>)
 		{
 			ui32 filtered = 0, actual = 0;
 			bool isLocated = false;
@@ -569,7 +569,7 @@ namespace ECSTest
 			using onlyAny = decltype(tuple_cat(declval<conditional_t<GetComponentType<tuple_element_t<Indexes, T>>::isRequiredAny == false, tuple<>, tuple<tuple_element_t<Indexes, T>>>>()...));
 		};
 
-		template <typename T, uiw... Indexes> static constexpr ProcessedArgumentsStruct<T, Indexes...> TransformArguments(index_sequence<Indexes...>)
+		template <typename T, uiw... Indexes> [[nodiscard]] static constexpr ProcessedArgumentsStruct<T, Indexes...> TransformArguments(index_sequence<Indexes...>)
 		{
 			return {};
 		}
@@ -579,7 +579,7 @@ namespace ECSTest
 			using unpacked = decltype(tuple_cat(declval<typename GetComponentType<tuple_element_t<Indexes, T>>::wrapped>()...));
 		};
 
-		template <typename T, uiw... Indexes> static constexpr UnpackArgumentsStruct<T, Indexes...> UnpackArguments(std::index_sequence<Indexes...>)
+		template <typename T, uiw... Indexes> [[nodiscard]] static constexpr UnpackArgumentsStruct<T, Indexes...> UnpackArguments(std::index_sequence<Indexes...>)
 		{
 			return {};
 		}
@@ -619,7 +619,7 @@ namespace ECSTest
 			return components;
         }
 
-		template <bool IsRequireWriteAccess, uiw size>[[nodiscard]] static constexpr uiw FindComponentsWithDataCount(const array<System::ComponentRequest, size> &arr)
+		template <bool IsRequireWriteAccess, uiw size> [[nodiscard]] static constexpr uiw FindComponentsWithDataCount(const array<System::ComponentRequest, size> &arr)
 		{
 			uiw target = 0;
 			for (uiw source = 0; source < arr.size(); ++source)
@@ -652,25 +652,25 @@ namespace ECSTest
 			return components;
         }
 
-		template <typename T, uiw... Indexes> static constexpr void CheckRequiredAnyGroup(bool &isFailed, index_sequence<Indexes...>)
+		template <typename T, uiw... Indexes> [[nodiscard]] static constexpr void CheckRequiredAnyGroup(bool &isFailed, index_sequence<Indexes...>)
 		{
 			(CheckArgumentType<tuple_element_t<Indexes, T>>(isFailed), ...);
 		}
 
-		template <typename T, uiw... Indexes> static constexpr bool IsRequiredAnyGroupsFailed()
+		template <typename T, uiw... Indexes> [[nodiscard]] static constexpr bool IsRequiredAnyGroupsFailed()
 		{
 			bool isFailed = false;
 			(CheckRequiredAnyGroup<typename GetComponentType<tuple_element_t<Indexes, T>>::wrapped>(isFailed, make_index_sequence<tuple_size_v<typename GetComponentType<tuple_element_t<Indexes, T>>::wrapped>>()), ...);
 			return isFailed;
 		}
 
-		template <typename T, uiw Group, uiw... Indexes> static constexpr auto RequiredAnyGroupToTuple(index_sequence<Indexes...>)
+		template <typename T, uiw Group, uiw... Indexes> [[nodiscard]] static constexpr auto RequiredAnyGroupToTuple(index_sequence<Indexes...>)
 		{
 			return make_tuple(pair<TypeId, ui32>(tuple_element_t<Indexes, GetComponentType<T>::expanded>::GetTypeId(), (ui32)Group)...);
 		}
 
 		// TODO: more checks
-		template <typename T, uiw... Indexes> static constexpr auto RequiredAnyToComponentsArray(index_sequence<Indexes...>)
+		template <typename T, uiw... Indexes> [[nodiscard]] static constexpr auto RequiredAnyToComponentsArray(index_sequence<Indexes...>)
 		{
 			if constexpr (IsRequiredAnyGroupsFailed<T, Indexes...>())
 			{
@@ -704,7 +704,7 @@ namespace ECSTest
 			return output;
 		}
 
-		template <typename AcceptType> static constexpr auto AcquireRequestedComponents()
+		template <typename AcceptType> [[nodiscard]] static constexpr auto AcquireRequestedComponents()
 		{
 			using rfc = RequirementForComponent;
 
@@ -758,7 +758,7 @@ namespace ECSTest
 			};
 		}
 
-		template <typename Tuple> static constexpr System::Requests ComponentsTupleToRequests(const Tuple &requestedComponentsTuple)
+		template <typename Tuple> [[nodiscard]] static constexpr System::Requests ComponentsTupleToRequests(const Tuple &requestedComponentsTuple)
 		{
 			return 
 			{
@@ -782,7 +782,7 @@ namespace ECSTest
 
 	template <typename SystemType> struct IndirectSystem : public BaseIndirectSystem, public TypeIdentifiable<SystemType>
 	{
-		static constexpr auto AcquireRequestedComponents()
+		[[nodiscard]] static constexpr auto AcquireRequestedComponents()
 		{
 			return _SystemHelperFuncs::AcquireRequestedComponents<decltype(&SystemType::Accept)>();
 		}
@@ -798,7 +798,7 @@ namespace ECSTest
 			return TypeIdentifiable<SystemType>::GetTypeName();
 		}
 			
-		virtual const Requests &RequestedComponents() const override final
+		[[nodiscard]] virtual const Requests &RequestedComponents() const override final
 		{
 			static constexpr auto requestedComponentsTuple = AcquireRequestedComponents();
 			static constexpr Requests requestedComponentsArray = _SystemHelperFuncs::ComponentsTupleToRequests(requestedComponentsTuple);
@@ -810,7 +810,7 @@ namespace ECSTest
 
 	template <typename SystemType> struct DirectSystem : public BaseDirectSystem, public TypeIdentifiable<SystemType>
 	{
-		static constexpr auto AcquireRequestedComponents()
+		[[nodiscard]] static constexpr auto AcquireRequestedComponents()
 		{
 			return _SystemHelperFuncs::AcquireRequestedComponents<decltype(&SystemType::Accept)>();
 		}
@@ -826,7 +826,7 @@ namespace ECSTest
 			return TypeIdentifiable<SystemType>::GetTypeName();
 		}
 
-		virtual const Requests &RequestedComponents() const override final
+		[[nodiscard]] virtual const Requests &RequestedComponents() const override final
 		{
 			static constexpr auto requestedComponentsTuple = AcquireRequestedComponents();
 			static constexpr Requests requestedComponentsArray = _SystemHelperFuncs::ComponentsTupleToRequests(requestedComponentsTuple);

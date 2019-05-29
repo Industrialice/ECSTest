@@ -59,8 +59,8 @@ namespace ECSTest
         std::atomic<ui32> _current = 0;
 
     public:
-        ComponentID Generate();
-        ComponentID LastGenerated() const;
+		[[nodiscard]] ComponentID Generate();
+		[[nodiscard]] ComponentID LastGenerated() const;
         ComponentIDGenerator() = default;
         ComponentIDGenerator(ComponentIDGenerator &&source);
         ComponentIDGenerator &operator = (ComponentIDGenerator &&source);
