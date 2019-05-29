@@ -54,7 +54,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
     LogFile = File(L"log.txt", FileOpenMode::CreateAlways, FileProcModes::Write);
     if (LogFile)
     {
-        LogFile.BufferSet(16384);
+        LogFile.Buffer(16384);
         LoggerFileHandle = EngineLogger->OnMessage(std::bind(FileLogRecipient, std::ref(LogFile), _1, _2, _3));
     }
 
@@ -77,7 +77,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
     manager->Register(move(renderer), rendererPipeline);
 	manager->Register(move(screenColorSystem), rendererPipeline);
 
-	auto physicsPipeline = manager->CreatePipeline(SecondsFP64(1.0 / 60.0), false);
+	auto physicsPipeline = manager->CreatePipeline(TimeSecondsFP64(1.0 / 60.0), false);
 
     vector<WorkerThread> workers;
     EntityIDGenerator idGenerator;

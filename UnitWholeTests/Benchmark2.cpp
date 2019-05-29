@@ -35,7 +35,7 @@ public:
 		auto after = TimeMoment::Now();
 		printf("Generating scene took %.2lfs\n", (after - before).ToSec_f64());
 
-		auto physicsPipeline = manager->CreatePipeline(IsPhysicsFPSRestricted ? optional(SecondsFP64(1.0 / 60.0)) : nullopt, false);
+		auto physicsPipeline = manager->CreatePipeline(IsPhysicsFPSRestricted ? optional(TimeSecondsFP64(1.0 / 60.0)) : nullopt, false);
 		auto rendererPipeline = manager->CreatePipeline(nullopt, false);
 
 		manager->Register<PhysicsSystem>(physicsPipeline);
