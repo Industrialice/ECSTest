@@ -31,7 +31,7 @@ namespace ECSTest
 		[[nodiscard]] virtual bool IsPaused() const override;
 		//virtual void StreamIn(vector<unique_ptr<IEntitiesStream>> &&streams) override;
 		[[nodiscard]] virtual shared_ptr<IEntitiesStream> StreamOut() const override; // the manager must be paused
-
+		
 	private:
 		struct ArchetypeGroup
 		{

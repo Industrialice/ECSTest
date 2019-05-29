@@ -1,7 +1,5 @@
 #pragma once
 
-#include <TypeIdentifiable.hpp>
-
 namespace ECSTest
 {
     enum class RequirementForComponent

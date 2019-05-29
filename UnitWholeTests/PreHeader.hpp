@@ -53,6 +53,10 @@
 #include <KeyController.hpp>
 #include <ArchetypeReflector.hpp>
 #include <set>
+#include <stdio.h>
+#include <tuple>
+#include <queue>
+#include <random>
 
 namespace ECSTest
 {

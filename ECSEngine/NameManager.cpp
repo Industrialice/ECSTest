@@ -1,6 +1,5 @@
 #include "PreHeader.hpp"
 #include "NameManager.hpp"
-#include <DIWRSpinLock.hpp>
 
 using namespace ECSEngine;
 

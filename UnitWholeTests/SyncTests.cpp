@@ -1,7 +1,4 @@
 #include "PreHeader.hpp"
-#include <stdio.h>
-#include <tuple>
-#include <set>
 
 using namespace ECSTest;
 

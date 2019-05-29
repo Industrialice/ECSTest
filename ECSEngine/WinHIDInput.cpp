@@ -1,7 +1,6 @@
 #include "PreHeader.hpp"
 #include "WinHIDInput.hpp"
 #include <..\External\HID\hidusage.h>
-#include <Logger.hpp>
 
 using namespace ECSEngine;
 

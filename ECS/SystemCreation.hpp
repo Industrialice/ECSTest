@@ -8,7 +8,7 @@ namespace ECSTest
     {
         return left.type < right.type;
     }
-
+	
     struct _SystemHelperFuncs
     {
         template <typename... T> struct GetComponentType

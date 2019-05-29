@@ -19,8 +19,6 @@
 #include <experimental/generator>
 
 #include <StdMiscLib.hpp>
-#include <MatrixMathTypes.hpp>
-#include <Logger.hpp>
 using namespace StdLib;
 
 using std::vector;

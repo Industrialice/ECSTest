@@ -2,7 +2,6 @@
 
 #include "Array.hpp"
 #include "Archetype.hpp"
-#include <DIWRSpinLock.hpp>
 #include "Component.hpp"
 
 namespace ECSTest

@@ -1,5 +1,4 @@
 #include <PreHeader.hpp>
-#include <stdio.h>
 
 void PerformUnitTests(bool isSuppressLogs);
 
