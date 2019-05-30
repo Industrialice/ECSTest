@@ -801,10 +801,9 @@ namespace ECSTest
 		[[nodiscard]] virtual const Requests &RequestedComponents() const override final
 		{
 			static constexpr auto requestedComponentsTuple = AcquireRequestedComponents();
-			static const Requests requestedComponentsArray = _SystemHelperFuncs::ComponentsTupleToRequests(requestedComponentsTuple);
-			// TODO: fix clang compilation
-			//static_assert(requestedComponentsArray.entityIDIndex == nullopt, "Indirect systems cannot request EntityID");
-			//static_assert(requestedComponentsArray.environmentIndex == nullopt, "Indirect systems cannot request Environment");
+			static constexpr Requests requestedComponentsArray = _SystemHelperFuncs::ComponentsTupleToRequests(requestedComponentsTuple);
+			static_assert(requestedComponentsArray.entityIDIndex == nullopt, "Indirect systems cannot request EntityID");
+			static_assert(requestedComponentsArray.environmentIndex == nullopt, "Indirect systems cannot request Environment");
 			return requestedComponentsArray;
 		}
 	};
@@ -830,7 +829,7 @@ namespace ECSTest
 		[[nodiscard]] virtual const Requests &RequestedComponents() const override final
 		{
 			static constexpr auto requestedComponentsTuple = AcquireRequestedComponents();
-			static const Requests requestedComponentsArray = _SystemHelperFuncs::ComponentsTupleToRequests(requestedComponentsTuple);
+			static constexpr Requests requestedComponentsArray = _SystemHelperFuncs::ComponentsTupleToRequests(requestedComponentsTuple);
 			return requestedComponentsArray;
 		}
 
