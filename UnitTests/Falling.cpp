@@ -12,11 +12,8 @@ class FallingClass
 public:
 	FallingClass()
 	{
-		auto logger = make_shared<Logger<string_view, true>>();
-		auto handle0 = logger->OnMessage(LogRecipient);
-
 		auto stream = make_unique<EntitiesStream>();
-		auto manager = SystemsManager::New(IsMultiThreadedECS, logger);
+		auto manager = SystemsManager::New(IsMultiThreadedECS, Log);
 		EntityIDGenerator entityIdGenerator;
 
 		GenerateScene(entityIdGenerator, *manager, *stream);
@@ -610,7 +607,7 @@ public:
 
             string name = "Entity"s + std::to_string(id.Hash());
             Name n;
-            strcpy_s(n.name.data(), n.name.size(), name.c_str());
+            MemOps::Copy(n.name.data(), name.c_str(), n.name.size());
             entity.AddComponent(n);
 
             stream.AddEntity(id, move(entity));
@@ -621,7 +618,7 @@ public:
     {
         if (!isFirstPass)
         {
-            printf("\n-------------\n\n");
+			Log->Info("", "\n-------------\n\n");
         }
 
         std::map<TypeId, ui32> componentCounts{};
@@ -634,18 +631,20 @@ public:
 
                 if (c.type == AverageHeight::GetTypeId())
                 {
-                    auto a = *(AverageHeight *)c.data;
-                    printf("average height %f based on %u sources\n", a.height, a.sources);
+                    AverageHeight a;
+                    MemOps::Copy((byte *)&a, c.data, sizeof(AverageHeight));
+					Log->Info("", "average height %f based on %u sources\n", a.height, a.sources);
                 }
                 else if (c.type == HeightFixerInfo::GetTypeId())
                 {
-                    auto i = *(HeightFixerInfo *)c.data;
-                    printf("height fixer run %u times, fixed %u heights\n", i.runTimes, i.heightsFixed);
+                    HeightFixerInfo i;
+                    MemOps::Copy((byte *)&i, c.data, sizeof(HeightFixerInfo));
+					Log->Info("", "height fixer run %u times, fixed %u heights\n", i.runTimes, i.heightsFixed);
                 }
             }
         }
 
-        printf("\n");
+		Log->Info("", "\n");
         for (auto &[id, count] : componentCounts)
         {
             if (id == Transform::GetTypeId())
@@ -665,7 +664,7 @@ public:
                 ASSUME(count == 1);
             }
 
-            printf("%s count %u\n", id.Name(), count);
+			Log->Info("", "%s count %u\n", id.Name(), count);
         }
     }
 };

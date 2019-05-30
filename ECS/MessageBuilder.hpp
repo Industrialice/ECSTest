@@ -20,6 +20,9 @@ namespace ECSTest
             EntityID entityID;
             vector<SerializedComponent> components;
 
+            WARNING_PUSH
+            WARNING_DISABLE_INCREASES_REQUIRED_ALIGNMENT
+
             template <typename T> const T *FindComponent() const
             {
                 static_assert(T::IsTag() == false, "Passed component type is a tag component, use FindTag() instead");
@@ -28,6 +31,7 @@ namespace ECSTest
                 {
                     if (c.type == T::GetTypeId())
                     {
+                        ASSUME(Funcs::IsAligned(c.data, alignof(T)));
                         return (T *)c.data;
                     }
                 }
@@ -40,6 +44,8 @@ namespace ECSTest
                 ASSUME(c);
                 return *c;
             }
+
+            WARNING_POP
 
             template <typename T> bool FindTag() const
             {
@@ -68,7 +74,7 @@ namespace ECSTest
 			}
 
         private:
-            vector<ui8> componentsData;
+            vector<unique_ptr<byte[], AlignedMallocDeleter>> componentsData;
         };
 
     private:
@@ -123,6 +129,9 @@ namespace ECSTest
             remove_reference_t<SerializedComponent> added;
             vector<SerializedComponent> components;
 
+            WARNING_PUSH
+            WARNING_DISABLE_INCREASES_REQUIRED_ALIGNMENT
+
             template <typename T> [[nodiscard]] const T *FindComponent() const
             {
                 static_assert(T::IsTag() == false, "Passed component type is a tag component, use FindTag() instead");
@@ -131,6 +140,7 @@ namespace ECSTest
                 {
                     if (c.type == T::GetTypeId())
                     {
+                        ASSUME(Funcs::IsAligned(c.data, alignof(T)));
                         return (T *)c.data;
                     }
                 }
@@ -143,6 +153,8 @@ namespace ECSTest
                 ASSUME(c);
                 return *c;
             }
+
+            WARNING_POP
 
             template <typename T> [[nodiscard]] bool FindTag() const
             {
@@ -171,7 +183,7 @@ namespace ECSTest
 			}
 
         private:
-            vector<ui8> componentsData;
+            vector<unique_ptr<byte[], AlignedMallocDeleter>> componentsData;
             ComponentArrayBuilder cab;
         };
 
@@ -229,7 +241,7 @@ namespace ECSTest
         {
 			vector<EntityID> entityIds{};
 			vector<ComponentID> componentIds{};
-			unique_ptr<ui8[], AlignedMallocDeleter> data{};
+			unique_ptr<byte[], AlignedMallocDeleter> data{};
             ui32 dataReserved{};
         };
 
@@ -254,10 +266,10 @@ namespace ECSTest
 			const EntityID *const _start{};
 			const EntityID *_entityIdPtr{};
 			const ComponentID *_componentIdPtr{};
-			const ui8 *_data{};
+			const byte *_data{};
 
 		public:
-			const_iterator(const EntityID *entityIdStart, const ComponentID *componentIdStart, const ui8 *data) : _start(entityIdStart), _entityIdPtr(entityIdStart), _componentIdPtr(componentIdStart), _data(data) {}
+			const_iterator(const EntityID *entityIdStart, const ComponentID *componentIdStart, const byte *data) : _start(entityIdStart), _entityIdPtr(entityIdStart), _componentIdPtr(componentIdStart), _data(data) {}
 
 			struct Info
 			{
@@ -283,10 +295,15 @@ namespace ECSTest
 				return _entityIdPtr != other._entityIdPtr;
 			}
 
+			WARNING_PUSH
+			WARNING_DISABLE_INCREASES_REQUIRED_ALIGNMENT
+
 			[[nodiscard]] auto operator * () const
 			{
 				auto index = _entityIdPtr - _start;
 				auto *dataPtr = _data + index * sizeof(T);
+
+				ASSUME(Funcs::IsAligned(dataPtr, alignof(T)));
 
 				if constexpr (T::IsUnique())
 				{
@@ -297,6 +314,8 @@ namespace ECSTest
 					return InfoWithId{*(T *)dataPtr, *_entityIdPtr, _componentIdPtr[index]};
 				}
 			}
+
+			WARNING_POP
 		};
 
 		template <typename T> class Enumerator
@@ -593,14 +612,14 @@ namespace ECSTest
             {
                 sc.alignmentOf = alignof(T);
                 sc.sizeOf = sizeof(T);
-                sc.data = (ui8 *)&component;
+                sc.data = (byte *)&component;
             }
             AddComponent(entityID, sc);
         }
 
         template <typename T, typename = enable_if_t<is_base_of_v<_BaseComponentClass, T> == false>, typename = void> void AddComponent(EntityID, const T &)
         {
-            static_assert(false, "Passed value is not a component");
+            static_assert(false_v<T>, "Passed value is not a component");
         }
 
         template <typename T, typename = enable_if_t<T::IsUnique() == false && T::IsTag() == false>> void AddComponent(EntityID entityID, const T &component, ComponentID id = {})
@@ -611,14 +630,14 @@ namespace ECSTest
             sc.isUnique = false;
             sc.isTag = false;
             sc.type = T::GetTypeId();
-            sc.data = (ui8 *)&component;
+            sc.data = (byte *)&component;
             sc.id = id;
             AddComponent(entityID, sc);
         }
 
         template <typename T, typename = enable_if_t<is_base_of_v<_BaseComponentClass, T> == false>, typename = void> void AddComponent(EntityID, const T &, ComponentID = {})
         {
-            static_assert(false, "Passed value is not a component");
+            static_assert(false_v<T>, "Passed value is not a component");
         }
 
 		template <typename T, typename = enable_if_t<T::IsUnique() && T::IsTag() == false>> void ComponentChanged(EntityID entityID, const T &component)
@@ -631,13 +650,13 @@ namespace ECSTest
 			sc.isUnique = true;
             sc.isTag = false;
 			sc.type = T::GetTypeId();
-			sc.data = (ui8 *)&component;
+			sc.data = (byte *)&component;
 			ComponentChanged(entityID, sc);
 		}
 
         template <typename T, typename = enable_if_t<is_base_of_v<_BaseComponentClass, T> == false>, typename = void> void ComponentChanged(EntityID, const T &)
         {
-            static_assert(false, "Passed value is not a component");
+            static_assert(false_v<T>, "Passed value is not a component");
         }
 
         template <typename T, typename = enable_if_t<T::IsUnique() == false && T::IsTag() == false>> void ComponentChanged(EntityID entityID, const T &component, ComponentID id)
@@ -648,14 +667,14 @@ namespace ECSTest
             sc.isUnique = false;
             sc.isTag = false;
             sc.type = T::GetTypeId();
-            sc.data = (ui8 *)&component;
+            sc.data = (byte *)&component;
             sc.id = id;
             ComponentChanged(entityID, sc);
         }
 
         template <typename T, typename = enable_if_t<is_base_of_v<_BaseComponentClass, T> == false>, typename = void> void ComponentChanged(EntityID, const T &, ComponentID)
         {
-            static_assert(false, "Passed value is not a component");
+            static_assert(false_v<T>, "Passed value is not a component");
         }
 
         template <typename T, typename = enable_if_t<T::IsUnique()>> void RemoveComponent(EntityID entityID, const T &) // both for regular unique and tag components
@@ -665,7 +684,7 @@ namespace ECSTest
 
         template <typename T, typename = enable_if_t<is_base_of_v<_BaseComponentClass, T> == false>, typename = void> void RemoveComponent(EntityID, const T &)
         {
-            static_assert(false, "Passed value is not a component");
+            static_assert(false_v<T>, "Passed value is not a component");
         }
 
         template <typename T, typename = enable_if_t<T::IsUnique() == false && T::IsTag() == false>> void RemoveComponent(EntityID entityID, const T &, ComponentID id)
@@ -675,7 +694,7 @@ namespace ECSTest
 
         template <typename T, typename = enable_if_t<is_base_of_v<_BaseComponentClass, T> == false>, typename = void> void RemoveComponent(EntityID, const T &, ComponentID)
         {
-            static_assert(false, "Passed value is not a component");
+            static_assert(false_v<T>, "Passed value is not a component");
         }
         
         ComponentArrayBuilder &AddEntity(EntityID entityID); // archetype will be computed after all the components were added, you can ignore the returned value if you don't want to add any components

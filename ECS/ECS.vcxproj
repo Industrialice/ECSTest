@@ -27,12 +27,12 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\Helpers\EntitiesStreamBuilder.hpp" />
     <ClInclude Include="Archetype.hpp" />
     <ClInclude Include="ArchetypeReflector.hpp" />
     <ClInclude Include="Array.hpp" />
     <ClInclude Include="Component.hpp" />
     <ClInclude Include="ComponentArrayBuilder.hpp" />
+    <ClInclude Include="EntitiesStreamBuilder.hpp" />
     <ClInclude Include="IEntitiesStream.hpp" />
     <ClInclude Include="EntityID.hpp" />
     <ClInclude Include="IKeyController.hpp" />

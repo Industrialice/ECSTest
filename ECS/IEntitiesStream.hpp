@@ -10,7 +10,7 @@ namespace ECSTest
     public:
         struct ComponentDesc : ComponentDescription
         {
-			const ui8 *data{}; // not aligned
+			const byte *data{}; // not aligned
         };
 
         struct StreamedEntity

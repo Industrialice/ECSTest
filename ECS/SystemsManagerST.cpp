@@ -370,7 +370,7 @@ static void AssignComponentIDs(Array<SerializedComponent> components, ComponentI
 
 void SystemsManagerST::Start(EntityIDGenerator &&idGenerator, vector<WorkerThread> &&workers, vector<unique_ptr<IEntitiesStream>> &&streams)
 {
-	ASSUME(_entitiesLocations.empty());
+	ASSUME(_entitiesLocations.empty() && _schedulerThread.get_id() == std::thread::id{});
 
 	if (workers.size())
 	{
@@ -430,6 +430,7 @@ void SystemsManagerST::Stop(bool isWaitForStop)
 
 	if (isWaitForStop)
 	{
+		ASSUME(_schedulerThread.get_id() != std::this_thread::get_id());
 		_schedulerThread.join();
 	}
 
@@ -573,9 +574,9 @@ void SystemsManagerST::AddEntityToArchetypeGroup(const ArchetypeFull &archetype,
 
 			ASSUME(componentArray.sizeOf > 0 && componentArray.stride > 0 && componentArray.alignmentOf > 0);
 
-			void *oldPtr = componentArray.data.release();
-			void *newPtr = Allocator::MallocAlignedRuntime::Reallocate(oldPtr, componentArray.sizeOf * componentArray.stride * group.reservedCount, componentArray.alignmentOf);
-			componentArray.data.reset((ui8 *)newPtr);
+			byte *oldPtr = componentArray.data.release();
+			byte *newPtr = Allocator::MallocAlignedRuntime::Reallocate(oldPtr, componentArray.sizeOf * componentArray.stride * group.reservedCount, componentArray.alignmentOf);
+			componentArray.data.reset(newPtr);
 
 			if (!componentArray.isUnique)
 			{
@@ -741,6 +742,10 @@ void SystemsManagerST::StartScheduler(vector<unique_ptr<IEntitiesStream>> &strea
 			SchedulerLoop();
 		}
 	}
+
+	#ifdef PLATFORM_ANDROID
+		DetachCurrentThread();
+	#endif
 }
 
 void SystemsManagerST::SchedulerLoop()
@@ -988,7 +993,7 @@ void SystemsManagerST::ExecuteIndirectSystem(BaseIndirectSystem &system, Managed
 
     for (const auto &[componentType, stream] : env.messageBuilder.ComponentChangedStreams()._data)
     {
-        auto it = requested.find_if([componentType](const System::ComponentRequest &r) { return r.type == componentType; });
+        auto it = requested.find_if([componentType = componentType](const System::ComponentRequest &r) { return r.type == componentType; });
         ASSUME(it != requested.end()); // system changed component without requesting write access
     }
 
@@ -1055,6 +1060,7 @@ void SystemsManagerST::ExecuteDirectSystem(BaseDirectSystem &system, ControlsQue
                 if (isFound)
                 {
 					const auto &component = group.get().components[index];
+					ASSUME(Funcs::IsAligned(component.data.get(), component.alignmentOf));
 
 					if (component.isUnique)
 					{
@@ -1063,7 +1069,7 @@ void SystemsManagerST::ExecuteDirectSystem(BaseDirectSystem &system, ControlsQue
 					}
 					else
 					{
-						NonUnique<ui8> desc = 
+						NonUnique<byte> desc =
 						{
 							{component.data.get(), group.get().entitiesCount * component.stride},
 							{component.ids.get(), group.get().entitiesCount * component.stride},
@@ -1084,7 +1090,7 @@ void SystemsManagerST::ExecuteDirectSystem(BaseDirectSystem &system, ControlsQue
 			{
 				if (requested.entityIDIndex)
 				{
-					_tempArrayArgs.push_back({(ui8 *)group.get().entities.get(), group.get().entitiesCount});
+					_tempArrayArgs.push_back({(byte *)group.get().entities.get(), group.get().entitiesCount});
 					_tempArgs.insert(_tempArgs.begin() + *requested.entityIDIndex, &_tempArrayArgs.back());
 				}
 			};
@@ -1198,7 +1204,7 @@ void SystemsManagerST::ProcessControlsQueueAndClear(System &system, ControlsQueu
 
     ASSUME(system.GetKeyController());
 
-    system.GetKeyController()->Dispatch(controlsQueue.Enumerate());
+    system.GetKeyController()->Dispatch(controlsQueue);
 
     controlsQueue.clear();
 }
@@ -1300,8 +1306,8 @@ void SystemsManagerST::UpdateECSFromMessages(MessageBuilder &messageBuilder)
             for (uiw componentIndex = 0; componentIndex < group.uniqueTypedComponentsCount; ++componentIndex)
             {
                 auto &arr = group.components[componentIndex];
-                ui8 *target = arr.data.get() + arr.sizeOf * index * arr.stride;
-                const ui8 *source = arr.data.get() + arr.sizeOf * replaceIndex * arr.stride;
+				byte *target = arr.data.get() + arr.sizeOf * index * arr.stride;
+                const byte *source = arr.data.get() + arr.sizeOf * replaceIndex * arr.stride;
                 uiw copySize = arr.sizeOf * arr.stride;
                 MemOps::Copy(target, source, copySize);
 
@@ -1593,7 +1599,7 @@ void SystemsManagerST::PassMessagesToIndirectSystemsAndClear(MessageBuilder &mes
                 if (managed.system.get() != systemToIgnore)
                 {
                     auto requested = managed.system->RequestedComponents();
-                    auto searchPredicate = [componentType](const System::ComponentRequest &stored) { return componentType == stored.type; };
+                    auto searchPredicate = [componentType = componentType](const System::ComponentRequest &stored) { return componentType == stored.type; };
 
                     if (requested.subtractive.find_if(searchPredicate) != requested.subtractive.end())
                     {
@@ -1621,7 +1627,7 @@ void SystemsManagerST::PassMessagesToIndirectSystemsAndClear(MessageBuilder &mes
                 if (managed.system.get() != systemToIgnore)
                 {
                     auto requested = managed.system->RequestedComponents();
-                    auto searchPredicate = [componentType](const System::ComponentRequest &stored) { return componentType == stored.type; };
+                    auto searchPredicate = [componentType = componentType](const System::ComponentRequest &stored) { return componentType == stored.type; };
 
                     if (requested.subtractive.find_if(searchPredicate) != requested.subtractive.end())
                     {
@@ -1649,7 +1655,7 @@ void SystemsManagerST::PassMessagesToIndirectSystemsAndClear(MessageBuilder &mes
                 if (managed.system.get() != systemToIgnore)
                 {
                     auto requested = managed.system->RequestedComponents();
-                    auto searchPredicate = [componentType](const System::ComponentRequest &stored) { return componentType == stored.type; };
+                    auto searchPredicate = [componentType = componentType](const System::ComponentRequest &stored) { return componentType == stored.type; };
 
                     if (requested.subtractive.find_if(searchPredicate) != requested.subtractive.end())
                     {

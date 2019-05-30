@@ -181,13 +181,25 @@ namespace ECSTest
             _actions.insert(_actions.end(), actions.begin(), actions.end());
         }
 
-		[[nodiscard]] std::experimental::generator<ControlAction> Enumerate() const
-        {
-            for (const auto &action : _actions)
-            {
-                co_yield action;
-            }
-        }
+		auto begin()
+		{
+			return _actions.begin();
+		}
+
+		auto begin() const
+		{
+			return _actions.cbegin();
+		}
+
+		auto end()
+		{
+			return _actions.end();
+		}
+
+		auto end() const
+		{
+			return _actions.cend();
+		}
 
 		[[nodiscard]] Array<const ControlAction> Actions() const
         {
@@ -220,7 +232,8 @@ namespace ECSTest
 
         virtual ~IKeyController() = default;
         virtual void Dispatch(const ControlAction &action) = 0;
-        virtual void Dispatch(std::experimental::generator<ControlAction> enumerable) = 0;
+		virtual void Dispatch(const ControlsQueue &controlsQueue) = 0;
+        //virtual void Dispatch(std::experimental::generator<ControlAction> enumerable) = 0;
         virtual void Update() = 0; // may be used for key repeating
         [[nodiscard]] virtual KeyInfo GetKeyInfo(KeyCode key, DeviceTypes::DeviceType device = DeviceTypes::MouseKeyboard) const = 0; // always default for Touch
         [[nodiscard]] virtual optional<i32Vector2> GetPositionInfo(DeviceTypes::DeviceType device = DeviceTypes::MouseKeyboard) const = 0; // always nullopt for Joystick
@@ -248,7 +261,8 @@ namespace ECSTest
 
         virtual ~EmptyKeyController() override = default;
         virtual void Dispatch(const ControlAction &action) override {}
-        virtual void Dispatch(std::experimental::generator<ControlAction> enumerable) override {}
+		virtual void Dispatch(const ControlsQueue &controlsQueue) override {}
+        //virtual void Dispatch(std::experimental::generator<ControlAction> enumerable) override {}
         virtual void Update() override {}
         [[nodiscard]] virtual KeyInfo GetKeyInfo(KeyCode key, DeviceTypes::DeviceType device = DeviceTypes::MouseKeyboard) const override { return {}; }
         [[nodiscard]] virtual optional<i32Vector2> GetPositionInfo(DeviceTypes::DeviceType device = DeviceTypes::MouseKeyboard) const override { return {}; }

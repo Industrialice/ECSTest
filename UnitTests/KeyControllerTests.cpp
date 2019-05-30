@@ -26,12 +26,10 @@ public:
 		RendererReceivedRendererKeys = 0;
 		RendererReceivedPhysicsKeys = 0;
 
-		auto logger = make_shared<Logger<string_view, true>>();
-		auto handle0 = logger->OnMessage(LogRecipient);
 		auto stream = make_unique<EntitiesStream>();
 
 		auto idGenerator = EntityIDGenerator{};
-		auto manager = SystemsManager::New(IsMTECS, logger);
+		auto manager = SystemsManager::New(IsMTECS, Log);
 
 		GenerateScene(idGenerator, *manager, *stream);
 

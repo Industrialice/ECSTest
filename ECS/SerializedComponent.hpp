@@ -6,18 +6,23 @@ namespace ECSTest
 {
     struct SerializedComponent : ComponentDescription
     {
-        const ui8 *data{}; // aigned by alignmentOf
+        const byte *data{}; // aigned by alignmentOf
         ComponentID id{};
+
+        WARNING_PUSH
+        WARNING_DISABLE_INCREASES_REQUIRED_ALIGNMENT
 
         template <typename T, typename = enable_if_t<T::IsTag() == false>> [[nodiscard]] T &Cast()
         {
             ASSUME(T::GetTypeId() == type);
+            ASSUME(Funcs::IsAligned(data, alignof(T)));
             return *(T *)data;
         }
 
         template <typename T, typename = enable_if_t<T::IsTag() == false>> [[nodiscard]] const T &Cast() const
         {
             ASSUME(T::GetTypeId() == type);
+            ASSUME(Funcs::IsAligned(data, alignof(T)));
             return *(T *)data;
         }
 
@@ -25,6 +30,7 @@ namespace ECSTest
         {
             if (T::GetTypeId() == type)
             {
+                ASSUME(Funcs::IsAligned(data, alignof(T)));
                 return (T *)data;
             }
             return nullptr;
@@ -34,10 +40,13 @@ namespace ECSTest
         {
             if (T::GetTypeId() == type)
             {
+                ASSUME(Funcs::IsAligned(data, alignof(T)));
                 return (T *)data;
             }
             return nullptr;
         }
+
+        WARNING_POP
 
         template <typename T, typename = enable_if_t<T::IsTag()>> [[nodiscard]] bool TryCast() const
         {

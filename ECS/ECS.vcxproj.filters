@@ -71,7 +71,7 @@
     <ClInclude Include="SystemCreation.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\Helpers\EntitiesStreamBuilder.hpp">
+    <ClInclude Include="EntitiesStreamBuilder.hpp">
       <Filter>Helpers</Filter>
     </ClInclude>
   </ItemGroup>

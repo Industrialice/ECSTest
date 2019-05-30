@@ -26,18 +26,26 @@ void RecordingKeyController::Dispatch(const ControlAction &action)
     return _nextController->Dispatch(action);
 }
 
-void RecordingKeyController::Dispatch(std::experimental::generator<ControlAction> enumerable)
+void RecordingKeyController::Dispatch(const ControlsQueue &controlsQueue)
 {
-    for (const auto &action : enumerable)
-    {
-        for (i32 index = (i32)_recordingListenerHandles.size() - 1; index >= 0; --index)
-        {
-            _recordingListenerHandles[index].listener(action);
-        }
-
-        _nextController->Dispatch(action);
-    }
+	for (auto &action : controlsQueue)
+	{
+		Dispatch(action);
+	}
 }
+
+//void RecordingKeyController::Dispatch(std::experimental::generator<ControlAction> enumerable)
+//{
+//    for (const auto &action : enumerable)
+//    {
+//        for (i32 index = (i32)_recordingListenerHandles.size() - 1; index >= 0; --index)
+//        {
+//            _recordingListenerHandles[index].listener(action);
+//        }
+//
+//        _nextController->Dispatch(action);
+//    }
+//}
 
 void RecordingKeyController::Update()
 {

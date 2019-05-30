@@ -132,7 +132,7 @@ bool ArchetypeReflector::Satisfies(Array<const TypeId> value, Array<const Archet
 {
 #ifdef DEBUG
 	{
-		ui8 currentGroup = 0;
+		ui32 currentGroup = 0;
 
 		for (auto[type, group, requirement] : request)
 		{
@@ -149,7 +149,7 @@ bool ArchetypeReflector::Satisfies(Array<const TypeId> value, Array<const Archet
 	}
 #endif
 
-	ui8 currentGroup = ui8_max;
+	ui32 currentGroup = ui32_max;
 	bool isGroupSatisfied = true;
 
     for (auto[type, group, requirement] : request)

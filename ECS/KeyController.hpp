@@ -18,7 +18,8 @@ namespace ECSTest
 
         virtual ~KeyController() override = default;
 		virtual void Dispatch(const ControlAction &action) override;
-		virtual void Dispatch(std::experimental::generator<ControlAction> enumerable) override;
+		virtual void Dispatch(const ControlsQueue &controlsQueue) override;
+		//virtual void Dispatch(std::experimental::generator<ControlAction> enumerable) override;
         virtual void Update() override;
         [[nodiscard]] virtual KeyInfo GetKeyInfo(KeyCode key, DeviceTypes::DeviceType device = DeviceTypes::MouseKeyboard) const override;
         [[nodiscard]] virtual optional<i32Vector2> GetPositionInfo(DeviceTypes::DeviceType device = DeviceTypes::MouseKeyboard) const override;

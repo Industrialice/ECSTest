@@ -15,25 +15,22 @@ class Benchmark2Class
 public:
 	Benchmark2Class()
 	{
-		printf("ECS multithreaded: %s\n", IsMTECS ? "yes" : "no");
-		printf("IsPhysicsFPSRestricted: %s\n", IsPhysicsFPSRestricted ? "yes" : "no");
-		printf("IsPhysicsUsingComponentChangedHints: %s\n", IsPhysicsUsingComponentChangedHints ? "yes" : "no");
-		printf("IsShuffleUpdatesOrder: %s\n", IsShuffleUpdatesOrder ? "yes" : "no");
-		printf("EntitiesToTest: %u\n", EntitiesToTest);
-		printf("PhysicsUpdatesPerFrame: %u\n", PhysicsUpdatesPerFrame);
-		printf("RendererDrawPerFrame: %u\n", RendererDrawPerFrame);
-
-		auto logger = make_shared<Logger<string_view, true>>();
-		auto handle0 = logger->OnMessage(LogRecipient);
+		Log->Info("", "ECS multithreaded: %s\n", IsMTECS ? "yes" : "no");
+		Log->Info("", "IsPhysicsFPSRestricted: %s\n", IsPhysicsFPSRestricted ? "yes" : "no");
+		Log->Info("", "IsPhysicsUsingComponentChangedHints: %s\n", IsPhysicsUsingComponentChangedHints ? "yes" : "no");
+		Log->Info("", "IsShuffleUpdatesOrder: %s\n", IsShuffleUpdatesOrder ? "yes" : "no");
+		Log->Info("", "EntitiesToTest: %u\n", EntitiesToTest);
+		Log->Info("", "PhysicsUpdatesPerFrame: %u\n", PhysicsUpdatesPerFrame);
+		Log->Info("", "RendererDrawPerFrame: %u\n", RendererDrawPerFrame);
 
 		auto idGenerator = EntityIDGenerator{};
-		auto manager = SystemsManager::New(IsMTECS, logger);
+		auto manager = SystemsManager::New(IsMTECS, Log);
 		auto stream = make_unique<EntitiesStream>();
 
 		auto before = TimeMoment::Now();
 		GenerateScene(idGenerator, *manager, *stream);
 		auto after = TimeMoment::Now();
-		printf("Generating scene took %.2lfs\n", (after - before).ToSec_f64());
+		Log->Info("", "Generating scene took %.2lfs\n", (after - before).ToSec_f64());
 
 		auto physicsPipeline = manager->CreatePipeline(IsPhysicsFPSRestricted ? optional(TimeSecondsFP64(1.0 / 60.0)) : nullopt, false);
 		auto rendererPipeline = manager->CreatePipeline(nullopt, false);
@@ -54,9 +51,6 @@ public:
 		TimeDifference rendererLastSpent, physicsLastSpent;
 
 		std::vector<f32> fpsHistory{};
-		char backBuf[512];
-		MemOps::Set(backBuf, '\b', sizeof(backBuf));
-		int lastPrinted = 510;
 
 		for (;;)
 		{
@@ -78,11 +72,7 @@ public:
 				f32 rendererSpent = (rendererInfo.timeSpentExecuting - rendererLastSpent).ToMSec() * diffRev;
 				f32 physicsSpent = (physicsInfo.timeSpentExecuting - physicsLastSpent).ToMSec() * diffRev;
 
-				backBuf[lastPrinted + 1] = '\0';
-				printf(backBuf);
-				int printed = printf("renderer %.1ffps (%.2lfms, %.2lfms), physics %.1ffps (%.2lfms, %.2lfms)  ", rfps, rendererSpent, rendererSpent / rfps, pfps, physicsSpent, physicsSpent / pfps);
-				backBuf[lastPrinted + 1] = '\b';
-				lastPrinted = printed;
+				Log->Info("", "renderer %.1ffps (%.2lfms, %.2lfms), physics %.1ffps (%.2lfms, %.2lfms)\n", rfps, rendererSpent, rendererSpent / rfps, pfps, physicsSpent, physicsSpent / pfps);
 
 				fpsHistory.push_back(rfps);
 				lastExecutedRenderer = rendererInfo.executedTimes;
@@ -97,7 +87,7 @@ public:
 		manager->Stop(true);
 
 		f32 avg = std::accumulate(fpsHistory.begin(), fpsHistory.end(), 0.0f);
-		printf("\nAverage FPS: %.2lf\n", avg / fpsHistory.size());
+		Log->Info("", "\nAverage FPS: %.2lf\n", avg / fpsHistory.size());
 	}
 
     struct Physics : Component<Physics>
@@ -298,10 +288,10 @@ public:
         virtual void Update(Environment &env) override
         {
 			//std::this_thread::sleep_for(1ms);
-            ui32 count = 0;
-            for (auto it = _linear.begin(); count < RendererDrawPerFrame && it != _linear.end(); ++it, ++count)
-            {
-            }
+            //ui32 count = 0;
+            //for (auto it = _linear.begin(); count < RendererDrawPerFrame && it != _linear.end(); ++it, ++count)
+            //{
+            //}
         }
 
         virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override
@@ -438,7 +428,7 @@ public:
 			};
 			std::sort(ids.begin(), ids.end(), pred);
 			TimeMoment after = TimeMoment::Now();
-			printf("Generating entity ids tool %.2lfs\n", (after - before).ToSec_f64());
+			Log->Info("", "Generating entity ids tool %.2lfs\n", (after - before).ToSec_f64());
 		}
 
         for (uiw index = 0; index < EntitiesToTest; ++index)

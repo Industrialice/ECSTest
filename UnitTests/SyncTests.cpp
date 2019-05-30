@@ -27,7 +27,7 @@ public:
 		constexpr bool isMT = false;
 
 		auto stream = make_unique<EntitiesStream>();
-		auto manager = SystemsManager::New(isMT, nullptr);
+		auto manager = SystemsManager::New(isMT, Log);
 		EntityIDGenerator entityIdGenerator;
 
 		GenerateScene(entityIdGenerator, *manager, *stream);
@@ -210,8 +210,8 @@ public:
                 {
                     if (component.type == TestComponent0::GetTypeId())
                     {
-                        auto casted = (TestComponent0 *)component.data;
-                        ASSUME(casted->value == 0 || casted->value == 10);
+                        auto casted = component.Cast<TestComponent0>();
+                        ASSUME(casted.value == 0 || casted.value == 10);
                     }
                 }
             }
@@ -330,14 +330,14 @@ public:
         ASSUME(MonitoringStats::receivedTest1ChangedCount == 0);
         ASSUME(MonitoringStats::receivedTest2ChangedCount == 0);
 
-        printf("finished checking stream, pass %s\n", (isFirstPass ? "first" : "second"));
+        Log->Info("", "finished checking stream, pass %s\n", (isFirstPass ? "first" : "second"));
 
-        printf("ECS info:\n");
-        printf("  entities: %u\n", entitiesCount);
-        printf("  test0 components: %u\n", test0Count);
-        printf("  test1 components: %u\n", test1Count);
-        printf("  test2 components: %u\n", test2Count);
-        printf("\n");
+		Log->Info("", "ECS info:\n");
+		Log->Info("", "  entities: %u\n", entitiesCount);
+		Log->Info("", "  test0 components: %u\n", test0Count);
+		Log->Info("", "  test1 components: %u\n", test1Count);
+		Log->Info("", "  test2 components: %u\n", test2Count);
+		Log->Info("", "\n");
     }
 };
 

@@ -116,13 +116,21 @@ void KeyController::Dispatch(const ControlAction &action)
     }
 }
 
-void KeyController::Dispatch(std::experimental::generator<ControlAction> enumerable)
+void KeyController::Dispatch(const ControlsQueue &controlsQueue)
 {
-    for (const auto &action : enumerable)
-    {
-        Dispatch(action);
-    }
+	for (auto &action : controlsQueue)
+	{
+		Dispatch(action);
+	}
 }
+
+//void KeyController::Dispatch(std::experimental::generator<ControlAction> enumerable)
+//{
+//    for (const auto &action : enumerable)
+//    {
+//        Dispatch(action);
+//    }
+//}
 
 void KeyController::Update()
 {}

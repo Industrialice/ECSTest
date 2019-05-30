@@ -41,7 +41,7 @@ namespace ECSTest
 				ui16 stride{}; // Components of that type per entity, 1 if there's only one. Any access to a particular component must be performed using index * stride
 				ui16 sizeOf{}; // of each component
 				ui16 alignmentOf{}; // of each component
-				unique_ptr<ui8[], AlignedMallocDeleter> data{}; // each component can be safely casted into class Component
+				unique_ptr<byte[], AlignedMallocDeleter> data{}; // each component can be safely casted into class Component
 				unique_ptr<ComponentID[], MallocDeleter> ids{}; // ComponentID, used only for components that allow multiple components of that type to be attached to an entity
 				bool isUnique{}; // indicates whether other components of the same type can be attached to an entity
 			};
@@ -144,8 +144,8 @@ namespace ECSTest
         shared_ptr<LoggerType> _logger = make_shared<LoggerType>();
 
         vector<SerializedComponent> _tempComponents{};
-        vector<Array<ui8>> _tempArrayArgs{};
-		vector<NonUnique<ui8>> _tempNonUniqueArgs{};
+        vector<Array<byte>> _tempArrayArgs{};
+		vector<NonUnique<byte>> _tempNonUniqueArgs{};
         vector<void *> _tempArgs{};
 
         MessageBuilder _tempMessageBuilder{};

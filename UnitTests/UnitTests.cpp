@@ -136,7 +136,7 @@ namespace
 
 		if (!isSuppressLogs)
 		{
-			printf("finished archetype tests\n");
+			Log->Info("", "finished archetype tests\n");
 		}
 	}
 
@@ -167,7 +167,7 @@ namespace
 		}
 		for (uiw index = 0; index < result.size(); ++index)
 		{
-			result[index].group = (ui8)index;
+			result[index].group = (ui32)index;
 		}
 		return result;
 	}
@@ -336,7 +336,7 @@ namespace
 
 		if (!isSuppressLogs)
 		{
-			printf("finished archetype reflector tests\n");
+			Log->Info("", "finished archetype reflector tests\n");
 		}
 	}
 
@@ -431,7 +431,7 @@ namespace
 			return true;
 		};
 
-		constexpr auto testSystemRequestsTuple = TestSystem::AcquireRequestedComponents();
+		/*constexpr auto testSystemRequestsTuple = TestSystem::AcquireRequestedComponents();
 		constexpr auto testSystemRequests = _SystemHelperFuncs::ComponentsTupleToRequests(testSystemRequestsTuple);
 
 		static_assert(matches(testSystemRequests.requiredWithoutData, MakeArray<TagTest0, TagTest1, ComponentDateOfBirth>()));
@@ -501,7 +501,7 @@ namespace
 		static_assert(matches(testSystem4Requests.argumentPassingOrder, MakeArray<ComponentSpouse, ComponentCompany, ComponentEmployee, ComponentGender>(), false));
 		static_assert(testArchetypeDefining(testSystem4Requests.archetypeDefiningInfoOnly, MakeArray<ComponentSpouse, ComponentCompany>(), make_array(TypeAndGroup{ComponentEmployee::GetTypeId(), 0}, TypeAndGroup{ComponentGender::GetTypeId(), 0})));
 		static_assert(testSystem4Requests.entityIDIndex == nullopt);
-		static_assert(testSystem4Requests.environmentIndex == nullopt);
+		static_assert(testSystem4Requests.environmentIndex == nullopt);*/
 	}
 }
 
@@ -644,7 +644,7 @@ public:
 
 		if (!isSuppressLogs)
 		{
-			printf("finished message builder tests\n");
+			Log->Info("", "finished message builder tests\n");
 		}
 	}
 };

@@ -2,19 +2,22 @@
 
 using namespace ECSTest;
 
+namespace
+{
+	static constexpr bool IsMTECS = false;
+	static constexpr ui32 EntitiesToTest = 1000;
+}
+
+volatile ui32 EntitiesToTestExternal = EntitiesToTest;
+volatile f32 ExternalF32;
+
 class BenchmarkClass
 {
-    static constexpr bool IsMTECS = false;
-	static constexpr ui32 EntitiesToTest = 1000;
-
 public:
 	BenchmarkClass()
 	{
-		auto logger = make_shared<Logger<string_view, true>>();
-		auto handle0 = logger->OnMessage(LogRecipient);
-
 		auto idGenerator = EntityIDGenerator{};
-		auto manager = SystemsManager::New(IsMTECS, logger);
+		auto manager = SystemsManager::New(IsMTECS, Log);
 		auto stream = make_unique<EntitiesStream>();
 
 		GenerateScene(idGenerator, *manager, *stream);
@@ -52,7 +55,7 @@ public:
 
 		auto computed = pipelineInfo.executedTimes * 4 * EntitiesToTest;
 		auto time = managerInfo.timeSinceStart.ToSec_f64();
-		printf("%.2lfkk sin/cos per second (ECS %s)\n", (computed / time) / 1000 / 1000, IsMTECS ? "multithreaded" : "singlethreaded");
+		Log->Info("", "%.2lfkk sin/cos per second (ECS %s)\n", (computed / time) / 1000 / 1000, IsMTECS ? "multithreaded" : "singlethreaded");
 	}
 
     struct CosineResultComponent : Component<CosineResultComponent>
@@ -157,7 +160,7 @@ public:
 
     static void MesasureReference()
     {
-        auto entitiesToTest = EntitiesToTest;
+        auto entitiesToTest = EntitiesToTestExternal;
         auto cosine = make_unique<CosineResultComponent[]>(entitiesToTest);
         auto sinus = make_unique<SinusResultComponent[]>(entitiesToTest);
         auto sources = make_unique<SourceComponent[]>(entitiesToTest);
@@ -166,6 +169,8 @@ public:
             sources[index].value = (f32)(rand() % 4 - 2);
         }
 
+		f32 reciprocal = 1.0f / RAND_MAX;
+		f32 halfReciprocal = reciprocal * 0.5f;
         ui32 executedTimes = 0;
         TimeMoment start = TimeMoment::Now();
         TimeDifference diff{};
@@ -185,9 +190,13 @@ public:
             }
         }
 
+		uiw index = (uiw)rand() % entitiesToTest;
+		ExternalF32 = cosine[index].value;
+		ExternalF32 = sinus[index].value;
+
         auto computed = executedTimes * entitiesToTest;
         auto time = diff.ToSec_f64();
-        printf("%.2lfkk sin/cos per second (reference 1 thread)\n", (computed / time) / 1000 / 1000);
+        Log->Info("", "%.2lfkk sin/cos per second (reference 1 thread)\n", (computed / time) / 1000 / 1000);
     }
 };
 

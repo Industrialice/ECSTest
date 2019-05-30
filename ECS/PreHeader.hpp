@@ -15,8 +15,6 @@
 #include <cstdlib>
 #include <stack>
 #include <compare>
-#include <experimental/coroutine>
-#include <experimental/generator>
 
 #include <StdMiscLib.hpp>
 using namespace StdLib;
@@ -59,13 +57,9 @@ using std::enable_if_t;
 using std::conditional_t;
 using std::is_base_of_v;
 using std::is_same_v;
+using std::byte;
 using namespace std::literals;
 using namespace std::placeholders;
-
-//namespace std
-//{
-//    using experimental::generator;
-//}
 
 #include "Array.hpp"
 
@@ -86,3 +80,7 @@ struct AlignedMallocDeleter
 };
 
 class UnitTests;
+
+#ifdef PLATFORM_ANDROID
+	void DetachCurrentThread();
+#endif

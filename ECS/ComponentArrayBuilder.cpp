@@ -5,8 +5,8 @@ using namespace ECSTest;
 
 void ComponentArrayBuilder::Clear()
 {
-    _components = {};
-    _data = {};
+    _components.clear();
+    _data.clear();
 }
 
 auto ComponentArrayBuilder::AddComponent(const IEntitiesStream::ComponentDesc &desc, ComponentID id) -> ComponentArrayBuilder &
@@ -24,47 +24,19 @@ auto ComponentArrayBuilder::AddComponent(const IEntitiesStream::ComponentDesc &d
 
 auto ComponentArrayBuilder::AddComponent(const SerializedComponent &sc) -> ComponentArrayBuilder &
 {
-    uiw copyIndex;
+	_components.push_back(sc);
+	if (sc.isTag)
+	{
+		return *this;
+	}
 
-    if (sc.isTag == false)
-    {
-        ui8 *oldPtr = _data.data();
-        _data.resize(_data.size() + _data.size() % sc.alignmentOf);
-        copyIndex = _data.size();
-        _data.resize(_data.size() + sc.sizeOf);
-        ui8 *newPtr = _data.data();
-        if (oldPtr != newPtr)
-        {
-            for (auto &stored : _components)
-            {
-                if (stored.data)
-                {
-                    if (newPtr > oldPtr)
-                    {
-                        stored.data += newPtr - oldPtr;
-                    }
-                    else
-                    {
-                        stored.data -= oldPtr - newPtr;
-                    }
-                }
-            }
-        }
-    }
-    else
-    {
-        ASSUME(sc.data == nullptr);
-    }
+	unique_ptr<byte[], AlignedMallocDeleter> data(Allocator::MallocAlignedRuntime::Allocate(sc.sizeOf, sc.alignmentOf));
+	MemOps::Copy(data.get(), sc.data, sc.sizeOf);
 
-    _components.push_back(sc);
+    SerializedComponent &added = _components.back();
+	added.data = data.get();
 
-    if (sc.isTag == false)
-    {
-        SerializedComponent &added = _components.back();
-        MemOps::Copy(_data.data() + copyIndex, sc.data, sc.sizeOf);
+	_data.emplace_back(move(data));
 
-        added.data = _data.data() + copyIndex;
-    }
-
-    return *this;
+	return *this;
 }

@@ -12,7 +12,7 @@ namespace ECSTest
         friend class MessageBuilder;
 
         vector<SerializedComponent> _components{};
-        vector<ui8> _data{};
+        vector<unique_ptr<byte[], AlignedMallocDeleter>> _data{};
 
         void Clear();
 
@@ -34,14 +34,14 @@ namespace ECSTest
             {
                 sc.alignmentOf = alignof(T);
                 sc.sizeOf = sizeof(T);
-                sc.data = (ui8 *)&component;
+                sc.data = (byte *)&component;
             }
             return AddComponent(sc);
         }
 
         template <typename T, typename = enable_if_t<is_base_of_v<_BaseComponentClass, T> == false>, typename = void> ComponentArrayBuilder &AddComponent(const T &)
         {
-            static_assert(false, "Passed value is not a component");
+            static_assert(false_v<T>, "Passed value is not a component");
         }
 
         template <typename T, typename = enable_if_t<T::IsUnique() == false && T::IsTag() == false>> ComponentArrayBuilder &AddComponent(const T &component, ComponentID id = {})
@@ -52,14 +52,14 @@ namespace ECSTest
             sc.isUnique = false;
             sc.isTag = false;
             sc.type = T::GetTypeId();
-            sc.data = (ui8 *)&component;
+            sc.data = (byte *)&component;
             sc.id = id;
             return AddComponent(sc);
         }
 
         template <typename T, typename = enable_if_t<is_base_of_v<_BaseComponentClass, T> == false>, typename = void> ComponentArrayBuilder &AddComponent(const T &, ComponentID = {})
         {
-            static_assert(false, "Passed value is not a component");
+            static_assert(false_v<T>, "Passed value is not a component");
         }
     };
 }

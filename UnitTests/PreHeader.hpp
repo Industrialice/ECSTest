@@ -58,6 +58,12 @@
 #include <queue>
 #include <random>
 
+extern shared_ptr<Logger<string_view, true>> Log; // from Selector.cpp
+
+#ifdef PLATFORM_ANDROID
+	void OnLogMessage(const char *message);
+#endif
+
 namespace ECSTest
 {
     inline const char *LogLevelToTag(LogLevels::LogLevel logLevel)
@@ -88,6 +94,7 @@ namespace ECSTest
         return nullptr;
     }
 
+#ifdef PLATFORM_WINDOWS
     inline void LogRecipient(LogLevels::LogLevel logLevel, string_view nullTerminatedText, string_view senderName)
     {
         if (logLevel == LogLevels::Critical || logLevel == LogLevels::Debug || logLevel == LogLevels::Error) // TODO: cancel breaking
@@ -131,15 +138,59 @@ namespace ECSTest
             return;
         }
 
-        const char *tag = LogLevelToTag(logLevel);
-
-        OutputDebugStringA(tag);
-        OutputDebugStringA(senderName.data());
-        OutputDebugStringA(": ");
+		bool isPrefixed = false;
+		if (logLevel != LogLevels::Info)
+		{
+			isPrefixed = true;
+			OutputDebugStringA(LogLevelToTag(logLevel));
+		}
+		if (senderName.size())
+		{
+			isPrefixed = true;
+			OutputDebugStringA(senderName.data());
+		}
+		if (isPrefixed)
+		{
+			OutputDebugStringA(": ");
+		}
         OutputDebugStringA(nullTerminatedText.data());
 
-        printf("%s%s: %s", tag, senderName.data(), nullTerminatedText.data());
+		if (isPrefixed)
+		{
+			const char *tag = "";
+			if (logLevel != LogLevels::Info)
+			{
+				tag = LogLevelToTag(logLevel);
+			}
+			printf("%s%s: %s", tag, senderName.data(), nullTerminatedText.data());
+		}
+		else
+		{
+			printf("%s", nullTerminatedText.data());
+		}
     }
+#endif
+
+#ifdef PLATFORM_ANDROID
+	inline void LogRecipient(LogLevels::LogLevel logLevel, string_view nullTerminatedText, string_view senderName)
+	{
+		bool isPrefixed = logLevel != LogLevels::Info || senderName.size();
+		if (isPrefixed)
+		{
+			const char *tag = "";
+			if (logLevel != LogLevels::Info)
+			{
+				tag = LogLevelToTag(logLevel);
+			}
+			string message = string(tag) + string(senderName) + ": "s + string(nullTerminatedText);
+			OnLogMessage(message.c_str());
+		}
+		else
+		{
+			OnLogMessage(nullTerminatedText.data());
+		}
+	}
+#endif
 }
 
 #if !defined(DEBUG) && !defined(_DEBUG)

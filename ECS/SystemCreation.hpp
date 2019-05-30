@@ -251,7 +251,7 @@ namespace ECSTest
             }
 			else
 			{
-				static_assert(false, "Unrecognized argument type");
+				static_assert(false_v<Types>, "Unrecognized argument type");
 			}
         }
 
@@ -274,120 +274,120 @@ namespace ECSTest
             constexpr bool isNonUnique = GetComponentType<pureType>::isNonUnique;
             constexpr bool isArray = GetComponentType<pureType>::isArray;
             constexpr auto isComponent = is_base_of_v<_BaseComponentClass, componentType>;
-			constexpr bool isConst = is_const_v<GetComponentType<pureType>::type>;
+			constexpr bool isConst = is_const_v<typename GetComponentType<pureType>::type>;
 
 			if constexpr (is_same_v<componentType, System::Environment>)
 			{
 				isFailed = true;
 				if constexpr (is_same_v<pureType, System::Environment>)
 				{
-					static_assert(false, "Environment can't appear twice");
+					static_assert(false_v<T>, "Environment can't appear twice");
 				}
 				else
 				{
-					static_assert(false, "Environment can't be inside a container");
+					static_assert(false_v<T>, "Environment can't be inside a container");
 				}
 			}
 
 			if constexpr (isComponent == false)
 			{
 				isFailed = true;
-				static_assert(false, "Used type is not component");
+				static_assert(false_v<T>, "Used type is not component");
 			}
 
 			if constexpr (componentType::IsTag() && (isArray || isNonUnique))
 			{
 				isFailed = true;
-				static_assert(false, "Tag components can't be inside an Array or NonUnique");
+				static_assert(false_v<T>, "Tag components can't be inside an Array or NonUnique");
 			}
 
 			if constexpr (componentType::IsTag() == false && is_empty_v<componentType>)
 			{
-				static_warning(false, "Component is empty, consider using TAG_COMPONENT instead");
+				static_warning(false_v<T>, "Component is empty, consider using TAG_COMPONENT instead");
 			}
 
 			if constexpr (componentType::IsTag() && !is_empty_v<componentType>)
 			{
 				isFailed = true;
-				static_assert(false, "Tag components must be empty");
+				static_assert(false_v<T>, "Tag components must be empty");
 			}
 
 			if constexpr (isConst)
 			{
 				isFailed = true;
-				static_assert(false, "Avoid using const to mark types inside of containers, apply const to the container itself instead");
+				static_assert(false_v<T>, "Avoid using const to mark types inside of containers, apply const to the container itself instead");
 			}
 
 			if constexpr (isNonUnique && componentType::IsUnique())
 			{
 				isFailed = true;
-				static_assert(false, "NonUnique object used to pass unique component");
+				static_assert(false_v<T>, "NonUnique object used to pass unique component");
 			}
 
 			if constexpr (componentType::IsUnique() == false && (isNonUnique || isRequired || isOptional || isRequiredAny || isSubtractive) == false)
 			{
 				isFailed = true;
-				static_assert(false, "NonUnique objects must be used for non unique components");
+				static_assert(false_v<T>, "NonUnique objects must be used for non unique components");
 			}
 
 			if constexpr (is_same_v<componentType, EntityID>)
 			{
 				isFailed = true;
-				static_assert(false, "EntityID can't appear twice");
+				static_assert(false_v<T>, "EntityID can't appear twice");
 			}
 
 			if constexpr (isSubtractive && isArray)
 			{
 				isFailed = true;
-				static_assert(false, "SubtractiveComponent can't be inside an Array");
+				static_assert(false_v<T>, "SubtractiveComponent can't be inside an Array");
 			}
 
 			if constexpr (isRequired && isArray)
 			{
 				isFailed = true;
-				static_assert(false, "RequiredComponent can't be inside an Array");
+				static_assert(false_v<T>, "RequiredComponent can't be inside an Array");
 			}
 
 			if constexpr (isOptional && isArray)
 			{
 				isFailed = true;
-				static_assert(false, "OptionalComponent can't be inside an Array");
+				static_assert(false_v<T>, "OptionalComponent can't be inside an Array");
 			}
 
 			if constexpr (isRequiredAny && isArray)
 			{
 				isFailed = true;
-				static_assert(false, "RequiredComponentAny can't be inside an Array");
+				static_assert(false_v<T>, "RequiredComponentAny can't be inside an Array");
 			}
 
 			if constexpr (isNonUnique && isArray)
 			{
 				isFailed = true;
-				static_assert(false, "NonUnique can't be inside an Array");
+				static_assert(false_v<T>, "NonUnique can't be inside an Array");
 			}
 
 			if constexpr (isArray == false && (isSubtractive || isRequired || isOptional || isRequiredAny || isNonUnique) == false)
 			{
 				isFailed = true;
-				static_assert(false, "Unique components must be passed using Array");
+				static_assert(false_v<T>, "Unique components must be passed using Array");
 			}
 				
 			if constexpr (!(isSubtractive || isRequired || isOptional || isRequiredAny || isRefOrPtr))
 			{
 				isFailed = true;
-				static_assert(false, "Components must be passed by either pointer, or by reference");
+				static_assert(false_v<T>, "Components must be passed by either pointer, or by reference");
 			}
 
 			if constexpr (!std::is_trivially_copyable_v<componentType>)
 			{
 				isFailed = true;
-				static_assert(false, "Components must be trivially copyable");
+				static_assert(false_v<T>, "Components must be trivially copyable");
 			}
 
 			if constexpr (!std::is_trivially_destructible_v<componentType>)
 			{
 				isFailed = true;
-				static_assert(false, "Components must be trivially destructible");
+				static_assert(false_v<T>, "Components must be trivially destructible");
 			}
         }
 
@@ -421,7 +421,7 @@ namespace ECSTest
             }
             else
             {
-                static_assert(false, "Failed to convert argument type to id");
+                static_assert(false_v<T>, "Failed to convert argument type to id");
                 return {};
             }
         }
@@ -432,11 +432,11 @@ namespace ECSTest
         }
 
         // makes sure the argument type appears only once
-        template <iw size> [[nodiscard]] static constexpr bool IsTypesAliased(const array<TypeId, size> &types)
+        template <uiw size> [[nodiscard]] static constexpr bool IsTypesAliased(const array<TypeId, size> &types)
         {
-            for (iw i = 0; i < size - 1; ++i)
+            for (iw i = 0; i < (iw)size - 1; ++i)
             {
-                for (iw j = i + 1; j < size; ++j)
+                for (iw j = i + 1; j < (iw)size; ++j)
                 {
                     if (types[i] == types[j])
                     {
@@ -471,7 +471,7 @@ namespace ECSTest
 			}
 			else
 			{
-				static_assert(false, "Invalid type");
+				static_assert(false_v<T>, "Invalid type");
 			}
 		}
 
@@ -491,7 +491,7 @@ namespace ECSTest
             }
         }
 		
-		template <typename T, uiw Index> [[nodiscard]] static constexpr void LocateEntityIDIndex(ui32 &filtered, ui32 &actual, bool &isLocated)
+		template <typename T, uiw Index> static constexpr void LocateEntityIDIndex(ui32 &filtered, ui32 &actual, bool &isLocated)
 		{
 			using TPure = remove_pointer_t<remove_reference_t<T>>;
 			using componentType = typename GetComponentType<remove_cv_t<TPure>>::type;
@@ -539,7 +539,7 @@ namespace ECSTest
 			}
         }
 
-		template <typename T, uiw Index> [[nodiscard]] static constexpr void LocateEnvironmentIndex(ui32 &filtered, ui32 &actual, bool &isLocated)
+		template <typename T, uiw Index> static constexpr void LocateEnvironmentIndex(ui32 &filtered, ui32 &actual, bool &isLocated)
 		{
 			using TPure = remove_cv_t<remove_pointer_t<remove_reference_t<T>>>;
 			if constexpr (is_same_v<TPure, System::Environment>)
@@ -652,7 +652,7 @@ namespace ECSTest
 			return components;
         }
 
-		template <typename T, uiw... Indexes> [[nodiscard]] static constexpr void CheckRequiredAnyGroup(bool &isFailed, index_sequence<Indexes...>)
+		template <typename T, uiw... Indexes> static constexpr void CheckRequiredAnyGroup(bool &isFailed, index_sequence<Indexes...>)
 		{
 			(CheckArgumentType<tuple_element_t<Indexes, T>>(isFailed), ...);
 		}
@@ -666,7 +666,7 @@ namespace ECSTest
 
 		template <typename T, uiw Group, uiw... Indexes> [[nodiscard]] static constexpr auto RequiredAnyGroupToTuple(index_sequence<Indexes...>)
 		{
-			return make_tuple(pair<TypeId, ui32>(tuple_element_t<Indexes, GetComponentType<T>::expanded>::GetTypeId(), (ui32)Group)...);
+			return make_tuple(pair<TypeId, ui32>(tuple_element_t<Indexes, typename GetComponentType<T>::expanded>::GetTypeId(), (ui32)Group)...);
 		}
 
 		// TODO: more checks
@@ -801,9 +801,10 @@ namespace ECSTest
 		[[nodiscard]] virtual const Requests &RequestedComponents() const override final
 		{
 			static constexpr auto requestedComponentsTuple = AcquireRequestedComponents();
-			static constexpr Requests requestedComponentsArray = _SystemHelperFuncs::ComponentsTupleToRequests(requestedComponentsTuple);
-			static_assert(requestedComponentsArray.entityIDIndex == nullopt, "Indirect systems cannot request EntityID");
-			static_assert(requestedComponentsArray.environmentIndex == nullopt, "Indirect systems cannot request Environment");
+			static const Requests requestedComponentsArray = _SystemHelperFuncs::ComponentsTupleToRequests(requestedComponentsTuple);
+			// TODO: fix clang compilation
+			//static_assert(requestedComponentsArray.entityIDIndex == nullopt, "Indirect systems cannot request EntityID");
+			//static_assert(requestedComponentsArray.environmentIndex == nullopt, "Indirect systems cannot request Environment");
 			return requestedComponentsArray;
 		}
 	};
@@ -829,7 +830,7 @@ namespace ECSTest
 		[[nodiscard]] virtual const Requests &RequestedComponents() const override final
 		{
 			static constexpr auto requestedComponentsTuple = AcquireRequestedComponents();
-			static constexpr Requests requestedComponentsArray = _SystemHelperFuncs::ComponentsTupleToRequests(requestedComponentsTuple);
+			static const Requests requestedComponentsArray = _SystemHelperFuncs::ComponentsTupleToRequests(requestedComponentsTuple);
 			return requestedComponentsArray;
 		}
 

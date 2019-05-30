@@ -17,17 +17,14 @@ public:
 		IsSystem1Visited = false;
 		IsSystem2Visisted = false;
 
-		auto logger = make_shared<Logger<string_view, true>>();
-		auto handle0 = logger->OnMessage(LogRecipient);
-
 		auto idGenerator = EntityIDGenerator{};
-		auto manager = SystemsManager::New(IsMTECS, logger);
+		auto manager = SystemsManager::New(IsMTECS, Log);
 		auto stream = make_unique<EntitiesStream>();
 
 		auto before = TimeMoment::Now();
 		GenerateScene(idGenerator, *manager, *stream);
 		auto after = TimeMoment::Now();
-		printf("Generating scene took %.2lfs\n", (after - before).ToSec());
+		Log->Info("", "Generating scene took %.2lfs\n", (after - before).ToSec());
 
 		auto pipeline = manager->CreatePipeline(nullopt, false);
 
@@ -290,7 +287,7 @@ public:
 			ASSUME(stream.Type() == StaticTag::GetTypeId() || stream.Type() == StaticPositionTag::GetTypeId());
 		}
 
-		virtual void ProcessMessages(System::Environment &env, const MessageStreamComponentChanged &stream)
+		virtual void ProcessMessages(System::Environment &env, const MessageStreamComponentChanged &stream) override
 		{
 		}
 
@@ -345,7 +342,7 @@ public:
 		{
 		}
 
-		virtual void ProcessMessages(System::Environment &env, const MessageStreamComponentChanged &stream) 
+		virtual void ProcessMessages(System::Environment &env, const MessageStreamComponentChanged &stream) override
 		{
 		}
 

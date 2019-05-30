@@ -149,7 +149,7 @@ namespace std
             {
                 ui64 hash = value.Hash();
                 hash ^= hash >> 32;
-                return hash && 0xFFFFFFFF;
+                return hash & 0xFFFFFFFF;
             }
             else
             {

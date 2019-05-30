@@ -11,7 +11,7 @@ namespace ECSTest
         {
 			EntityID entityId;
             vector<ComponentDesc> descs;
-            vector<ui8> componentsData;
+            vector<byte> componentsData;
 
             EntityData() = default;
             EntityData(EntityData &&) = default;
@@ -29,7 +29,7 @@ namespace ECSTest
                 {
 					uiw offset = componentsData.size();
 					componentsData.resize(offset + sizeof(T));
-                    MemOps::Copy(componentsData.data() + offset, (ui8 *)&component, sizeof(T));
+                    MemOps::Copy(componentsData.data() + offset, (byte *)&component, sizeof(T));
                 }
                 descs.emplace_back(desc);
             }

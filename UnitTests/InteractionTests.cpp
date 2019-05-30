@@ -22,10 +22,7 @@ public:
 		CurrentData = {};
 		ValueGenerator = {};
 
-		auto logger = make_shared<Logger<string_view, true>>();
-		auto handle0 = logger->OnMessage(LogRecipient);
-
-		auto manager = SystemsManager::New(IsMultiThreadedECS, logger);
+		auto manager = SystemsManager::New(IsMultiThreadedECS, Log);
 		EntityIDGenerator entityIdGenerator;
 
 		auto testPipeline0 = manager->CreatePipeline(/*5_ms*/nullopt, false);
@@ -546,7 +543,7 @@ public:
     {
         if (!isFirstPass)
         {
-            printf("\n-------------\n\n");
+            Log->Info("", "\n-------------\n\n");
         }
 
         ui32 tagComponentsSent = 0;
@@ -562,13 +559,14 @@ public:
             {
                 if (c.type == ConsumerInfoComponent::GetTypeId())
                 {
-                    const auto &t = *(ConsumerInfoComponent *)c.data;
-                    printf("consumer stats:\n");
-                    printf("  componentAdded %u\n", t.generatedComponentAdded);
-                    printf("  componentChanged %u", t.generatedComponentChanged);
-                    printf("  componentRemoved %u", t.tempComponentRemoved);
-                    printf("  entityAdded %u\n", t.entityAdded);
-                    printf("  entityRemoved %u\n", t.entityRemoved);
+                    ConsumerInfoComponent t;
+                    MemOps::Copy((byte *)&t, c.data, sizeof(ConsumerInfoComponent));
+					Log->Info("", "consumer stats:\n");
+					Log->Info("", "  componentAdded %u\n", t.generatedComponentAdded);
+					Log->Info("", "  componentChanged %u", t.generatedComponentChanged);
+					Log->Info("", "  componentRemoved %u", t.tempComponentRemoved);
+					Log->Info("", "  entityAdded %u\n", t.entityAdded);
+					Log->Info("", "  entityRemoved %u\n", t.entityRemoved);
 
                     ASSUME(t.generatedComponentAdded == 0);
                     ASSUME(t.generatedComponentChanged == EntitiesToAdd * 2);
@@ -583,7 +581,8 @@ public:
                 }
                 else if (c.type == GeneratorInfoComponent::GetTypeId())
                 {
-                    const auto &t = *(GeneratorInfoComponent *)c.data;
+                    GeneratorInfoComponent t;
+                    MemOps::Copy((byte *)&t, c.data, sizeof(GeneratorInfoComponent));
                     tagComponentsSent = t.tagComponentsGenerated;
                     tagSentConnectionHash = t.tagConnectionHash;
                     tagSentIDHash = t.tagIDHash;
