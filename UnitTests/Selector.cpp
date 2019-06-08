@@ -35,6 +35,10 @@ static void DoAllTests()
 #ifdef PLATFORM_WINDOWS
 int main()
 {
+#ifdef DEBUG
+	//_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_DELAY_FREE_MEM_DF | _CRTDBG_LEAK_CHECK_DF/* | _CRTDBG_CHECK_EVERY_1024_DF*/);
+#endif
+
 	StdLib::Initialization::Initialize({});
 
 	Log = make_shared<Logger<string_view, true>>();
@@ -52,7 +56,7 @@ int main()
 		console.
 			BufferSize(std::nullopt, 150).
 			Size(width, height).
-			Position((screenWidth - (i32)width) / 2, (screenHeight - (i32)height) / 2).
+			Position((screenWidth - static_cast<i32>(width)) / 2, (screenHeight - static_cast<i32>(height)) / 2).
 			SnapToWindowSize(true);
 	}
 

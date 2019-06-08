@@ -97,15 +97,21 @@ public:
 
     static Vector3 GeneratePosition()
     {
-        std::random_device rd; // obtain a random number from hardware
-        std::mt19937 eng(rd()); // seed the generator
-        std::uniform_real_distribution<> distr(-50, 50); // define the range
-        return {(f32)distr(eng), (f32)distr(eng), (f32)distr(eng)};
+        auto distr = []
+        {
+            // for some reason causes SIGILL on Android in Release
+            std::random_device rd; // obtain a random number from hardware
+            std::mt19937 eng(rd()); // seed the generator
+            std::uniform_real_distribution<> distr(-50, 50); // define the range
+            return static_cast<f32>(distr(eng));
+            //return static_cast<f32>(rand() % 100 - 50);
+        };
+        return {distr(), distr(), distr()};
     }
 
     struct TransformGeneratorSystem : IndirectSystem<TransformGeneratorSystem>
     {
-        void Accept(Array<Name> &, SubtractiveComponent<Transform>);
+		void Accept(Array<Name> &, SubtractiveComponent<Transform>) {}
 		using BaseIndirectSystem::ProcessMessages;
 
         virtual void Update(Environment &env) override
@@ -123,7 +129,7 @@ public:
                 if (rand() % 2)
                 {
                     SpeedOfFall speed;
-                    speed.speed = (f32)(rand() % 25);
+                    speed.speed = static_cast<f32>(rand() % 25);
                     env.messageBuilder.AddComponent(id, speed);
                 }
             }
@@ -161,7 +167,7 @@ public:
 
     struct TransformHeightFixerSystem : IndirectSystem<TransformHeightFixerSystem>
     {
-        void Accept(Array<Transform> &, const Array<NegativeHeightCooldown> *, Array<HeightFixerInfo> *);
+		void Accept(Array<Transform> &, const Array<NegativeHeightCooldown> *, Array<HeightFixerInfo> *) {}
 
         virtual void Update(Environment &env) override
         {
@@ -305,7 +311,7 @@ public:
         };
 
 	public:
-        void Accept(Array<Transform> &, Array<SpeedOfFall> *);
+		void Accept(Array<Transform> &, Array<SpeedOfFall> *) {}
 
         virtual void Update(Environment &env) override
         {
@@ -416,7 +422,7 @@ public:
 
     struct AverageHeightAnalyzerSystem : IndirectSystem<AverageHeightAnalyzerSystem>
     {
-        void Accept(const Array<Transform> &, Array<AverageHeight> *);
+		void Accept(const Array<Transform> &, Array<AverageHeight> *) {}
 
         virtual void Update(Environment &env) override
         {
@@ -433,8 +439,8 @@ public:
             sum /= _entities.size();
 
             AverageHeight h;
-            h.height = (f32)sum;
-            h.sources = (ui32)_entities.size();
+            h.height = static_cast<f32>(sum);
+            h.sources = static_cast<ui32>(_entities.size());
             env.messageBuilder.ComponentChanged(_entityID, h);
 
             _isChanged = false;
@@ -514,7 +520,7 @@ public:
 
     struct CooldownUpdater : IndirectSystem<CooldownUpdater>
     {
-        void Accept(Array<NegativeHeightCooldown> &);
+		void Accept(Array<NegativeHeightCooldown> &) {}
 
         virtual void Update(Environment &env) override
         {
@@ -598,7 +604,7 @@ public:
                 if (rand() % 2)
                 {
                     SpeedOfFall speed;
-                    speed.speed = (f32)(rand() % 25);
+                    speed.speed = static_cast<f32>(rand() % 25);
                     entity.AddComponent(speed);
                 }
             }
@@ -632,13 +638,13 @@ public:
                 if (c.type == AverageHeight::GetTypeId())
                 {
                     AverageHeight a;
-                    MemOps::Copy((byte *)&a, c.data, sizeof(AverageHeight));
+                    MemOps::Copy(reinterpret_cast<byte *>(&a), c.data, sizeof(AverageHeight));
 					Log->Info("", "average height %f based on %u sources\n", a.height, a.sources);
                 }
                 else if (c.type == HeightFixerInfo::GetTypeId())
                 {
                     HeightFixerInfo i;
-                    MemOps::Copy((byte *)&i, c.data, sizeof(HeightFixerInfo));
+                    MemOps::Copy(reinterpret_cast<byte *>(&i), c.data, sizeof(HeightFixerInfo));
 					Log->Info("", "height fixer run %u times, fixed %u heights\n", i.runTimes, i.heightsFixed);
                 }
             }

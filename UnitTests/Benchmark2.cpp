@@ -66,8 +66,8 @@ public:
 
 				f32 diffRev = 1.0f / timeDiff.ToSec();
 
-				f32 rfps = (f32)rexecDiff * diffRev;
-				f32 pfps = (f32)pexecDiff * diffRev;
+				f32 rfps = static_cast<f32>(rexecDiff) * diffRev;
+				f32 pfps = static_cast<f32>(pexecDiff) * diffRev;
 
 				f32 rendererSpent = (rendererInfo.timeSpentExecuting - rendererLastSpent).ToMSec() * diffRev;
 				f32 physicsSpent = (physicsInfo.timeSpentExecuting - physicsLastSpent).ToMSec() * diffRev;
@@ -139,7 +139,7 @@ public:
 
     struct PhysicsSystem : IndirectSystem<PhysicsSystem>
     {
-        void Accept(Array<Position> &, Array<Rotation> &, const Array<MeshCollider> &, const Array<Physics> &);
+		void Accept(Array<Position> &, Array<Rotation> &, const Array<MeshCollider> &, const Array<Physics> &) {}
 
         struct Data
         {
@@ -277,7 +277,7 @@ public:
 
     struct RendererSystem : IndirectSystem<RendererSystem>
     {
-        void Accept(const Array<Position> &, const Array<Rotation> &, const Array<MeshRenderer> &);
+		void Accept(const Array<Position> &, const Array<Rotation> &, const Array<MeshRenderer> &) {}
 
         struct Data
         {
@@ -303,7 +303,7 @@ public:
 				data.id = entry.entityID;
                 data.pos = entry.GetComponent<Position>().position;
                 data.rot = entry.GetComponent<Rotation>().rotation;
-				_entities[entry.entityID] = (ui32)_linear.size();
+				_entities[entry.entityID] = static_cast<ui32>(_linear.size());
 				_linear.emplace_back(data);
 				_meshLinear.emplace_back(entry.GetComponent<MeshRenderer>());
             }
@@ -317,7 +317,7 @@ public:
 				data.id = entry.entityID;
                 data.pos = entry.GetComponent<Position>().position;
                 data.rot = entry.GetComponent<Rotation>().rotation;
-				_entities[entry.entityID] = (ui32)_linear.size();
+				_entities[entry.entityID] = static_cast<ui32>(_linear.size());
 				_linear.emplace_back(data);
 				_meshLinear.emplace_back(entry.GetComponent<MeshRenderer>());
             }
@@ -436,10 +436,10 @@ public:
         {
             EntitiesStream::EntityData entity;
 
-            Position pos = {Vector3((f32)rand(), (f32)rand(), (f32)rand())};
+            Position pos = {Vector3(static_cast<f32>(rand()), static_cast<f32>(rand()), static_cast<f32>(rand()))};
             entity.AddComponent(pos);
 
-            Rotation rot = Quaternion::FromEuler({(f32)rand(), (f32)rand(), (f32)rand()});
+            Rotation rot = Quaternion::FromEuler({static_cast<f32>(rand()), static_cast<f32>(rand()), static_cast<f32>(rand())});
             entity.AddComponent(rot);
 
             Physics phy;

@@ -19,7 +19,7 @@ shared_ptr<RecordingKeyController> RecordingKeyController::New(const shared_ptr<
 
 void RecordingKeyController::Dispatch(const ControlAction &action)
 {
-    for (i32 index = (i32)_recordingListenerHandles.size() - 1; index >= 0; --index)
+    for (i32 index = static_cast<i32>(_recordingListenerHandles.size()) - 1; index >= 0; --index)
     {
         _recordingListenerHandles[index].listener(action);
     }

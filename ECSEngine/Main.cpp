@@ -190,10 +190,10 @@ void LogRecipient(LogLevels::LogLevel logLevel, string_view nullTerminatedText, 
 void FileLogRecipient(File &file, LogLevels::LogLevel logLevel, string_view nullTerminatedText, string_view senderName)
 {
     const char *tag = LogLevelToTag(logLevel);
-    file.Write(tag, (ui32)strlen(tag));
-    file.Write(senderName.data(), (ui32)senderName.size());
+    file.Write(tag, static_cast<ui32>(strlen(tag)));
+    file.Write(senderName.data(), static_cast<ui32>(senderName.size()));
     file.Write(": ", 2);
-    file.Write(nullTerminatedText.data(), (ui32)nullTerminatedText.size());
+    file.Write(nullTerminatedText.data(), static_cast<ui32>(nullTerminatedText.size()));
 }
 
 bool ReceiveInput(const ControlAction &action)

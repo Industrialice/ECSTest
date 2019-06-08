@@ -240,7 +240,7 @@ public:
 	{
 		using BaseIndirectSystem::ProcessMessages;
 
-		void Accept(RequiredComponent<Tag0, Tag1>, SubtractiveComponent<Tag2, Tag3>, OptionalComponent<StaticTag, StaticPositionTag>, const Array<Component0> &c0, const Array<Component1> *c1, const NonUnique<Component2> *c2, RequiredComponentAny<Component1, Component2>);
+		void Accept(RequiredComponent<Tag0, Tag1>, SubtractiveComponent<Tag2, Tag3>, OptionalComponent<StaticTag, StaticPositionTag>, const Array<Component0> &c0, const Array<Component1> *c1, const NonUnique<Component2> *c2, RequiredComponentAny<Component1, Component2>) {}
 
 		virtual void Update(Environment &env) override
 		{
@@ -298,7 +298,7 @@ public:
 	{
 		using BaseIndirectSystem::ProcessMessages;
 
-		void Accept();
+		void Accept() {}
 
 		virtual void Update(Environment &env) override
 		{
@@ -378,19 +378,19 @@ public:
 				if (type == Component0::GetTypeId())
 				{
 					Component0 component;
-					(ComponentBase &)component = base;
+					static_cast<ComponentBase &>(component) = base;
 					entity.AddComponent(component);
 				}
 				else if (type == Component1::GetTypeId())
 				{
 					Component1 component;
-					(ComponentBase &)component = base;
+					static_cast<ComponentBase &>(component) = base;
 					entity.AddComponent(component);
 				}
 				else
 				{
 					Component2 component;
-					(ComponentBase &)component = base;
+					static_cast<ComponentBase &>(component) = base;
 					entity.AddComponent(component);
 				}
 			}
@@ -420,7 +420,7 @@ public:
 		{
 			generatedTypes.clear();
 			left.assign(types.begin(), types.end());
-			uiw count = (uiw)rand() % types.size();
+			uiw count = static_cast<uiw>(rand()) % types.size();
 			EntitiesStream::EntityData entity;
 			for (; count; --count)
 			{

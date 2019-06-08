@@ -191,7 +191,7 @@ namespace ECSTest
 
 	template <typename T> [[nodiscard]] constexpr Array<T> ToArray(array<T, 0> &value)
 	{
-		return {(T *)nullptr, 0};
+		return {static_cast<T *>(nullptr), 0};
 	}
 
 	template <typename T, uiw size> [[nodiscard]] constexpr Array<const T> ToArray(const array<T, size> &value)
@@ -201,7 +201,7 @@ namespace ECSTest
 
 	template <typename T> [[nodiscard]] constexpr Array<const T> ToArray(const array<T, 0> &value)
 	{
-		return {(const T *)nullptr, 0};
+		return {static_cast<const T *>(nullptr), 0};
 	}
 
 	template <typename T, uiw size> [[nodiscard]] constexpr Array<const T> ToArray(const array<const T, size> &value)
@@ -211,7 +211,7 @@ namespace ECSTest
 
 	template <typename T> [[nodiscard]] constexpr Array<const T> ToArray(const array<const T, 0> &value)
 	{
-		return {(const T *)nullptr, 0};
+		return {static_cast<const T *>(nullptr), 0};
 	}
 
 	template <typename T, uiw size> [[nodiscard]] constexpr Array<T> ToArray(T (&value)[size])

@@ -124,9 +124,9 @@ namespace ECSEngine
         {
             constexpr f32 rdiv256 = 0.003921568628f;
 
-            f32 r = rBits == 8 ? R() * rdiv256 : R() / (f32)rMax;
-            f32 g = gBits == 8 ? G() * rdiv256 : G() / (f32)gMax;
-            f32 b = bBits == 8 ? B() * rdiv256 : B() / (f32)bMax;
+            f32 r = rBits == 8 ? R() * rdiv256 : R() / static_cast<f32>(rMax);
+            f32 g = gBits == 8 ? G() * rdiv256 : G() / static_cast<f32>(gMax);
+            f32 b = bBits == 8 ? B() * rdiv256 : B() / static_cast<f32>(bMax);
 
             f32 a;
             if constexpr (aBits == 8)
@@ -140,7 +140,7 @@ namespace ECSEngine
             else
             {
 				static_assert(aMax > 0);
-                a = A() / (f32)aMax;
+                a = A() / static_cast<f32>(aMax);
             }
 
             return {r, g, b, a};

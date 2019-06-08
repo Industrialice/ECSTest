@@ -139,7 +139,7 @@ public:
 
     struct GeneratorSystem : IndirectSystem<GeneratorSystem>
     {
-        void Accept(Array<GeneratedComponent> *, SubtractiveComponent<ConsumerInfoComponent>, SubtractiveComponent<OtherComponent>, NonUnique<ComponentWithTag> *, Array<GeneratorInfoComponent> *);
+		void Accept(Array<GeneratedComponent> *, SubtractiveComponent<ConsumerInfoComponent>, SubtractiveComponent<OtherComponent>, NonUnique<ComponentWithTag> *, Array<GeneratorInfoComponent> *) {}
 
         virtual void Update(Environment &env) override
         {
@@ -160,14 +160,14 @@ public:
                         {
                             tag.id = env.componentIdGenerator.Generate();
                             builder.AddComponent(tag, *tag.id);
-                            _info.tagIDHash ^= Hash::Integer((ui64)tag.id->ID());
+                            _info.tagIDHash ^= Hash::Integer<Hash::Precision::P64>(tag.id->ID());
                             _toTagChange.push({env.entityIdGenerator.LastGenerated(), tag});
                         }
                         else
                         {
                             builder.AddComponent(tag);
                         }
-                        _info.tagConnectionHash ^= Hash::Integer((ui64)tag.connectedTo);
+                        _info.tagConnectionHash ^= Hash::Integer<Hash::Precision::P64>(tag.connectedTo);
                         ++_info.tagComponentsGenerated;
                     }
                     c.value = 25;
@@ -270,7 +270,7 @@ public:
 
     struct ConsumerIndirectSystem : IndirectSystem<ConsumerIndirectSystem>
     {
-        void Accept(const Array<GeneratedComponent> &, const Array<TempComponent> *, const NonUnique<ComponentWithTag> *, Array<ConsumerInfoComponent> *, RequiredComponent<FilterTag>);
+		void Accept(const Array<GeneratedComponent> &, const Array<TempComponent> *, const NonUnique<ComponentWithTag> *, Array<ConsumerInfoComponent> *, RequiredComponent<FilterTag>) {}
 
         virtual void Update(Environment &env) override
         {
@@ -310,9 +310,9 @@ public:
                         ++_info.tagComponentsReceived;
 
                         auto &t = attached.Cast<ComponentWithTag>();
-                        _info.tagConnectionHash ^= Hash::Integer((ui64)t.connectedTo);
+                        _info.tagConnectionHash ^= Hash::Integer<Hash::Precision::P64>(t.connectedTo);
 
-                        _info.tagIDHash ^= Hash::Integer((ui64)t.id.value_or(ComponentID(0)).ID());
+                        _info.tagIDHash ^= Hash::Integer<Hash::Precision::P64>(t.id.value_or(ComponentID(0)).ID());
 
                         if (t.id)
                         {
@@ -444,7 +444,7 @@ public:
 
     struct OtherIndirectSystem : IndirectSystem<OtherIndirectSystem>
     {
-        void Accept(Array<OtherComponent> &);
+		void Accept(Array<OtherComponent> &) {}
 		using BaseIndirectSystem::ProcessMessages;
 
         virtual void Update(Environment &env) override
@@ -560,7 +560,7 @@ public:
                 if (c.type == ConsumerInfoComponent::GetTypeId())
                 {
                     ConsumerInfoComponent t;
-                    MemOps::Copy((byte *)&t, c.data, sizeof(ConsumerInfoComponent));
+                    MemOps::Copy(reinterpret_cast<byte *>(&t), c.data, sizeof(ConsumerInfoComponent));
 					Log->Info("", "consumer stats:\n");
 					Log->Info("", "  componentAdded %u\n", t.generatedComponentAdded);
 					Log->Info("", "  componentChanged %u", t.generatedComponentChanged);
@@ -582,7 +582,7 @@ public:
                 else if (c.type == GeneratorInfoComponent::GetTypeId())
                 {
                     GeneratorInfoComponent t;
-                    MemOps::Copy((byte *)&t, c.data, sizeof(GeneratorInfoComponent));
+                    MemOps::Copy(reinterpret_cast<byte *>(&t), c.data, sizeof(GeneratorInfoComponent));
                     tagComponentsSent = t.tagComponentsGenerated;
                     tagSentConnectionHash = t.tagConnectionHash;
                     tagSentIDHash = t.tagIDHash;

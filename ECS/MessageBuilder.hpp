@@ -32,7 +32,7 @@ namespace ECSTest
                     if (c.type == T::GetTypeId())
                     {
                         ASSUME(Funcs::IsAligned(c.data, alignof(T)));
-                        return (T *)c.data;
+                        return reinterpret_cast<const T *>(c.data);
                     }
                 }
                 return nullptr;
@@ -141,7 +141,7 @@ namespace ECSTest
                     if (c.type == T::GetTypeId())
                     {
                         ASSUME(Funcs::IsAligned(c.data, alignof(T)));
-                        return (T *)c.data;
+                        return reinterpret_cast<const T *>(c.data);
                     }
                 }
                 return nullptr;
@@ -307,11 +307,11 @@ namespace ECSTest
 
 				if constexpr (T::IsUnique())
 				{
-					return Info{*(T *)dataPtr, *_entityIdPtr};
+					return Info{*reinterpret_cast<const T *>(dataPtr), *_entityIdPtr};
 				}
 				else
 				{
-					return InfoWithId{*(T *)dataPtr, *_entityIdPtr, _componentIdPtr[index]};
+					return InfoWithId{*reinterpret_cast<const T *>(dataPtr), *_entityIdPtr, _componentIdPtr[index]};
 				}
 			}
 
@@ -612,7 +612,7 @@ namespace ECSTest
             {
                 sc.alignmentOf = alignof(T);
                 sc.sizeOf = sizeof(T);
-                sc.data = (byte *)&component;
+                sc.data = reinterpret_cast<const byte *>(&component);
             }
             AddComponent(entityID, sc);
         }
@@ -630,7 +630,7 @@ namespace ECSTest
             sc.isUnique = false;
             sc.isTag = false;
             sc.type = T::GetTypeId();
-            sc.data = (byte *)&component;
+			sc.data = reinterpret_cast<const byte *>(&component);
             sc.id = id;
             AddComponent(entityID, sc);
         }
@@ -650,7 +650,7 @@ namespace ECSTest
 			sc.isUnique = true;
             sc.isTag = false;
 			sc.type = T::GetTypeId();
-			sc.data = (byte *)&component;
+			sc.data = reinterpret_cast<const byte *>(&component);
 			ComponentChanged(entityID, sc);
 		}
 
@@ -667,7 +667,7 @@ namespace ECSTest
             sc.isUnique = false;
             sc.isTag = false;
             sc.type = T::GetTypeId();
-            sc.data = (byte *)&component;
+			sc.data = reinterpret_cast<const byte *>(&component);
             sc.id = id;
             ComponentChanged(entityID, sc);
         }

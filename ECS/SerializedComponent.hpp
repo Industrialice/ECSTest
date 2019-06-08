@@ -16,14 +16,14 @@ namespace ECSTest
         {
             ASSUME(T::GetTypeId() == type);
             ASSUME(Funcs::IsAligned(data, alignof(T)));
-            return *(T *)data;
+            return *reinterpret_cast<T *>(data);
         }
 
         template <typename T, typename = enable_if_t<T::IsTag() == false>> [[nodiscard]] const T &Cast() const
         {
             ASSUME(T::GetTypeId() == type);
             ASSUME(Funcs::IsAligned(data, alignof(T)));
-            return *(T *)data;
+            return *reinterpret_cast<const T *>(data);
         }
 
         template <typename T, typename = enable_if_t<T::IsTag() == false>> [[nodiscard]] T *TryCast()
@@ -31,7 +31,7 @@ namespace ECSTest
             if (T::GetTypeId() == type)
             {
                 ASSUME(Funcs::IsAligned(data, alignof(T)));
-                return (T *)data;
+                return reinterpret_cast<T *>(data);
             }
             return nullptr;
         }
@@ -41,7 +41,7 @@ namespace ECSTest
             if (T::GetTypeId() == type)
             {
                 ASSUME(Funcs::IsAligned(data, alignof(T)));
-                return (T *)data;
+                return reinterpret_cast<const T *>(data);
             }
             return nullptr;
         }

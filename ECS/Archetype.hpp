@@ -63,7 +63,7 @@ namespace ECSTest
                 if (isAdd)
                 {
                     unduplicated[count++] = tType;
-                    result._u.typePart ^= (ui32)tType.Hash();
+                    result._u.typePart ^= static_cast<ui32>(tType.Hash());
 
                 #ifdef CHECK_TYPES_IN_ARCHETYPES
                     result._storedTypes.push_back(tType);
@@ -124,7 +124,7 @@ namespace ECSTest
             
             for (const T &t : types)
             {
-                result._u.idPart ^= Hash::Integer((t.*id).ID());
+                result._u.idPart ^= Hash::Integer<Hash::Precision::P64>((t.*id).ID());
             }
 
             return result;

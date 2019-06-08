@@ -32,19 +32,7 @@ namespace ECSTest
             _AllDevices = MouseKeyboard.Combined(_AllTouches).Combined(_AllJoysticks);
     };
 
-	[[nodiscard]] inline ui32 DeviceIndex(DeviceTypes::DeviceTypes::DeviceType device)
-    {
-        ASSUME(Funcs::IndexOfMostSignificantNonZeroBit(device.AsInteger()) == Funcs::IndexOfLeastSignificantNonZeroBit(device.AsInteger()));
-        if (device >= DeviceTypes::Touch0 && device <= DeviceTypes::Touch9)
-        {
-            return Funcs::IndexOfMostSignificantNonZeroBit(device.AsInteger()) - Funcs::IndexOfMostSignificantNonZeroBit(DeviceTypes::Touch0.AsInteger());
-        }
-        if (device >= DeviceTypes::Joystick0 && device <= DeviceTypes::Joystick7)
-        {
-            return Funcs::IndexOfMostSignificantNonZeroBit(device.AsInteger()) - Funcs::IndexOfMostSignificantNonZeroBit(DeviceTypes::Joystick0.AsInteger());
-        }
-        return 0;
-    }
+	[[nodiscard]] ui32 DeviceIndex(DeviceTypes::DeviceTypes::DeviceType device);
 
     class ControlAction
     {
@@ -147,64 +135,27 @@ namespace ECSTest
     class ControlsQueue
     {
         vector<ControlAction> _actions;
+		using iteratorType = vector<ControlAction>::iterator;
+		using constIteratorType = vector<ControlAction>::const_iterator;
 
     public:
 
-        void clear()
-        {
-            _actions.clear();
-        }
+		void clear();
+		[[nodiscard]] uiw size() const;
+		void push_back(ControlAction &&action);
+		void push_back(const ControlAction &action);
+		void Enqueue(Array<const ControlAction> actions);
+		[[nodiscard]] iteratorType begin();
+		[[nodiscard]] constIteratorType begin() const;
+		[[nodiscard]] iteratorType end();
+		[[nodiscard]] constIteratorType end() const;
+		[[nodiscard]] Array<const ControlAction> Actions() const;
 
-		[[nodiscard]] uiw size() const
-        {
-            return _actions.size();
-        }
-
-        void push_back(ControlAction &&action)
-        {
-            _actions.push_back(move(action));
-        }
-
-        void push_back(const ControlAction &action)
-        {
-            _actions.push_back(action);
-        }
-
-        template <typename T> void Enqueue(DeviceTypes::DeviceType device, T action)
-        {
-            ASSUME(device != DeviceTypes::_None);
-            _actions.push_back(ControlAction{action, TimeMoment::Now(), device});
-        }
-
-        void Enqueue(Array<const ControlAction> actions)
-        {
-            _actions.insert(_actions.end(), actions.begin(), actions.end());
-        }
-
-		auto begin()
+		template <typename T> void Enqueue(DeviceTypes::DeviceType device, T action)
 		{
-			return _actions.begin();
+			ASSUME(device != DeviceTypes::_None);
+			_actions.push_back(ControlAction{action, TimeMoment::Now(), device});
 		}
-
-		auto begin() const
-		{
-			return _actions.cbegin();
-		}
-
-		auto end()
-		{
-			return _actions.end();
-		}
-
-		auto end() const
-		{
-			return _actions.cend();
-		}
-
-		[[nodiscard]] Array<const ControlAction> Actions() const
-        {
-            return {_actions.data(), _actions.size()};
-        }
     };
 
     class IKeyController
@@ -222,13 +173,10 @@ namespace ECSTest
             ui32 timesKeyStateChanged{};
             TimeMoment occuredAt = TimeMoment::Now();
 
-            bool IsPressed() const
-            {
-                return keyState != KeyState::Released;
-            }
+			bool IsPressed() const;
         };
 
-        using AllKeyStates = array<KeyInfo, (size_t)KeyCode::_size>;
+        using AllKeyStates = array<KeyInfo, static_cast<size_t>(KeyCode::_size)>;
 
         virtual ~IKeyController() = default;
         virtual void Dispatch(const ControlAction &action) = 0;
@@ -250,15 +198,7 @@ namespace ECSTest
         EmptyKeyController &operator = (EmptyKeyController &&) = delete;
 
     public:
-        static shared_ptr<EmptyKeyController> New()
-        {
-            struct Proxy : public EmptyKeyController
-            {
-                Proxy() : EmptyKeyController() {}
-            };
-            return make_shared<Proxy>();
-        }
-
+		static shared_ptr<EmptyKeyController> New();
         virtual ~EmptyKeyController() override = default;
         virtual void Dispatch(const ControlAction &action) override {}
 		virtual void Dispatch(const ControlsQueue &controlsQueue) override {}

@@ -205,7 +205,7 @@ public:
             {
                 isChanged |= camera.windows[windowIndex].isChanged;
                 camera.windows[windowIndex].isChanged = false;
-                env.keyController->Dispatch(camera.windows[windowIndex].controlsQueue.Enumerate());
+                env.keyController->Dispatch(camera.windows[windowIndex].controlsQueue);
                 camera.windows[windowIndex].controlsQueue.clear();
             }
 
@@ -235,7 +235,7 @@ public:
         constexpr D3D_FEATURE_LEVEL maxFeatureLevel = D3D_FEATURE_LEVEL_11_0;
 
         COMUniquePtr<IDXGIFactory1> dxgiFactory;
-        HRESULT dxgiFactoryResult = CreateDXGIFactory1(__uuidof(IDXGIFactory1), (void **)&dxgiFactory);
+        HRESULT dxgiFactoryResult = CreateDXGIFactory1(__uuidof(IDXGIFactory1), reinterpret_cast<void **>(&dxgiFactory));
         if (FAILED(dxgiFactoryResult))
         {
             env.logger.Error("Failed to create DXGI factory, error %s\n", ConvertDX11ErrToString(dxgiFactoryResult));
@@ -284,9 +284,9 @@ public:
             featureLevels.data(),
             (UINT)featureLevels.size(),
             D3D11_SDK_VERSION,
-            (ID3D11Device **)&_device,
+            reinterpret_cast<ID3D11Device **>(&_device),
             &_featureLevel,
-            (ID3D11DeviceContext **)&_context);
+			reinterpret_cast<ID3D11DeviceContext **>(&_context));
 
         if (FAILED(result))
         {
@@ -406,7 +406,7 @@ optional<HWND> CreateSystemWindow(LoggerWrapper &logger, const string &title, bo
     wc.hInstance = instance;
     wc.hIcon = LoadIconA(0, IDI_APPLICATION);
     wc.hCursor = AcquireCursor(cursorType);
-    wc.hbrBackground = (HBRUSH)GetStockObject(NULL_BRUSH);
+    wc.hbrBackground = static_cast<HBRUSH>(GetStockObject(NULL_BRUSH));
     wc.lpszMenuName = 0;
     wc.lpszClassName = className.c_str();
 
@@ -441,7 +441,7 @@ optional<HWND> CreateSystemWindow(LoggerWrapper &logger, const string &title, bo
         return nullopt;
     }
 
-    SetWindowLongPtrA(hwnd, GWLP_USERDATA, (LONG_PTR)userData);
+    SetWindowLongPtrA(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(userData));
 
     ShowWindow(hwnd, SW_SHOW);
     UpdateWindow(hwnd);
@@ -451,7 +451,7 @@ optional<HWND> CreateSystemWindow(LoggerWrapper &logger, const string &title, bo
 
 LRESULT WINAPI MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-    auto data = (DX11Window *)GetWindowLongPtrA(hwnd, GWLP_USERDATA);
+    auto data = reinterpret_cast<DX11Window *>(GetWindowLongPtrA(hwnd, GWLP_USERDATA));
     if (data == nullptr || data->hwnd != hwnd)
     {
         return DefWindowProcA(hwnd, msg, wParam, lParam);
@@ -649,7 +649,7 @@ bool DX11Window::MakeWindowAssociation(LoggerWrapper &logger)
         };
 
         COMUniquePtr<IDXGIDevice> dxgiDevice;
-        if (HRESULT hresult = device->QueryInterface(__uuidof(IDXGIDevice), (void**)&dxgiDevice) != S_OK)
+        if (HRESULT hresult = device->QueryInterface(__uuidof(IDXGIDevice), reinterpret_cast<void **>(&dxgiDevice)) != S_OK)
         {
             logger.Error("CreateWindowAssociation: failed to get DXGI device with error 0x%h %s\n", hresult, ConvertDX11ErrToString(hresult));
             procError();
@@ -657,7 +657,7 @@ bool DX11Window::MakeWindowAssociation(LoggerWrapper &logger)
         }
 
         COMUniquePtr<IDXGIAdapter> dxgiAdapter;
-        if (HRESULT hresult = dxgiDevice->GetParent(__uuidof(IDXGIAdapter), (void**)&dxgiAdapter) != S_OK)
+        if (HRESULT hresult = dxgiDevice->GetParent(__uuidof(IDXGIAdapter), reinterpret_cast<void **>(&dxgiAdapter)) != S_OK)
         {
             logger.Error("CreateWindowAssociation: failed to get DXGI adapter with error 0x%h %s\n", hresult, ConvertDX11ErrToString(hresult));
             procError();
@@ -665,14 +665,14 @@ bool DX11Window::MakeWindowAssociation(LoggerWrapper &logger)
         }
 
         COMUniquePtr<IDXGIFactory> dxgiFactory;
-        if (HRESULT hresult = dxgiAdapter->GetParent(__uuidof(IDXGIFactory), (void**)&dxgiFactory) != S_OK)
+        if (HRESULT hresult = dxgiAdapter->GetParent(__uuidof(IDXGIFactory), reinterpret_cast<void **>(&dxgiFactory)) != S_OK)
         {
             logger.Error("CreateWindowAssociation: failed to get DXGI factory with error 0x%h %s\n", hresult, ConvertDX11ErrToString(hresult));
             procError();
             return false;
         }
 
-        if (HRESULT hresult = dxgiFactory->CreateSwapChain(device, &sd, (IDXGISwapChain **)&swapChain) != S_OK)
+        if (HRESULT hresult = dxgiFactory->CreateSwapChain(device, &sd, reinterpret_cast<IDXGISwapChain **>(&swapChain)) != S_OK)
         {
             logger.Error("CreateWindowAssociation: create swap chain for the current window failed with error 0x%h %s\n", hresult, ConvertDX11ErrToString(hresult));
             procError();
@@ -718,13 +718,13 @@ bool DX11Window::CreateWindowRenderTargetView(LoggerWrapper &logger)
     }
 
     COMUniquePtr<ID3D11Texture2D> backBufferTexture;
-    if (HRESULT hresult = swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void **)&backBufferTexture) != S_OK)
+    if (HRESULT hresult = swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void **>(&backBufferTexture)) != S_OK)
     {
         logger.Error("CreateWindowRenderTargetView: get back buffer for the current window's swap chain failed with error 0x%h %s\n", hresult, ConvertDX11ErrToString(hresult));
         return false;
     }
 
-    if (HRESULT hresult = device->CreateRenderTargetView(backBufferTexture.get(), 0, (ID3D11RenderTargetView **)&renderTargetView) != S_OK)
+    if (HRESULT hresult = device->CreateRenderTargetView(backBufferTexture.get(), 0, reinterpret_cast<ID3D11RenderTargetView **>(&renderTargetView)) != S_OK)
     {
         logger.Error("CreateWindowRenderTargetView: create render target view for the current window failed with error 0x%h %s\n", hresult, ConvertDX11ErrToString(hresult));
         return false;

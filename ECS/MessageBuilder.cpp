@@ -198,7 +198,7 @@ void MessageBuilder::ComponentChangedHint(const ComponentDescription &desc, uiw 
 
 	if (memSize > entry->dataReserved)
 	{
-		entry->dataReserved = (ui32)memSize;
+		entry->dataReserved = static_cast<ui32>(memSize);
 
 		byte *oldPtr = entry->data.release();
 		byte *newPtr = Allocator::MallocAlignedRuntime::Reallocate(oldPtr, entry->dataReserved, desc.alignmentOf);

@@ -14,6 +14,7 @@ TODO:
 Implement component groups for RequiredComponentAny
 +Implement OptionalComponent
 Implement solution for shared components
+Implement unified CMake settings for StdLib2018 and ECS projects
 
 Support arbitrary sized components? (can be used, for example, as raw data holders)
 

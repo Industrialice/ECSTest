@@ -167,7 +167,7 @@ namespace
 		}
 		for (uiw index = 0; index < result.size(); ++index)
 		{
-			result[index].group = (ui32)index;
+			result[index].group = static_cast<ui32>(index);
 		}
 		return result;
 	}
@@ -377,6 +377,7 @@ namespace
 
 	static void ArgumentPropertiesTests()
 	{
+#ifdef _MSC_VER /* doesn't compile with Clang */
 		auto matches = [](const Array<const System::ComponentRequest> &left, auto right, bool sort = true) constexpr -> bool
 		{
 			if (sort)
@@ -409,11 +410,11 @@ namespace
 			
 			for (uiw index = 0; index < regular.size(); ++index)
 			{
-				result[index] = {regular[index], (ui32)index};
+				result[index] = {regular[index], static_cast<ui32>(index)};
 			}
 			for (uiw index = regular.size(), sourceIndex = 0; sourceIndex < anyGroups.size(); ++index, ++sourceIndex)
 			{
-				result[index] = {anyGroups[sourceIndex].type, anyGroups[sourceIndex].group + (ui32)regular.size()};
+				result[index] = {anyGroups[sourceIndex].type, anyGroups[sourceIndex].group + static_cast<ui32>(regular.size())};
 			}
 			
 			for (uiw index = 0; index < result.size(); ++index)
@@ -431,7 +432,7 @@ namespace
 			return true;
 		};
 
-		/*constexpr auto testSystemRequestsTuple = TestSystem::AcquireRequestedComponents();
+		constexpr auto testSystemRequestsTuple = TestSystem::AcquireRequestedComponents();
 		constexpr auto testSystemRequests = _SystemHelperFuncs::ComponentsTupleToRequests(testSystemRequestsTuple);
 
 		static_assert(matches(testSystemRequests.requiredWithoutData, MakeArray<TagTest0, TagTest1, ComponentDateOfBirth>()));
@@ -501,7 +502,8 @@ namespace
 		static_assert(matches(testSystem4Requests.argumentPassingOrder, MakeArray<ComponentSpouse, ComponentCompany, ComponentEmployee, ComponentGender>(), false));
 		static_assert(testArchetypeDefining(testSystem4Requests.archetypeDefiningInfoOnly, MakeArray<ComponentSpouse, ComponentCompany>(), make_array(TypeAndGroup{ComponentEmployee::GetTypeId(), 0}, TypeAndGroup{ComponentGender::GetTypeId(), 0})));
 		static_assert(testSystem4Requests.entityIDIndex == nullopt);
-		static_assert(testSystem4Requests.environmentIndex == nullopt);*/
+		static_assert(testSystem4Requests.environmentIndex == nullopt);
+#endif
 	}
 }
 
@@ -520,7 +522,7 @@ public:
 		{
 			ComponentFirstName name;
 			name.name.fill(0);
-			uiw len = (uiw)rand() % 10 + 5;
+			uiw len = static_cast<uiw>(rand()) % 10 + 5;
 			for (uiw index = 0; index < len; ++index)
 			{
 				name.name[index] = 'a' + rand() % 24;
@@ -592,22 +594,16 @@ public:
 
 				auto checkFirstName = [refName](const SerializedComponent &c)
 				{
-					uiw alignment = (uiw)1 << Funcs::IndexOfLeastSignificantNonZeroBit((uiw)c.data);
-					ASSUME(alignment >= alignof(ComponentFirstName));
-
-					ComponentFirstName *casted = (ComponentFirstName *)c.data;
-					ASSUME(!MemOps::Compare(casted->name.data(), refName.name.data(), refName.name.size()));
+					const ComponentFirstName &casted = c.Cast<ComponentFirstName>();
+					ASSUME(!MemOps::Compare(casted.name.data(), refName.name.data(), refName.name.size()));
 				};
 
 				checkFirstName(c0.type == ComponentFirstName::GetTypeId() ? c0 : c1);
 
 				auto checkArtist = [](const SerializedComponent &c)
 				{
-					uiw alignment = (uiw)1 << Funcs::IndexOfLeastSignificantNonZeroBit((uiw)c.data);
-					ASSUME(alignment >= alignof(ComponentArtist));
-
-					ComponentArtist *casted = (ComponentArtist *)c.data;
-					ASSUME(casted->area == ComponentArtist::Areas::Concept);
+					const ComponentArtist &casted = c.Cast<ComponentArtist>();
+					ASSUME(casted.area == ComponentArtist::Areas::Concept);
 				};
 
 				checkArtist(c0.type == ComponentArtist::GetTypeId() ? c0 : c1);

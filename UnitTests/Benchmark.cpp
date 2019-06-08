@@ -141,7 +141,7 @@ public:
                 EntitiesStream::EntityData entity;
 
                 SourceComponent source;
-                source.value = (f32)(rand() % 4 - 2);
+                source.value = static_cast<f32>(rand() % 4 - 2);
 
                 entity.AddComponent(source);
                 entity.AddComponent(CosineResultComponent{});
@@ -166,7 +166,7 @@ public:
         auto sources = make_unique<SourceComponent[]>(entitiesToTest);
         for (uiw index = 0; index < entitiesToTest; ++index)
         {
-            sources[index].value = (f32)(rand() % 4 - 2);
+            sources[index].value = static_cast<f32>(rand() % 4 - 2);
         }
 
 		f32 reciprocal = 1.0f / RAND_MAX;
@@ -190,7 +190,7 @@ public:
             }
         }
 
-		uiw index = (uiw)rand() % entitiesToTest;
+		uiw index = static_cast<uiw>(rand()) % entitiesToTest;
 		ExternalF32 = cosine[index].value;
 		ExternalF32 = sinus[index].value;
 

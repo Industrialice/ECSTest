@@ -79,7 +79,7 @@ bool HIDInput::Register(HWND hwnd)
 	hids[1].dwFlags = RIDEV_NOLEGACY | RIDEV_APPKEYS;
 	hids[1].hwndTarget = NULL;
 
-	if (!RegisterRawInputDevices(hids.data(), (UINT)hids.size(), sizeof(RAWINPUTDEVICE)))
+	if (!RegisterRawInputDevices(hids.data(), static_cast<UINT>(hids.size()), sizeof(RAWINPUTDEVICE)))
 	{
 		SENDLOG(Error, HIDInput, "Register failed, RegisterRawInputDevices failed\n");
 		return false;
@@ -110,7 +110,7 @@ void HIDInput::Unregister()
 	hids[1].dwFlags = RIDEV_REMOVE;
 	hids[1].hwndTarget = NULL; // must be NULL here
 
-	if (!RegisterRawInputDevices(hids.data(), (UINT)hids.size(), sizeof(RAWINPUTDEVICE)))
+	if (!RegisterRawInputDevices(hids.data(), static_cast<UINT>(hids.size()), sizeof(RAWINPUTDEVICE)))
 	{
 		SENDLOG(Error, HIDInput, "Unregister failed, RegisterRawInputDevices failed\n");
 		SOFTBREAK;
@@ -124,7 +124,7 @@ void HIDInput::Dispatch(ControlsQueue &controlsQueue, HWND hwnd, WPARAM wParam, 
 {
 	RAWINPUT data;
 	UINT dataSize = sizeof(data);
-	if (GetRawInputData((HRAWINPUT)lParam, RID_INPUT, &data, &dataSize, sizeof(RAWINPUTHEADER)) == -1)
+	if (GetRawInputData(reinterpret_cast<HRAWINPUT>(lParam), RID_INPUT, &data, &dataSize, sizeof(RAWINPUTHEADER)) == -1)
 	{
 		return;
 	}

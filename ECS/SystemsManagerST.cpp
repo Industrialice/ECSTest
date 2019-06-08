@@ -104,7 +104,7 @@ auto SystemsManagerST::CreatePipeline(optional<TimeDifference> executionStep, bo
     Pipeline group;
     if (isMergeIfSuchPipelineExists)
     {
-        for (ui32 index = 0; index < (ui32)_pipelines.size(); ++index)
+        for (ui32 index = 0; index < static_cast<ui32>(_pipelines.size()); ++index)
         {
             if (_pipelines[index].executionStep == executionStep)
             {
@@ -113,7 +113,7 @@ auto SystemsManagerST::CreatePipeline(optional<TimeDifference> executionStep, bo
             }
         }
     }
-    group.index = (ui32)_pipelines.size();
+    group.index = static_cast<ui32>(_pipelines.size());
     _pipelines.emplace_back();
     _pipelines.back().executionStep = executionStep;
     return group;
@@ -127,8 +127,8 @@ auto SystemsManagerST::GetPipelineInfo(Pipeline pipeline) const -> PipelineInfo
 
     PipelineInfo info;
     info.executedTimes = pipelineData.executionFrame;
-    info.directSystems = (ui32)pipelineData.directSystems.size();
-    info.indirectSystems = (ui32)pipelineData.indirectSystems.size();
+    info.directSystems = static_cast<ui32>(pipelineData.directSystems.size());
+    info.indirectSystems = static_cast<ui32>(pipelineData.indirectSystems.size());
     info.executionStep = pipelineData.executionStep;
 	info.timeSpentExecuting = pipelineData.timeSpentExecuting;
 
@@ -234,7 +234,7 @@ void SystemsManagerST::Register(unique_ptr<System> system, Pipeline pipeline)
 		}
 	}
 
-	_archetypeReflector.StartTrackingMatchingArchetypes((uiw)system.get(), requestedComponents.archetypeDefiningInfoOnly);
+	_archetypeReflector.StartTrackingMatchingArchetypes(reinterpret_cast<uiw>(system.get()), requestedComponents.archetypeDefiningInfoOnly);
 
     auto addSystem = [&pipelineData](auto &managed, auto *system)
     {
@@ -298,7 +298,7 @@ void SystemsManagerST::Unregister(TypeId systemType)
 		{
 			if (managed.system->GetTypeId() == systemType)
 			{
-				_archetypeReflector.StopTrackingMatchingArchetypes((uiw)managed.system.get());
+				_archetypeReflector.StopTrackingMatchingArchetypes(reinterpret_cast<uiw>(managed.system.get()));
 
 				auto diff = &managed - &directSystems.front();
 				directSystems.erase(directSystems.begin() + diff);
@@ -310,7 +310,7 @@ void SystemsManagerST::Unregister(TypeId systemType)
 		{
 			if (managed.system->GetTypeId() == systemType)
 			{
-				_archetypeReflector.StopTrackingMatchingArchetypes((uiw)managed.system.get());
+				_archetypeReflector.StopTrackingMatchingArchetypes(reinterpret_cast<uiw>(managed.system.get()));
 
 				auto diff = &managed - &indirectSystems.front();
 				indirectSystems.erase(indirectSystems.begin() + diff);
@@ -493,7 +493,7 @@ auto SystemsManagerST::AddNewArchetypeGroup(const ArchetypeFull &archetype, Arra
 
 	group.archetype = archetype;
 
-	group.uniqueTypedComponentsCount = (ui16)uniqueTypes.size();
+	group.uniqueTypedComponentsCount = static_cast<ui16>(uniqueTypes.size());
 	group.components = make_unique<ArchetypeGroup::ComponentArray[]>(group.uniqueTypedComponentsCount);
 
 	for (const auto &component : components)
@@ -548,7 +548,7 @@ auto SystemsManagerST::AddNewArchetypeGroup(const ArchetypeFull &archetype, Arra
             tagTypes.push_back(component.type);
         }
     }
-    group.tagsCount = (ui16)tagTypes.size();
+    group.tagsCount = static_cast<ui16>(tagTypes.size());
     group.tags = make_unique<TypeId[]>(group.tagsCount);
     std::copy(tagTypes.begin(), tagTypes.end(), group.tags.get());
 
@@ -933,7 +933,7 @@ void SystemsManagerST::ExecutePipeline(PipelineData &pipeline, TimeDifference ti
             ProcessMessagesAndClear(*managed.system, managed.messageQueue, env);
             managed.system->OnInitialized(env);
             auto after = TimeMoment::Now();
-            _logger->Message(LogLevels::Info, selfName, "Initializing %*s took %.2lfs\n", (i32)managed.system->GetTypeName().size(), managed.system->GetTypeName().data(), (after - before).ToSec_f64());
+            _logger->Message(LogLevels::Info, selfName, "Initializing %*s took %.2lfs\n", static_cast<i32>(managed.system->GetTypeName().size()), managed.system->GetTypeName().data(), (after - before).ToSec_f64());
             PassControlsToOtherSystemsAndClear(managed.controlsToSendQueue, managed.system.get());
             PatchComponentAddedMessages(env.messageBuilder);
             PatchEntityRemovedArchetypes(env.messageBuilder);
@@ -1022,7 +1022,7 @@ void SystemsManagerST::ExecuteDirectSystem(BaseDirectSystem &system, ControlsQue
     _tempArrayArgs.reserve(maxArgs);
     _tempArgs.reserve(maxArgs);
 
-    const auto &archetypes = _archetypeReflector.FindMatchingArchetypes((uiw)&system);
+    const auto &archetypes = _archetypeReflector.FindMatchingArchetypes(reinterpret_cast<uiw>(&system));
 
     for (const Archetype &archetype : archetypes)
     {
@@ -1090,7 +1090,7 @@ void SystemsManagerST::ExecuteDirectSystem(BaseDirectSystem &system, ControlsQue
 			{
 				if (requested.entityIDIndex)
 				{
-					_tempArrayArgs.push_back({(byte *)group.get().entities.get(), group.get().entitiesCount});
+					_tempArrayArgs.push_back({reinterpret_cast<byte *>(group.get().entities.get()), group.get().entitiesCount});
 					_tempArgs.insert(_tempArgs.begin() + *requested.entityIDIndex, &_tempArrayArgs.back());
 				}
 			};

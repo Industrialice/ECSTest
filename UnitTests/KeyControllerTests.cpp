@@ -125,7 +125,7 @@ public:
 
     struct RendererSystem : IndirectSystem<RendererSystem>
     {
-		void Accept(const Array<Position> &);
+		void Accept(const Array<Position> &) {}
 
         virtual bool ControlInput(Environment &env, const ControlAction &input) override
         {
@@ -178,7 +178,7 @@ public:
             EntitiesStream::EntityData entity;
 
             Position pos;
-            pos.position = {(f32)rand(), (f32)rand(), (f32)rand()};
+            pos.position = {static_cast<f32>(rand()), static_cast<f32>(rand()), static_cast<f32>(rand())};
             entity.AddComponent(pos);
 
             stream.AddEntity(entityIdGenerator.Generate(), move(entity));

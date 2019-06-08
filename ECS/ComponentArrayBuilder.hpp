@@ -34,7 +34,7 @@ namespace ECSTest
             {
                 sc.alignmentOf = alignof(T);
                 sc.sizeOf = sizeof(T);
-                sc.data = (byte *)&component;
+                sc.data = reinterpret_cast<const byte *>(&component);
             }
             return AddComponent(sc);
         }
@@ -52,7 +52,7 @@ namespace ECSTest
             sc.isUnique = false;
             sc.isTag = false;
             sc.type = T::GetTypeId();
-            sc.data = (byte *)&component;
+            sc.data = reinterpret_cast<const byte *>(&component);
             sc.id = id;
             return AddComponent(sc);
         }

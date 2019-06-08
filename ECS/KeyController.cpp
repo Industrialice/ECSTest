@@ -47,7 +47,7 @@ void KeyController::Dispatch(const ControlAction &action)
             return _joystickKeyStates[index];
         };
 
-        auto &keyInfo = getKeyStates()[(size_t)keyAction->key];
+        auto &keyInfo = getKeyStates()[static_cast<size_t>(keyAction->key)];
 
         bool wasPressed = keyInfo.keyState == KeyInfo::KeyState::Pressed;
         bool isRepeating = wasPressed && keyAction->keyState == KeyInfo::KeyState::Pressed;
@@ -96,7 +96,7 @@ void KeyController::Dispatch(const ControlAction &action)
     }
 
     _isDispatchingInProgress = true;
-    for (i32 index = (i32)_listeners.size() - 1; index >= 0; --index)
+    for (i32 index = static_cast<i32>(_listeners.size()) - 1; index >= 0; --index)
     {
         const auto &listener = _listeners[index];
         if (listener.deviceMask.Contains(action.device))
@@ -184,12 +184,12 @@ auto KeyController::GetKeyInfo(KeyCode key, DeviceTypes::DeviceType device) cons
     ASSUME(Funcs::IndexOfMostSignificantNonZeroBit(device.AsInteger()) == Funcs::IndexOfLeastSignificantNonZeroBit(device.AsInteger()));
     if (device == DeviceTypes::MouseKeyboard)
     {
-        return _mouseKeyboardKeyStates[0][(ui32)key];
+        return _mouseKeyboardKeyStates[0][static_cast<ui32>(key)];
     }
     if (device >= DeviceTypes::Joystick0 && device <= DeviceTypes::Joystick7)
     {
         ui32 index = Funcs::IndexOfMostSignificantNonZeroBit(device.AsInteger()) - Funcs::IndexOfMostSignificantNonZeroBit(DeviceTypes::Joystick0.AsInteger());
-        return _joystickKeyStates[index][(ui32)key];
+        return _joystickKeyStates[index][static_cast<ui32>(key)];
     }
     return {};
 }

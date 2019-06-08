@@ -32,8 +32,8 @@ public:
 
 		GenerateScene(entityIdGenerator, *manager, *stream);
 
-		auto testPipeline0 = manager->CreatePipeline(1_ms, false);
-		auto testPipeline1 = manager->CreatePipeline(1.5_ms, false);
+		auto testPipeline0 = manager->CreatePipeline(5_ms, false);
+		auto testPipeline1 = manager->CreatePipeline(6.5_ms, false);
 
 		manager->Register<TestIndirectSystem0>(testPipeline0);
 
@@ -90,7 +90,7 @@ public:
     // cannot run in parallel with TestIndirectSystem2
     struct TestIndirectSystem0 : IndirectSystem<TestIndirectSystem0>
     {
-		void Accept(Array<TestComponent0> &);
+		void Accept(Array<TestComponent0> &) {}
 		using BaseIndirectSystem::ProcessMessages;
 
         virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override
@@ -128,7 +128,7 @@ public:
 
     struct TestIndirectSystem1 : IndirectSystem<TestIndirectSystem1>
     {
-		void Accept(const Array<TestComponent0> &, const Array<TestComponent1> &, const NonUnique<TestComponent2> *);
+		void Accept(const Array<TestComponent0> &, const Array<TestComponent1> &, const NonUnique<TestComponent2> *) {}
 		using BaseIndirectSystem::ProcessMessages;
 
         virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override
@@ -165,7 +165,7 @@ public:
     // cannot run in parallel with TestIndirectSystem0
     struct TestIndirectSystem2 : IndirectSystem<TestIndirectSystem2>
     {
-		void Accept(Array<TestComponent0> &);
+		void Accept(Array<TestComponent0> &) {}
 		using BaseIndirectSystem::ProcessMessages;
 
         virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override
@@ -197,7 +197,7 @@ public:
 
     struct MonitoringSystem : IndirectSystem<MonitoringSystem>
     {
-		void Accept();
+		void Accept() {}
 		using BaseIndirectSystem::ProcessMessages;
 
         virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override

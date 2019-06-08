@@ -41,7 +41,7 @@ bool ECSTest::Archetype::operator < (const Archetype &other) const
 
 ui64 ArchetypeFull::Hash() const
 {
-    return ((ui64)_u.idPart << 32) | _u.typePart;
+    return (static_cast<ui64>(_u.idPart) << 32) | _u.typePart;
 }
 
 Archetype ArchetypeFull::ToShort() const

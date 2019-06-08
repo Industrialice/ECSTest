@@ -237,13 +237,13 @@ namespace ECSTest
             {
                 using bare = remove_reference_t<T>;
                 static_assert(!is_pointer_v<bare>, "Type cannot be reference to pointer");
-                return *(bare *)args[index];
+                return *reinterpret_cast<bare *>(args[index]);
             }
             else if constexpr (is_pointer_v<T>)
             {
                 using bare = remove_pointer_t<T>;
                 static_assert(!is_pointer_v<bare> && !is_reference_v<bare>, "Type cannot be pointer to reference/pointer");
-                return (T)args[index];
+                return reinterpret_cast<T>(args[index]);
             }
             else if constexpr (isRequired || isSubtractive || isOptional || isRequiredAny)
             {
@@ -434,9 +434,9 @@ namespace ECSTest
         // makes sure the argument type appears only once
         template <uiw size> [[nodiscard]] static constexpr bool IsTypesAliased(const array<TypeId, size> &types)
         {
-            for (iw i = 0; i < (iw)size - 1; ++i)
+            for (iw i = 0; i < static_cast<iw>(size) - 1; ++i)
             {
-                for (iw j = i + 1; j < (iw)size; ++j)
+                for (iw j = i + 1; j < static_cast<iw>(size); ++j)
                 {
                     if (types[i] == types[j])
                     {
@@ -482,7 +482,7 @@ namespace ECSTest
             using componentType = typename GetComponentType<remove_cv_t<TPure>>::type;
             if constexpr (is_same_v<EntityID, componentType>)
             {
-                return {{}, false, (RequirementForComponent)i8_max};
+                return {{}, false, static_cast<RequirementForComponent>(i8_max)};
             }
             else
             {
@@ -666,7 +666,7 @@ namespace ECSTest
 
 		template <typename T, uiw Group, uiw... Indexes> [[nodiscard]] static constexpr auto RequiredAnyGroupToTuple(index_sequence<Indexes...>)
 		{
-			return make_tuple(pair<TypeId, ui32>(tuple_element_t<Indexes, typename GetComponentType<T>::expanded>::GetTypeId(), (ui32)Group)...);
+			return make_tuple(pair<TypeId, ui32>(tuple_element_t<Indexes, typename GetComponentType<T>::expanded>::GetTypeId(), static_cast<ui32>(Group))...);
 		}
 
 		// TODO: more checks
@@ -695,11 +695,11 @@ namespace ECSTest
 			array<ArchetypeDefiningRequirement, NonAnySize + AnySize> output{};
 			for (uiw index = 0; index < NonAnySize; ++index)
 			{
-				output[index] = {nonAnyComponents[index].type, (ui32)index, nonAnyComponents[index].requirement};
+				output[index] = {nonAnyComponents[index].type, static_cast<ui32>(index), nonAnyComponents[index].requirement};
 			}
 			for (uiw index = NonAnySize, sourceIndex = 0; index < NonAnySize + AnySize; ++index, ++sourceIndex)
 			{
-				output[index] = {anyComponents[sourceIndex].first, anyComponents[sourceIndex].second + (ui32)NonAnySize, RequirementForComponent::Required};
+				output[index] = {anyComponents[sourceIndex].first, anyComponents[sourceIndex].second + static_cast<ui32>(NonAnySize), RequirementForComponent::Required};
 			}
 			return output;
 		}
@@ -837,7 +837,7 @@ namespace ECSTest
 		{
 			using types = typename FunctionInfo::Info<decltype(&SystemType::Accept)>::args;
 			static constexpr uiw count = tuple_size_v<types>;
-			_SystemHelperFuncs::CallAccept<types>((SystemType *)this, array, make_index_sequence<count>());
+			_SystemHelperFuncs::CallAccept<types>(static_cast<SystemType *>(this), array, make_index_sequence<count>());
 		}
 	};
 }
