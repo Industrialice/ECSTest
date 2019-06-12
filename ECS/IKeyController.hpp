@@ -32,7 +32,7 @@ namespace ECSTest
             _AllDevices = MouseKeyboard.Combined(_AllTouches).Combined(_AllJoysticks);
     };
 
-	[[nodiscard]] ui32 DeviceIndex(DeviceTypes::DeviceTypes::DeviceType device);
+	[[nodiscard]] uiw DeviceIndex(DeviceTypes::DeviceTypes::DeviceType device);
 
     class ControlAction
     {

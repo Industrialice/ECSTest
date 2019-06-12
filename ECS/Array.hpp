@@ -35,6 +35,16 @@ namespace ECSTest
             return _count == 0;
         }
 
+		[[nodiscard]] constexpr T *data()
+		{
+			return _items;
+		}
+
+		[[nodiscard]] constexpr const T *data() const
+		{
+			return _items;
+		}
+
         [[nodiscard]] constexpr T &front()
         {
             ASSUME(_count > 0);

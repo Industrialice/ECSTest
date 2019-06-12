@@ -67,7 +67,7 @@ bool IKeyController::KeyInfo::IsPressed() const
 	return keyState != KeyState::Released;
 }
 
-ui32 DeviceIndex(DeviceTypes::DeviceTypes::DeviceType device)
+uiw DeviceIndex(DeviceTypes::DeviceTypes::DeviceType device)
 {
 	ASSUME(Funcs::IndexOfMostSignificantNonZeroBit(device.AsInteger()) == Funcs::IndexOfLeastSignificantNonZeroBit(device.AsInteger()));
 	if (device >= DeviceTypes::Touch0 && device <= DeviceTypes::Touch9)

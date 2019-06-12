@@ -216,6 +216,22 @@ public:
 		{
 			for (uiw index = 0; index < c0.size(); ++index)
 			{
+				auto c0Data = c0[index];
+				if (c1)
+				{
+					auto c1Data = c1->at(index);
+				}
+				if (c2)
+				{
+					auto c2Components = c2->at(index);
+					for (auto c2Data : c2Components)
+					{
+					}
+				}
+			}
+
+			for (uiw index = 0; index < c0.size(); ++index)
+			{
 				const Component0 &c = c0[index];
 
 				ASSUME(c.Contains(Tag0::GetTypeId()));

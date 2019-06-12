@@ -1,5 +1,9 @@
 #pragma once
 
+#ifndef _ENABLE_EXTENDED_ALIGNED_STORAGE
+	#define _ENABLE_EXTENDED_ALIGNED_STORAGE
+#endif
+
 #include <vector>
 #include <memory>
 #include <string>

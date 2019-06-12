@@ -149,6 +149,26 @@ namespace ECSTest
 
 		NonUnique(Array<T> components, Array<ComponentID> ids, ui32 stride) : components(components), ids(ids), stride(stride)
 		{}
+
+		Array<T> operator [](uiw index)
+		{
+			return at(index);
+		}
+
+		Array<const T> operator [](uiw index) const
+		{
+			return at(index);
+		}
+
+		Array<T> at(uiw index)
+		{
+			return ToArray(components.data() + index * stride, stride);
+		}
+
+		Array<const T> at(uiw index) const
+		{
+			return ToArray(components.data() + index * stride, stride);
+		}
 	};
 }
 
