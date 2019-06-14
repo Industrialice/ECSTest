@@ -276,17 +276,28 @@ public:
         vector<D3D_FEATURE_LEVEL> featureLevels{D3D_FEATURE_LEVEL_9_1, D3D_FEATURE_LEVEL_9_2, D3D_FEATURE_LEVEL_9_3, D3D_FEATURE_LEVEL_10_0, D3D_FEATURE_LEVEL_10_1, D3D_FEATURE_LEVEL_11_0};
 		featureLevels.erase(std::remove_if(featureLevels.begin(), featureLevels.end(), [maxFeatureLevel](D3D_FEATURE_LEVEL level) { return level > maxFeatureLevel; }), featureLevels.end());
 
-        HRESULT result = D3D11CreateDevice(
-            adapters[0].get(),
-            D3D_DRIVER_TYPE_UNKNOWN,
-            NULL,
-            createDeviceFlags,
-            featureLevels.data(),
-            (UINT)featureLevels.size(),
-            D3D11_SDK_VERSION,
-            reinterpret_cast<ID3D11Device **>(&_device),
-            &_featureLevel,
-			reinterpret_cast<ID3D11DeviceContext **>(&_context));
+		auto createDevice = [&]
+		{
+			return D3D11CreateDevice(
+				adapters[0].get(),
+				D3D_DRIVER_TYPE_UNKNOWN,
+				NULL,
+				createDeviceFlags,
+				featureLevels.data(),
+				(UINT)featureLevels.size(),
+				D3D11_SDK_VERSION,
+				reinterpret_cast<ID3D11Device * *>(&_device),
+				&_featureLevel,
+				reinterpret_cast<ID3D11DeviceContext * *>(&_context));
+		};
+
+		HRESULT result = createDevice();
+		if (result == DXGI_ERROR_SDK_COMPONENT_MISSING)
+		{
+			env.logger.Warning("Failed to create device, error DXGI_ERROR_SDK_COMPONENT_MISSING, trying to create without debug layers\n");
+			createDeviceFlags &= ~D3D11_CREATE_DEVICE_DEBUG;
+			result = createDevice();
+		}
 
         if (FAILED(result))
         {
