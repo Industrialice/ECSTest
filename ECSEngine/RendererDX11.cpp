@@ -14,7 +14,7 @@ using namespace ECSEngine;
 static optional<HWND> CreateSystemWindow(LoggerWrapper &logger, const string &title, bool isFullscreen, bool hideBorders, bool isMaximized, RECT &dimensions, Window::CursorTypet cursorType, void *userData);
 static LRESULT WINAPI MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 static HCURSOR AcquireCursor(Window::CursorTypet type);
-static const char *ConvertDX11ErrToString(HRESULT hresult);
+NOINLINE static const char *ConvertDirectXErrToString(HRESULT hresult);
 
 struct _COMDeleter
 {
@@ -238,7 +238,7 @@ public:
         HRESULT dxgiFactoryResult = CreateDXGIFactory1(__uuidof(IDXGIFactory1), reinterpret_cast<void **>(&dxgiFactory));
         if (FAILED(dxgiFactoryResult))
         {
-            env.logger.Error("Failed to create DXGI factory, error %s\n", ConvertDX11ErrToString(dxgiFactoryResult));
+            env.logger.Error("Failed to create DXGI factory, error %s\n", ConvertDirectXErrToString(dxgiFactoryResult));
             return;
         }
 
@@ -290,7 +290,7 @@ public:
 
         if (FAILED(result))
         {
-            env.logger.Error("Failed to create device, error %s\n", ConvertDX11ErrToString(result));
+            env.logger.Error("Failed to create device, error %s\n", ConvertDirectXErrToString(result));
             return;
         }
 
@@ -533,32 +533,71 @@ HCURSOR AcquireCursor(Window::CursorTypet type)
     return NULL;
 }
 
-const char *ConvertDX11ErrToString(HRESULT hresult)
+NOINLINE const char *ConvertDirectXErrToString(HRESULT hresult)
 {
     switch (hresult)
     {
-    case D3D11_ERROR_FILE_NOT_FOUND:
-        return "D3D11_ERROR_FILE_NOT_FOUND";
-    case D3D11_ERROR_TOO_MANY_UNIQUE_STATE_OBJECTS:
-        return "D3D11_ERROR_TOO_MANY_UNIQUE_STATE_OBJECTS";
-    case D3D11_ERROR_TOO_MANY_UNIQUE_VIEW_OBJECTS:
-        return "D3D11_ERROR_TOO_MANY_UNIQUE_VIEW_OBJECTS";
-    case D3D11_ERROR_DEFERRED_CONTEXT_MAP_WITHOUT_INITIAL_DISCARD:
-        return "D3D11_ERROR_DEFERRED_CONTEXT_MAP_WITHOUT_INITIAL_DISCARD";
-    case DXGI_ERROR_INVALID_CALL:
-        return "DXGI_ERROR_INVALID_CALL";
-    case DXGI_ERROR_WAS_STILL_DRAWING:
-        return "DXGI_ERROR_WAS_STILL_DRAWING";
-    case E_FAIL:
-        return "E_FAIL";
-    case E_INVALIDARG:
-        return "E_INVALIDARG";
-    case E_OUTOFMEMORY:
-        return "E_OUTOFMEMORY";
-    case S_FALSE:
-        return "S_FALSE";
+	#define CASE(Val) case Val: return TOSTR(#Val);
+	CASE(D3D10_ERROR_TOO_MANY_UNIQUE_STATE_OBJECTS)
+	CASE(D3D10_ERROR_FILE_NOT_FOUND)
+	CASE(D3D11_ERROR_TOO_MANY_UNIQUE_STATE_OBJECTS)
+	CASE(D3D11_ERROR_FILE_NOT_FOUND)
+	CASE(D3D11_ERROR_TOO_MANY_UNIQUE_VIEW_OBJECTS)
+	CASE(D3D11_ERROR_DEFERRED_CONTEXT_MAP_WITHOUT_INITIAL_DISCARD)
+	CASE(D3D12_ERROR_ADAPTER_NOT_FOUND)
+	CASE(D3D12_ERROR_DRIVER_VERSION_MISMATCH)
+    CASE(DXGI_STATUS_OCCLUDED)
+    CASE(DXGI_STATUS_CLIPPED)
+    CASE(DXGI_STATUS_NO_REDIRECTION)
+    CASE(DXGI_STATUS_NO_DESKTOP_ACCESS)
+    CASE(DXGI_STATUS_GRAPHICS_VIDPN_SOURCE_IN_USE)
+    CASE(DXGI_STATUS_MODE_CHANGED)
+    CASE(DXGI_STATUS_MODE_CHANGE_IN_PROGRESS)
+    CASE(DXGI_ERROR_INVALID_CALL)
+    CASE(DXGI_ERROR_NOT_FOUND)
+    CASE(DXGI_ERROR_MORE_DATA)
+    CASE(DXGI_ERROR_UNSUPPORTED)
+    CASE(DXGI_ERROR_DEVICE_REMOVED)
+    CASE(DXGI_ERROR_DEVICE_HUNG)
+    CASE(DXGI_ERROR_DEVICE_RESET)
+    CASE(DXGI_ERROR_WAS_STILL_DRAWING)
+	CASE(DXGI_ERROR_FRAME_STATISTICS_DISJOINT)
+	CASE(DXGI_ERROR_GRAPHICS_VIDPN_SOURCE_IN_USE)
+	CASE(DXGI_ERROR_DRIVER_INTERNAL_ERROR)
+	CASE(DXGI_ERROR_NONEXCLUSIVE)
+	CASE(DXGI_ERROR_NOT_CURRENTLY_AVAILABLE)
+	CASE(DXGI_ERROR_REMOTE_CLIENT_DISCONNECTED)
+	CASE(DXGI_ERROR_REMOTE_OUTOFMEMORY)
+	CASE(DXGI_ERROR_ACCESS_LOST)
+	CASE(DXGI_ERROR_WAIT_TIMEOUT)
+	CASE(DXGI_ERROR_SESSION_DISCONNECTED)
+	CASE(DXGI_ERROR_RESTRICT_TO_OUTPUT_STALE)
+	CASE(DXGI_ERROR_CANNOT_PROTECT_CONTENT)
+	CASE(DXGI_ERROR_ACCESS_DENIED)
+	CASE(DXGI_ERROR_NAME_ALREADY_EXISTS)
+	CASE(DXGI_ERROR_SDK_COMPONENT_MISSING)
+	CASE(DXGI_ERROR_NOT_CURRENT)
+	CASE(DXGI_ERROR_HW_PROTECTION_OUTOFMEMORY)
+	CASE(DXGI_ERROR_DYNAMIC_CODE_POLICY_VIOLATION)
+	CASE(DXGI_ERROR_NON_COMPOSITED_UI)
+	CASE(DXGI_STATUS_UNOCCLUDED)
+	CASE(DXGI_STATUS_DDA_WAS_STILL_DRAWING)
+	CASE(DXGI_ERROR_MODE_CHANGE_IN_PROGRESS)
+	CASE(DXGI_STATUS_PRESENT_REQUIRED)
+	CASE(DXGI_ERROR_CACHE_CORRUPT)
+	CASE(DXGI_ERROR_CACHE_FULL)
+	CASE(DXGI_ERROR_CACHE_HASH_COLLISION)
+	CASE(DXGI_ERROR_ALREADY_EXISTS)
+	CASE(DXGI_DDI_ERR_WASSTILLDRAWING)
+	CASE(DXGI_DDI_ERR_UNSUPPORTED)
+	CASE(DXGI_DDI_ERR_NONEXCLUSIVE)
+    CASE(E_FAIL)
+    CASE(E_INVALIDARG)
+    CASE(E_OUTOFMEMORY)
+    CASE(S_FALSE)
     default:
         return "unidentified error";
+	#undef CASE
     }
 }
 
@@ -651,7 +690,7 @@ bool DX11Window::MakeWindowAssociation(LoggerWrapper &logger)
         COMUniquePtr<IDXGIDevice> dxgiDevice;
         if (HRESULT hresult = device->QueryInterface(__uuidof(IDXGIDevice), reinterpret_cast<void **>(&dxgiDevice)) != S_OK)
         {
-            logger.Error("CreateWindowAssociation: failed to get DXGI device with error 0x%h %s\n", hresult, ConvertDX11ErrToString(hresult));
+            logger.Error("CreateWindowAssociation: failed to get DXGI device with error 0x%h %s\n", hresult, ConvertDirectXErrToString(hresult));
             procError();
             return false;
         }
@@ -659,7 +698,7 @@ bool DX11Window::MakeWindowAssociation(LoggerWrapper &logger)
         COMUniquePtr<IDXGIAdapter> dxgiAdapter;
         if (HRESULT hresult = dxgiDevice->GetParent(__uuidof(IDXGIAdapter), reinterpret_cast<void **>(&dxgiAdapter)) != S_OK)
         {
-            logger.Error("CreateWindowAssociation: failed to get DXGI adapter with error 0x%h %s\n", hresult, ConvertDX11ErrToString(hresult));
+            logger.Error("CreateWindowAssociation: failed to get DXGI adapter with error 0x%h %s\n", hresult, ConvertDirectXErrToString(hresult));
             procError();
             return false;
         }
@@ -667,21 +706,21 @@ bool DX11Window::MakeWindowAssociation(LoggerWrapper &logger)
         COMUniquePtr<IDXGIFactory> dxgiFactory;
         if (HRESULT hresult = dxgiAdapter->GetParent(__uuidof(IDXGIFactory), reinterpret_cast<void **>(&dxgiFactory)) != S_OK)
         {
-            logger.Error("CreateWindowAssociation: failed to get DXGI factory with error 0x%h %s\n", hresult, ConvertDX11ErrToString(hresult));
+            logger.Error("CreateWindowAssociation: failed to get DXGI factory with error 0x%h %s\n", hresult, ConvertDirectXErrToString(hresult));
             procError();
             return false;
         }
 
         if (HRESULT hresult = dxgiFactory->CreateSwapChain(device, &sd, reinterpret_cast<IDXGISwapChain **>(&swapChain)) != S_OK)
         {
-            logger.Error("CreateWindowAssociation: create swap chain for the current window failed with error 0x%h %s\n", hresult, ConvertDX11ErrToString(hresult));
+            logger.Error("CreateWindowAssociation: create swap chain for the current window failed with error 0x%h %s\n", hresult, ConvertDirectXErrToString(hresult));
             procError();
             return false;
         }
 
         if (HRESULT hresult = dxgiFactory->MakeWindowAssociation(*hwnd, DXGI_MWA_NO_WINDOW_CHANGES) != S_OK)
         {
-            logger.Error("CreateWindowAssociation: failed to make window association with error 0x%h %s\n", hresult, ConvertDX11ErrToString(hresult));
+            logger.Error("CreateWindowAssociation: failed to make window association with error 0x%h %s\n", hresult, ConvertDirectXErrToString(hresult));
         }
 
         currentFullScreen = false;
@@ -713,20 +752,20 @@ bool DX11Window::CreateWindowRenderTargetView(LoggerWrapper &logger)
 
     if (HRESULT hresult = swapChain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, 0) != S_OK)
     {
-        logger.Error("CreateWindowRenderTargetView: failed to resize swap chain's buffers with error 0x%h %s\n", hresult, ConvertDX11ErrToString(hresult));
+        logger.Error("CreateWindowRenderTargetView: failed to resize swap chain's buffers with error 0x%h %s\n", hresult, ConvertDirectXErrToString(hresult));
         return false;
     }
 
     COMUniquePtr<ID3D11Texture2D> backBufferTexture;
     if (HRESULT hresult = swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void **>(&backBufferTexture)) != S_OK)
     {
-        logger.Error("CreateWindowRenderTargetView: get back buffer for the current window's swap chain failed with error 0x%h %s\n", hresult, ConvertDX11ErrToString(hresult));
+        logger.Error("CreateWindowRenderTargetView: get back buffer for the current window's swap chain failed with error 0x%h %s\n", hresult, ConvertDirectXErrToString(hresult));
         return false;
     }
 
     if (HRESULT hresult = device->CreateRenderTargetView(backBufferTexture.get(), 0, reinterpret_cast<ID3D11RenderTargetView **>(&renderTargetView)) != S_OK)
     {
-        logger.Error("CreateWindowRenderTargetView: create render target view for the current window failed with error 0x%h %s\n", hresult, ConvertDX11ErrToString(hresult));
+        logger.Error("CreateWindowRenderTargetView: create render target view for the current window failed with error 0x%h %s\n", hresult, ConvertDirectXErrToString(hresult));
         return false;
     }
 
@@ -769,7 +808,7 @@ bool DX11Window::HandleSizeFullScreenChanges(LoggerWrapper &logger)
 
         if (HRESULT hresult = swapChain->ResizeTarget(&mode) != S_OK)
         {
-            logger.Error("HandleWindowSizeFullScreenChanges: swap chain's ResizeTarget failed, error 0x%h %s\n", hresult, ConvertDX11ErrToString(hresult));
+            logger.Error("HandleWindowSizeFullScreenChanges: swap chain's ResizeTarget failed, error 0x%h %s\n", hresult, ConvertDirectXErrToString(hresult));
         }
         else
         {
@@ -786,7 +825,7 @@ bool DX11Window::HandleSizeFullScreenChanges(LoggerWrapper &logger)
         //  will trigger a WM_SIZE event that can change current window's size
         if (HRESULT hresult = swapChain->SetFullscreenState(window->isFullscreen ? TRUE : FALSE, 0) != S_OK)
         {
-            logger.Error("HandleWindowSizeFullScreenChanges: failed to change fullscreen state of the swap chain, error 0x%h %s\n", hresult, ConvertDX11ErrToString(hresult));
+            logger.Error("HandleWindowSizeFullScreenChanges: failed to change fullscreen state of the swap chain, error 0x%h %s\n", hresult, ConvertDirectXErrToString(hresult));
         }
         else
         {
@@ -798,7 +837,7 @@ bool DX11Window::HandleSizeFullScreenChanges(LoggerWrapper &logger)
         mode.RefreshRate.Numerator = 0;
         if (HRESULT hresult = swapChain->ResizeTarget(&mode) != S_OK)
         {
-            logger.Error("HandleWindowSizeFullScreenChanges: second swap chain's ResizeTarget failed, error 0x%h %s\n", hresult, ConvertDX11ErrToString(hresult));
+            logger.Error("HandleWindowSizeFullScreenChanges: second swap chain's ResizeTarget failed, error 0x%h %s\n", hresult, ConvertDirectXErrToString(hresult));
         }
         else
         {
