@@ -95,7 +95,7 @@ namespace ECSTest
     }
 
 #ifdef PLATFORM_WINDOWS
-    inline void LogRecipient(LogLevels::LogLevel logLevel, string_view nullTerminatedText, string_view senderName)
+    inline void LogRecipient(LogLevels::LogLevel logLevel, StringViewNullTerminated message, string_view senderName)
     {
         if (logLevel == LogLevels::Critical || logLevel == LogLevels::Debug || logLevel == LogLevels::Error) // TODO: cancel breaking
         {
@@ -134,7 +134,7 @@ namespace ECSTest
                 return;
             }
 
-            MessageBoxA(0, nullTerminatedText.data(), tag, 0);
+            MessageBoxA(0, message.data(), tag, 0);
             return;
         }
 
@@ -153,7 +153,7 @@ namespace ECSTest
 		{
 			OutputDebugStringA(": ");
 		}
-        OutputDebugStringA(nullTerminatedText.data());
+        OutputDebugStringA(message.data());
 
 		if (isPrefixed)
 		{
@@ -162,17 +162,17 @@ namespace ECSTest
 			{
 				tag = LogLevelToTag(logLevel);
 			}
-			printf("%s%s: %s", tag, senderName.data(), nullTerminatedText.data());
+			printf("%s%s: %s", tag, senderName.data(), message.data());
 		}
 		else
 		{
-			printf("%s", nullTerminatedText.data());
+			printf("%s", message.data());
 		}
     }
 #endif
 
 #ifdef PLATFORM_ANDROID
-	inline void LogRecipient(LogLevels::LogLevel logLevel, string_view nullTerminatedText, string_view senderName)
+	inline void LogRecipient(LogLevels::LogLevel logLevel, StringViewNullTerminated message, string_view senderName)
 	{
 		bool isPrefixed = logLevel != LogLevels::Info || senderName.size();
 		if (isPrefixed)
@@ -182,12 +182,12 @@ namespace ECSTest
 			{
 				tag = LogLevelToTag(logLevel);
 			}
-			string message = string(tag) + string(senderName) + ": "s + string(nullTerminatedText);
+			string message = string(tag) + string(senderName) + ": "s + string(message);
 			OnLogMessage(message.c_str());
 		}
 		else
 		{
-			OnLogMessage(nullTerminatedText.data());
+			OnLogMessage(message.data());
 		}
 	}
 #endif

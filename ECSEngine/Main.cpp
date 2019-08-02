@@ -14,8 +14,8 @@ namespace
     std::atomic<bool> IsExiting{false};
 }
 
-static void LogRecipient(LogLevels::LogLevel logLevel, string_view nullTerminatedText, string_view senderName);
-static void FileLogRecipient(File &file, LogLevels::LogLevel logLevel, string_view nullTerminatedText, string_view senderName);
+static void LogRecipient(LogLevels::LogLevel logLevel, StringViewNullTerminated message, string_view senderName);
+static void FileLogRecipient(File &file, LogLevels::LogLevel logLevel, StringViewNullTerminated message, string_view senderName);
 static bool ReceiveInput(const ControlAction &action);
 
 struct ScreenColorSystem : DirectSystem<ScreenColorSystem>
@@ -134,7 +134,7 @@ static const char *LogLevelToTag(LogLevels::LogLevel logLevel)
     return nullptr;
 }
 
-void LogRecipient(LogLevels::LogLevel logLevel, string_view nullTerminatedText, string_view senderName)
+void LogRecipient(LogLevels::LogLevel logLevel, StringViewNullTerminated message, string_view senderName)
 {
     if (logLevel == LogLevels::Critical || logLevel == LogLevels::Debug || logLevel == LogLevels::Error)
     {
@@ -173,7 +173,7 @@ void LogRecipient(LogLevels::LogLevel logLevel, string_view nullTerminatedText, 
             return;
         }
 
-        MessageBoxA(0, nullTerminatedText.data(), tag, 0);
+        MessageBoxA(0, message.data(), tag, 0);
         return;
     }
 
@@ -182,18 +182,18 @@ void LogRecipient(LogLevels::LogLevel logLevel, string_view nullTerminatedText, 
     OutputDebugStringA(tag);
     OutputDebugStringA(senderName.data());
     OutputDebugStringA(": ");
-    OutputDebugStringA(nullTerminatedText.data());
+    OutputDebugStringA(message.data());
 
-    printf("%s%s: %s", tag, senderName.data(), nullTerminatedText.data());
+    printf("%s%s: %s", tag, senderName.data(), message.data());
 }
 
-void FileLogRecipient(File &file, LogLevels::LogLevel logLevel, string_view nullTerminatedText, string_view senderName)
+void FileLogRecipient(File &file, LogLevels::LogLevel logLevel, StringViewNullTerminated message, string_view senderName)
 {
     const char *tag = LogLevelToTag(logLevel);
     file.Write(tag, static_cast<ui32>(strlen(tag)));
     file.Write(senderName.data(), static_cast<ui32>(senderName.size()));
     file.Write(": ", 2);
-    file.Write(nullTerminatedText.data(), static_cast<ui32>(nullTerminatedText.size()));
+    file.Write(message.data(), static_cast<ui32>(message.size()));
 }
 
 bool ReceiveInput(const ControlAction &action)
