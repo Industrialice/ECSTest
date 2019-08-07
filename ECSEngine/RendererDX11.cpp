@@ -258,8 +258,36 @@ public:
 			const UINT compileFlags = D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_OPTIMIZATION_LEVEL3 | D3DCOMPILE_SKIP_VALIDATION;
 		#endif
 
+		D3D_FEATURE_LEVEL featureLevel = _device->GetFeatureLevel();
+		auto featureLevelToTarget = [featureLevel]
+		{
+			switch (featureLevel)
+			{
+			case D3D_FEATURE_LEVEL_9_1:
+			case D3D_FEATURE_LEVEL_9_2:
+				return "xs_4_0_level_9_1";
+			case D3D_FEATURE_LEVEL_9_3:
+				return "xs_4_0_level_9_3";
+			case D3D_FEATURE_LEVEL_10_0:
+				return "xs_4_0";
+			case D3D_FEATURE_LEVEL_10_1:
+				return "xs_4_1";
+			case D3D_FEATURE_LEVEL_11_0:
+			case D3D_FEATURE_LEVEL_11_1:
+			case D3D_FEATURE_LEVEL_12_0:
+			case D3D_FEATURE_LEVEL_12_1:
+			default:
+				return "xs_5_0";
+			}
+		};
+
+		const char *featureLevelShaderStr = featureLevelToTarget();
+
 		COMUniquePtr<ID3DBlob> compiledShader, errors;
-		if (HRESULT result = D3DCompile(vsCode, strlen(vsCode), 0, nullptr, 0, "VSMain", "vs_5_0", compileFlags, 0, AddressOfNaked(compiledShader), AddressOfNaked(errors)); result != S_OK)
+		char shaderTarget[32];
+		strcpy_s(shaderTarget, featureLevelShaderStr);
+		shaderTarget[0] = 'v';
+		if (HRESULT result = D3DCompile(vsCode, strlen(vsCode), 0, nullptr, 0, "VSMain", shaderTarget, compileFlags, 0, AddressOfNaked(compiledShader), AddressOfNaked(errors)); result != S_OK)
 		{
 			if (errors)
 			{
@@ -290,7 +318,8 @@ public:
 		compiledShader = {};
 		errors = {};
 
-		if (HRESULT result = D3DCompile(psCode, strlen(psCode), 0, nullptr, 0, "PSMain", "ps_5_0", compileFlags, 0, AddressOfNaked(compiledShader), AddressOfNaked(errors)); result != S_OK)
+		shaderTarget[0] = 'p';
+		if (HRESULT result = D3DCompile(psCode, strlen(psCode), 0, nullptr, 0, "PSMain", shaderTarget, compileFlags, 0, AddressOfNaked(compiledShader), AddressOfNaked(errors)); result != S_OK)
 		{
 			if (errors)
 			{
