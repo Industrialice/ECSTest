@@ -615,8 +615,8 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="0.41129356"
-     inkscape:cx="-976.01803"
-     inkscape:cy="1126.511"
+     inkscape:cx="-1018.0086"
+     inkscape:cy="1430.4754"
      inkscape:document-units="mm"
      inkscape:current-layer="layer1"
      showgrid="false"
@@ -624,11 +624,11 @@
      inkscape:snap-bbox="true"
      inkscape:snap-global="false"
      showborder="false"
-     inkscape:window-width="1900"
-     inkscape:window-height="1453"
-     inkscape:window-x="3003"
-     inkscape:window-y="470"
-     inkscape:window-maximized="0" />
+     inkscape:window-width="1280"
+     inkscape:window-height="1024"
+     inkscape:window-x="5760"
+     inkscape:window-y="755"
+     inkscape:window-maximized="1" />
   <metadata
      id="metadata5">
     <rdf:RDF>
@@ -637,7 +637,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -655,7 +655,7 @@
          id="tspan3719"
          x="-319.76785"
          y="-143.89212"
-         style="stroke-width:0.26458332"></tspan></text>
+         style="stroke-width:0.26458332" /></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-weight:normal;font-size:10.58333302px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
@@ -687,7 +687,7 @@
            height="74.285713"
            x="-1397.1428"
            y="-1037.4803" /></flowRegion><flowPara
-         id="flowPara3745"></flowPara></flowRoot>    <flowRoot
+         id="flowPara3745" /></flowRoot>    <flowRoot
        xml:space="preserve"
        id="flowRoot3747"
        style="fill:black;fill-opacity:1;stroke:none;font-family:sans-serif;font-style:normal;font-weight:normal;font-size:40px;line-height:1.25;letter-spacing:0px;word-spacing:0px"><flowRegion
@@ -697,7 +697,7 @@
            height="62.857143"
            x="-1431.4286"
            y="-928.90887" /></flowRegion><flowPara
-         id="flowPara3753"></flowPara></flowRoot>    <text
+         id="flowPara3753" /></flowRoot>    <text
        xml:space="preserve"
        style="font-style:normal;font-weight:normal;font-size:10.58333302px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
        x="-285.18994"
@@ -970,7 +970,7 @@
          id="tspan6754">  WrapModet xWrapMode;</tspan><tspan
          sodipodi:role="line"
          x="-584.75574"
-         y="158.10097"
+         y="158.10095"
          style="stroke-width:0.26458332"
          id="tspan6756">  WrapModet yWrapMode;</tspan><tspan
          sodipodi:role="line"
@@ -985,7 +985,7 @@
          id="tspan6758">  FilterModet minifyFilterMode;</tspan><tspan
          sodipodi:role="line"
          x="-584.75574"
-         y="197.78847"
+         y="197.78845"
          style="stroke-width:0.26458332"
          id="tspan6760">  FilterModet magnifyFilterMode;</tspan><tspan
          sodipodi:role="line"
@@ -995,12 +995,12 @@
          id="tspan14547">  R32G32B32A32_Float borderColor;</tspan><tspan
          sodipodi:role="line"
          x="-584.75574"
-         y="224.2468"
+         y="224.24678"
          style="stroke-width:0.26458332"
          id="tspan6762">  bool isMinifyInterpolatesBetweenMips;</tspan><tspan
          sodipodi:role="line"
          x="-584.75574"
-         y="237.47597"
+         y="237.47595"
          style="stroke-width:0.26458332"
          id="tspan9560">  ui8 anisotropyLevel;</tspan><tspan
          sodipodi:role="line"
@@ -1015,7 +1015,7 @@
          id="tspan9564">  GPUAccessMode gpuMode;</tspan><tspan
          sodipodi:role="line"
          x="-584.75574"
-         y="277.16345"
+         y="277.16348"
          style="stroke-width:0.26458332"
          id="tspan6766" /></text>
     <path
@@ -1151,7 +1151,7 @@
          id="tspan14633"
          x="-456.09659"
          y="234.6064"
-         style="stroke-width:0.26458332"></tspan></text>
+         style="stroke-width:0.26458332" /></text>
     <path
        style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#marker14641)"
        d="M -562.88362,-33.653933 V 28.102443"

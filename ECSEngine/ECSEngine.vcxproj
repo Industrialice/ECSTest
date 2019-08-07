@@ -192,6 +192,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="AssetsLoaders.cpp" />
+    <ClCompile Include="CameraMovementSystem.cpp" />
+    <ClCompile Include="CameraTransform.cpp" />
     <ClCompile Include="Color.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="NameManager.cpp" />
@@ -210,14 +213,20 @@
     <ClCompile Include="WinVKInput.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="AssetsLoaders.hpp" />
+    <ClInclude Include="CameraMovementSystem.hpp" />
+    <ClInclude Include="CameraTransform.hpp" />
     <ClInclude Include="Color.hpp" />
     <ClInclude Include="Components.hpp" />
     <ClInclude Include="CustomControlActions.hpp" />
+    <ClInclude Include="Material.hpp" />
+    <ClInclude Include="Mesh.hpp" />
     <ClInclude Include="NameManager.hpp" />
     <ClInclude Include="PreHeader.hpp" />
     <ClInclude Include="Renderer.hpp" />
     <ClInclude Include="RendererDX11.hpp" />
     <ClInclude Include="Scene.hpp" />
+    <ClInclude Include="Texture.hpp" />
     <ClInclude Include="WinAPI.hpp" />
     <ClInclude Include="WinHIDInput.hpp" />
     <ClInclude Include="WinVKInput.hpp" />

@@ -19,8 +19,8 @@ namespace ECSTest
     public:
         ~WorkerThread();
         WorkerThread() = default;
-        WorkerThread(WorkerThread &&source);
-        WorkerThread &operator = (WorkerThread &&source);
+        WorkerThread(WorkerThread &&source) noexcept;
+        WorkerThread &operator = (WorkerThread &&source) noexcept;
         void AddWork(std::function<void()> &&work);
         void Start();
 		[[nodiscard]] bool IsRunning() const;

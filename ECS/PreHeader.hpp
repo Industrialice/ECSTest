@@ -88,3 +88,73 @@ class UnitTests;
 #ifdef PLATFORM_ANDROID
 	void DetachCurrentThread();
 #endif
+
+template <typename T, T InvalidIDValue> class OpaqueID
+{
+protected:
+	T _id = InvalidIDValue;
+
+	using hashType = conditional_t<sizeof(T) == 1, ui8,
+		conditional_t<sizeof(T) == 2, ui16,
+		conditional_t<sizeof(T) == 4, ui32, ui64>>>;
+
+public:	
+	OpaqueID() = default;
+	
+	explicit OpaqueID(T id) : _id(id)
+	{}
+
+	[[nodiscard]] hashType Hash() const
+	{
+		return static_cast<hashType>(_id);
+	}
+
+#ifdef SPACESHIP_SUPPORTED
+	[[nodiscard]] auto operator <=> (const OpaqueID &other) const = default;
+#else
+	[[nodiscard]] bool operator == (const OpaqueID &other) const
+	{
+		return _id == other._id;
+	}
+	
+	[[nodiscard]] bool operator != (const OpaqueID &other) const
+	{
+		return _id != other._id;
+	}
+
+	[[nodiscard]] bool operator < (const OpaqueID &other) const
+	{
+		return _id < other._id;
+	}
+
+	[[nodiscard]] bool operator <= (const OpaqueID &other) const
+	{
+		return _id <= other._id;
+	}
+
+	[[nodiscard]] bool operator > (const OpaqueID &other) const
+	{
+		return _id > other._id;
+	}
+
+	[[nodiscard]] bool operator >= (const OpaqueID &other) const
+	{
+		return _id >= other._id;
+	}
+
+#endif
+	[[nodiscard]] bool IsValid() const
+	{
+		return _id != InvalidIDValue;
+	}
+	
+	[[nodiscard]] explicit operator bool() const
+	{
+		return IsValid();
+	}
+
+	[[nodiscard]] static constexpr T InvalidID()
+	{
+		return InvalidIDValue;
+	}
+};

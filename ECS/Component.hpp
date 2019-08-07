@@ -27,30 +27,11 @@ namespace ECSTest
 		RequirementForComponent requirement{};
 	};
 
-	class ComponentID
+	class ComponentID : public OpaqueID<ui32, ui32_max>
 	{
-    public:
-        static constexpr ui32 invalidId = ui32_max;
-
-    private:
-		ui32 _id = invalidId;
-
 	public:
-		ComponentID() = default;
-        explicit ComponentID(ui32 id);
-		[[nodiscard]] ui32 ID() const;
-		[[nodiscard]] bool IsValid() const;
-#ifdef SPACESHIP_SUPPORTED
-		[[nodiscard]] auto operator <=> (const ComponentID &other) const = default;
-#else
-		[[nodiscard]] bool operator == (const ComponentID &other) const;
-		[[nodiscard]] bool operator != (const ComponentID &other) const;
-		[[nodiscard]] bool operator < (const ComponentID &other) const;
-		[[nodiscard]] bool operator <= (const ComponentID &other) const;
-		[[nodiscard]] bool operator > (const ComponentID &other) const;
-		[[nodiscard]] bool operator >= (const ComponentID &other) const;
-#endif
-		[[nodiscard]] explicit operator bool() const;
+		using OpaqueID::OpaqueID;
+		ui32 ID() const;
 	};
 
     class ComponentIDGenerator
@@ -62,8 +43,8 @@ namespace ECSTest
 		[[nodiscard]] ComponentID Generate();
 		[[nodiscard]] ComponentID LastGenerated() const;
         ComponentIDGenerator() = default;
-        ComponentIDGenerator(ComponentIDGenerator &&source);
-        ComponentIDGenerator &operator = (ComponentIDGenerator &&source);
+        ComponentIDGenerator(ComponentIDGenerator &&source) noexcept;
+        ComponentIDGenerator &operator = (ComponentIDGenerator &&source) noexcept;
     };
 
     class _BaseComponentClass

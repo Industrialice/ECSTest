@@ -4,30 +4,9 @@
 
 namespace ECSTest
 {
-	class EntityID
+	class EntityID : public OpaqueID<ui32, ui32_max>
 	{
-	public:
-		static constexpr ui32 invalidId = ui32_max;
-
-	private:
-		ui32 _id = invalidId;
-
-	public:
-        EntityID() = default;
-        explicit EntityID(ui32 id);
-		[[nodiscard]] ui32 Hash() const;
-#ifdef SPACESHIP_SUPPORTED
-		[[nodiscard]] auto operator <=> (const EntityID &other) const = default;
-#else
-		[[nodiscard]] bool operator == (const EntityID &other) const;
-		[[nodiscard]] bool operator != (const EntityID &other) const;
-		[[nodiscard]] bool operator < (const EntityID &other) const;
-		[[nodiscard]] bool operator <= (const EntityID &other) const;
-		[[nodiscard]] bool operator > (const EntityID &other) const;
-		[[nodiscard]] bool operator >= (const EntityID &other) const;
-#endif
-		[[nodiscard]] bool IsValid() const;
-		[[nodiscard]] explicit operator bool() const;
+		using OpaqueID::OpaqueID;
 	};
 
     class EntityIDGenerator

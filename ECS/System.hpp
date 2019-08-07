@@ -4,6 +4,7 @@
 #include "MessageBuilder.hpp"
 #include "LoggerWrapper.hpp"
 #include "IKeyController.hpp"
+#include "AssetsManager.hpp"
 
 namespace ECSTest
 {
@@ -23,6 +24,7 @@ namespace ECSTest
             MessageBuilder &messageBuilder;
 			LoggerWrapper logger;
             IKeyController *keyController;
+			AssetsManager &assetsManager;
         };
 
 		struct ComponentRequest

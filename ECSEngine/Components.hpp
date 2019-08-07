@@ -65,13 +65,19 @@ namespace ECSEngine
 
     struct Camera : Component<Camera>
     {
-        f32 fov;
-        f32 size;
-        bool isClearDepth;
-        f32 nearPlane;
-        f32 farPlane;
-        variant<std::monostate, ClearColor> clearWith;
-        array<RT, 8> rt;
-        enum class ProjectionType : ui8 { Perspective, Orthographic } projectionType;
+		enum class ProjectionTypet : ui8
+		{
+			Perspective,
+			Orthographic
+		};
+
+		f32 fov{};
+		f32 size{};
+		bool isClearDepth{};
+		f32 nearPlane{};
+		f32 farPlane{};
+		variant<std::monostate, ClearColor> clearWith{};
+		array<RT, 8> rt{};
+		ProjectionTypet projectionType{};
     };
 }

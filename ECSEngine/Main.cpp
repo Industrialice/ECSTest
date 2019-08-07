@@ -2,6 +2,7 @@
 #include "RendererDX11.hpp"
 #include "Scene.hpp"
 #include "CustomControlActions.hpp"
+#include "CameraMovementSystem.hpp"
 
 using namespace ECSEngine;
 
@@ -17,33 +18,6 @@ namespace
 static void LogRecipient(LogLevels::LogLevel logLevel, StringViewNullTerminated message, string_view senderName);
 static void FileLogRecipient(File &file, LogLevels::LogLevel logLevel, StringViewNullTerminated message, string_view senderName);
 static bool ReceiveInput(const ControlAction &action);
-
-struct ScreenColorSystem : DirectSystem<ScreenColorSystem>
-{
-	void Accept(Array<Camera> &cameras, const Array<EntityID> &ids)
-	{
-		for (auto &camera : cameras)
-		{
-			ClearColor clearColor;
-			clearColor.color = ColorR8G8B8((ui32)intensity, (ui32)intensity, (ui32)intensity);
-			camera.clearWith = clearColor;
-		}
-	}
-
-	virtual bool ControlInput(Environment &env, const ControlAction &action) override
-	{
-		if (auto wheel = action.Get<ControlAction::MouseWheel>(); wheel)
-		{
-			intensity -= wheel->delta * 10;
-			intensity = std::clamp(intensity, 0, 255);
-		}
-
-		return false;
-	}
-
-private:
-	i32 intensity = 0;
-};
 
 int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 {
@@ -64,18 +38,18 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 
     auto manager = SystemsManager::New(false, EngineLogger);
 
-    auto keyController = KeyController::New();
-    InputHandle = keyController->OnControlAction(ReceiveInput);
+    auto rendererKeyController = KeyController::New();
+    InputHandle = rendererKeyController->OnControlAction(ReceiveInput);
 
     auto renderer = RendererDX11System::New();
-    renderer->SetKeyController(keyController);
+    renderer->SetKeyController(rendererKeyController);
 
-	auto screenColorSystem = make_unique<ScreenColorSystem>();
-	screenColorSystem->SetKeyController(KeyController::New());
+	auto cameraMovementSystem = make_unique<CameraMovementSystem>();
+	cameraMovementSystem->SetKeyController(KeyController::New()); // create a new key controller for each system because otherwise the same key controller might receive the same control more than once (when the controls are dispatched before system execution)
 
     auto rendererPipeline = manager->CreatePipeline(nullopt, false);
     manager->Register(move(renderer), rendererPipeline);
-	manager->Register(move(screenColorSystem), rendererPipeline);
+	manager->Register(move(cameraMovementSystem), rendererPipeline);
 
 	auto physicsPipeline = manager->CreatePipeline(TimeSecondsFP64(1.0 / 60.0), false);
 

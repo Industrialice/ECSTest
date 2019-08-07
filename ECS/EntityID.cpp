@@ -3,57 +3,6 @@
 
 using namespace ECSTest;
 
-EntityID::EntityID(ui32 id) : _id(id)
-{
-}
-
-ui32 EntityID::Hash() const
-{
-	return _id;
-}
-
-#ifndef SPACESHIP_SUPPORTED
-	bool EntityID::operator == (const EntityID &other) const
-	{
-		return _id == other._id;
-	}
-
-	bool EntityID::operator != (const EntityID &other) const
-	{
-		return _id != other._id;
-	}
-
-	bool EntityID::operator < (const EntityID &other) const
-	{
-		return _id < other._id;
-	}
-
-	bool EntityID::operator <= (const EntityID &other) const
-	{
-		return _id <= other._id;
-	}
-
-	bool EntityID::operator > (const EntityID &other) const
-	{
-		return _id > other._id;
-	}
-
-	bool EntityID::operator >= (const EntityID &other) const
-	{
-		return _id >= other._id;
-	}
-#endif
-
-bool EntityID::IsValid() const
-{
-	return _id != invalidId;
-}
-
-EntityID::operator bool() const
-{
-	return IsValid();
-}
-
 EntityID EntityIDGenerator::Generate()
 {
     auto id = EntityID(_current.load());

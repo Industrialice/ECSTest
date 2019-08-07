@@ -4,6 +4,7 @@
 #include "CustomControlActions.hpp"
 #include "WinHIDInput.hpp"
 #include "WinVKInput.hpp"
+#include "CameraTransform.hpp"
 
 #pragma comment( lib, "d3d11.lib" )
 #pragma comment( lib, "dxgi.lib" )
@@ -66,8 +67,8 @@ public:
 
     DX11Window() = default;
 
-    DX11Window(DX11Window &&source);
-    DX11Window &operator = (DX11Window &&source);
+    DX11Window(DX11Window &&source) noexcept;
+    DX11Window &operator = (DX11Window &&source) noexcept;
     DX11Window(Window &window, ID3D11Device *device, LoggerWrapper &logger);
     bool MakeWindowAssociation(LoggerWrapper &logger);
     bool CreateWindowRenderTargetView(LoggerWrapper &logger);
@@ -80,10 +81,279 @@ struct DX11Camera
     EntityID id{};
     Camera data{};
     DX11Window windows[8]{};
+	CameraTransform transform{};
 
-    DX11Camera(EntityID id, const Camera &data) : id(id), data(data) {}
+    DX11Camera(EntityID id, const Camera &data, const CameraTransform &transform) : id(id), data(data), transform(transform) {}
     DX11Camera(DX11Camera &&) = default;
     DX11Camera &operator = (DX11Camera &&) = default;
+};
+
+class Cube
+{
+public:
+	Cube() = default;
+
+	Cube(LoggerWrapper &logger, ID3D11Device *device, ID3D11DeviceContext *context, ID3D11Buffer *uniformBuffer) : _device(device), _context(context), _uniformBuffer(uniformBuffer)
+	{
+		D3D11_RASTERIZER_DESC rsDesc{};
+		rsDesc.AntialiasedLineEnable = false;
+		rsDesc.CullMode = D3D11_CULL_BACK;
+		rsDesc.DepthBias = 0;
+		rsDesc.DepthBiasClamp = 0.0f;
+		rsDesc.DepthClipEnable = true;
+		rsDesc.FillMode = D3D11_FILL_SOLID;
+		rsDesc.FrontCounterClockwise = false;
+		rsDesc.MultisampleEnable = false;
+		rsDesc.ScissorEnable = false;
+		rsDesc.SlopeScaledDepthBias = 0.0f;
+		if (HRESULT result = _device->CreateRasterizerState(&rsDesc, AddressOfNaked(_rsState)); result != S_OK)
+		{
+			logger.Error("Failed to create rasterizer state, error %s\n", ConvertDirectXErrToString(result));
+		}
+
+		D3D11_BLEND_DESC blendDesc{};
+		blendDesc.AlphaToCoverageEnable = false;
+		blendDesc.IndependentBlendEnable = false;
+		blendDesc.RenderTarget[0].BlendEnable = false;
+		blendDesc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+		blendDesc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+		blendDesc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+		blendDesc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ZERO;
+		blendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
+		blendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+		blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+		if (HRESULT result = _device->CreateBlendState(&blendDesc, AddressOfNaked(_blendState)); result != S_OK)
+		{
+			logger.Error("Failed to create blend state, error %s\n", ConvertDirectXErrToString(result));
+		}
+
+		const D3D11_DEPTH_STENCILOP_DESC stencilOpDesc = {D3D11_STENCIL_OP_KEEP, D3D11_STENCIL_OP_KEEP, D3D11_STENCIL_OP_KEEP, D3D11_COMPARISON_ALWAYS};
+		D3D11_DEPTH_STENCIL_DESC dsDesc{};
+		dsDesc.BackFace = stencilOpDesc;
+		dsDesc.DepthEnable = true;
+		dsDesc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
+		dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+		dsDesc.FrontFace = stencilOpDesc;
+		dsDesc.StencilEnable = false;
+		dsDesc.StencilReadMask = D3D11_DEFAULT_STENCIL_READ_MASK;
+		dsDesc.StencilWriteMask = D3D11_DEFAULT_STENCIL_WRITE_MASK;
+		if (HRESULT result = _device->CreateDepthStencilState(&dsDesc, AddressOfNaked(_dsState)); result != S_OK)
+		{
+			logger.Error("Failed to create depth stencil state, error %s\n", ConvertDirectXErrToString(result));
+		}
+
+		static constexpr f32 transparency = 0.5f;
+
+		static constexpr Vector4 frontColor{1, 1, 1, transparency};
+		static constexpr Vector4 upColor{0, 1, 1, transparency};
+		static constexpr Vector4 backColor{0, 0, 1, transparency};
+		static constexpr Vector4 downColor{1, 0, 0, transparency};
+		static constexpr Vector4 leftColor{1, 1, 0, transparency};
+		static constexpr Vector4 rightColor{1, 0, 1, transparency};
+
+		struct Vertex
+		{
+			Vector3 position;
+			Vector4 color;
+		};
+
+		static constexpr Vertex vertexArrayData[]
+		{
+			// front
+			{{-0.5f, -0.5f, -0.5f}, frontColor},
+			{{-0.5f, 0.5f, -0.5f}, frontColor},
+			{{0.5f, -0.5f, -0.5f}, frontColor},
+			{{0.5f, 0.5f, -0.5f}, frontColor},
+
+			// up
+			{{-0.5f, 0.5f, -0.5f}, upColor},
+			{{-0.5f, 0.5f, 0.5f}, upColor},
+			{{0.5f, 0.5f, -0.5f}, upColor},
+			{{0.5f, 0.5f, 0.5f}, upColor},
+
+			// back
+			{{0.5f, -0.5f, 0.5f}, backColor},
+			{{0.5f, 0.5f, 0.5f}, backColor},
+			{{-0.5f, -0.5f, 0.5f}, backColor},
+			{{-0.5f, 0.5f, 0.5f}, backColor},
+
+			// down
+			{{-0.5f, -0.5f, 0.5f}, downColor},
+			{{-0.5f, -0.5f, -0.5f}, downColor},
+			{{0.5f, -0.5f, 0.5f}, downColor},
+			{{0.5f, -0.5f, -0.5f}, downColor},
+
+			// left
+			{{-0.5f, -0.5f, 0.5f}, leftColor},
+			{{-0.5f, 0.5f, 0.5f}, leftColor},
+			{{-0.5f, -0.5f, -0.5f}, leftColor},
+			{{-0.5f, 0.5f, -0.5f}, leftColor},
+
+			// right
+			{{0.5f, -0.5f, -0.5f}, rightColor},
+			{{0.5f, 0.5f, -0.5f}, rightColor},
+			{{0.5f, -0.5f, 0.5f}, rightColor},
+			{{0.5f, 0.5f, 0.5f}, rightColor},
+		};
+
+		D3D11_BUFFER_DESC bufDesc =
+		{
+			sizeof(vertexArrayData),
+			D3D11_USAGE_IMMUTABLE,
+			D3D11_BIND_VERTEX_BUFFER,
+			0,
+			0,
+			0
+		};
+		D3D11_SUBRESOURCE_DATA bufData;
+		bufData.pSysMem = vertexArrayData;
+		if (HRESULT result = _device->CreateBuffer(&bufDesc, &bufData, AddressOfNaked(_vertexBuffer)); result != S_OK)
+		{
+			logger.Error("Creating vertex buffer failed, error %s", ConvertDirectXErrToString(result));
+		}
+
+		ui16 indexes[36];
+		for (ui32 index = 0; index < 6; ++index)
+		{
+			indexes[index * 6 + 0] = index * 4 + 0;
+			indexes[index * 6 + 1] = index * 4 + 1;
+			indexes[index * 6 + 2] = index * 4 + 3;
+
+			indexes[index * 6 + 3] = index * 4 + 2;
+			indexes[index * 6 + 4] = index * 4 + 0;
+			indexes[index * 6 + 5] = index * 4 + 3;
+		}
+
+		bufDesc.ByteWidth = sizeof(indexes);
+		bufDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+		bufData.pSysMem = indexes;
+		if (HRESULT result = _device->CreateBuffer(&bufDesc, &bufData, AddressOfNaked(_indexBuffer)); result != S_OK)
+		{
+			logger.Error("Creating index buffer failed, error %s", ConvertDirectXErrToString(result));
+		}
+
+		const char *vsCode = TOSTR(
+			cbuffer Uniforms : register(b0)
+			{
+				float4x4 ModelViewProjectionMatrix : packoffset(c0);
+			}
+
+			void VSMain(float4 pos : POSITION, float4 color : COLOR, out float4 outPos : SV_POSITION, out float4 outColor : COLOR)
+			{
+				outPos = mul(pos, ModelViewProjectionMatrix);
+				outColor = color;
+			}
+		);
+
+		const char *psCode = TOSTR(
+			float4 PSMain(float4 pos : SV_POSITION, float4 color : COLOR) : SV_TARGET
+			{
+				return color;
+			}
+		);
+
+		#if defined(DEBUG)
+			const UINT compileFlags = D3DCOMPILE_DEBUG;
+		#else
+			const UINT compileFlags = D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_OPTIMIZATION_LEVEL3 | D3DCOMPILE_SKIP_VALIDATION;
+		#endif
+
+		COMUniquePtr<ID3DBlob> compiledShader, errors;
+		if (HRESULT result = D3DCompile(vsCode, strlen(vsCode), 0, nullptr, 0, "VSMain", "vs_5_0", compileFlags, 0, AddressOfNaked(compiledShader), AddressOfNaked(errors)); result != S_OK)
+		{
+			if (errors)
+			{
+				logger.Error("Vertex shader compilation failed, error %s, compile errors %*s\n", ConvertDirectXErrToString(result), static_cast<i32>(errors->GetBufferSize()), static_cast<char *>(errors->GetBufferPointer()));
+			}
+			else
+			{
+				logger.Error("Vertex shader compilation failed, error %s\n", ConvertDirectXErrToString(result));
+			}
+		}
+
+		if (HRESULT result = _device->CreateVertexShader(compiledShader->GetBufferPointer(), compiledShader->GetBufferSize(), nullptr, AddressOfNaked(_vertexShader)); result != S_OK)
+		{
+			logger.Error("Vertex shader creation failed, error %s\n", ConvertDirectXErrToString(result));
+		}
+
+		static constexpr D3D11_INPUT_ELEMENT_DESC inputLayoutDesc[] =
+		{
+			{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+			{"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0}
+		};
+
+		if (HRESULT result = _device->CreateInputLayout(inputLayoutDesc, CountOf(inputLayoutDesc), compiledShader->GetBufferPointer(), compiledShader->GetBufferSize(), AddressOfNaked(_inputLayout)); result != S_OK)
+		{
+			logger.Error("Input layout creation failed, error %s\n", ConvertDirectXErrToString(result));
+		}
+
+		compiledShader = {};
+		errors = {};
+
+		if (HRESULT result = D3DCompile(psCode, strlen(psCode), 0, nullptr, 0, "PSMain", "ps_5_0", compileFlags, 0, AddressOfNaked(compiledShader), AddressOfNaked(errors)); result != S_OK)
+		{
+			if (errors)
+			{
+				logger.Error("Pixel shader compilation failed, error %s, compile errors %*s\n", ConvertDirectXErrToString(result), static_cast<i32>(errors->GetBufferSize()), static_cast<char *>(errors->GetBufferPointer()));
+			}
+			else
+			{
+				logger.Error("Pixel shader compilation failed, error %s\n", ConvertDirectXErrToString(result));
+			}
+		}
+
+		if (HRESULT result = _device->CreatePixelShader(compiledShader->GetBufferPointer(), compiledShader->GetBufferSize(), nullptr, AddressOfNaked(_pixelShader)); result != S_OK)
+		{
+			logger.Error("Pixel shader creation failed, error %s\n", ConvertDirectXErrToString(result));
+		}
+
+		logger.Info("Finished creating cube\n");
+	}
+
+	void Draw(System::Environment &env, const Matrix4x4 &viewProjectionMatrix)
+	{
+		static constexpr UINT strides[] = {sizeof(Vector3) + sizeof(Vector4)};
+		static constexpr UINT offsets[] = {0};
+
+		D3D11_MAPPED_SUBRESOURCE mapped;
+		if (HRESULT result = _context->Map(_uniformBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped); result != S_OK)
+		{
+			env.logger.Error("Uniform buffer mapping failed, error %s\n", ConvertDirectXErrToString(result));
+		}
+
+		Matrix4x3 modelMatrix = Matrix4x3::CreateRTS(Vector3(0, env.timeSinceStarted.ToSec(), 0), Vector3(0, 0, 1));
+
+		Matrix4x4 mvp = modelMatrix * viewProjectionMatrix;
+		mvp.Transpose();
+		MemOps::Copy(static_cast<Matrix4x4 *>(mapped.pData), &mvp, 1);
+
+		_context->Unmap(_uniformBuffer, 0);
+
+		_context->RSSetState(_rsState.get());
+		_context->OMSetBlendState(_blendState.get(), nullptr, ui32_max);
+		_context->OMSetDepthStencilState(_dsState.get(), ui32_max);
+		_context->IASetVertexBuffers(0, 1, AddressOfNaked(_vertexBuffer), strides, offsets);
+		_context->IASetIndexBuffer(_indexBuffer.get(), DXGI_FORMAT_R16_UINT, 0);
+		_context->PSSetShader(_pixelShader.get(), nullptr, 0);
+		_context->VSSetShader(_vertexShader.get(), nullptr, 0);
+		_context->IASetInputLayout(_inputLayout.get());
+		_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+		_context->DrawIndexed(36, 0, 0);
+	}
+
+private:
+	COMUniquePtr<ID3D11InputLayout> _inputLayout{};
+	COMUniquePtr<ID3D11VertexShader> _vertexShader{};
+	COMUniquePtr<ID3D11PixelShader> _pixelShader{};
+	COMUniquePtr<ID3D11Buffer> _vertexBuffer{};
+	COMUniquePtr<ID3D11Buffer> _indexBuffer{};
+	COMUniquePtr<ID3D11RasterizerState> _rsState{};
+	COMUniquePtr<ID3D11BlendState> _blendState{};
+	COMUniquePtr<ID3D11DepthStencilState> _dsState{};
+	ID3D11Device *_device{};
+	ID3D11DeviceContext *_context{};
+	ID3D11Buffer *_uniformBuffer{};
 };
 
 class RendereDX11SystemImpl : public RendererDX11System
@@ -101,7 +371,7 @@ public:
             auto camera = entry.FindComponent<Camera>();
             if (camera)
             {
-                AddCamera(entry.entityID, *camera);
+				AddCamera(entry.entityID, *camera, {entry.GetComponent<Position>().position, entry.GetComponent<Rotation>().rotation});
             }
         }
     }
@@ -112,12 +382,19 @@ public:
         {
             for (auto &entry : stream)
             {
-                AddCamera(entry.entityID, entry.added.Cast<Camera>());
+                AddCamera(entry.entityID, entry.added.Cast<Camera>(), {entry.GetComponent<Position>().position, entry.GetComponent<Rotation>().rotation});
             }
         }
-        else
+        else if (stream.Type() == Position::GetTypeId() || stream.Type() == Rotation::GetTypeId())
         {
-            HARDBREAK;
+			for (auto &entry : stream)
+			{
+				auto *camera = entry.FindComponent<Camera>();
+				if (camera)
+				{
+					AddCamera(entry.entityID, *camera, {entry.GetComponent<Position>().position, entry.GetComponent<Rotation>().rotation});
+				}
+			}
         }
     }
     
@@ -129,9 +406,11 @@ public:
         }
 		for (const auto &entry : stream.Enumerate<Position>())
 		{
+			CameraPositionChanged(entry.entityID, entry.component);
 		}
 		for (const auto &entry : stream.Enumerate<Rotation>())
 		{
+			CameraRotationChanged(entry.entityID, entry.component);
 		}
 
 		ASSUME(stream.Type() == Camera::GetTypeId() || stream.Type() == Position::GetTypeId() || stream.Type() == Rotation::GetTypeId());
@@ -140,6 +419,14 @@ public:
     virtual void ProcessMessages(Environment &env, const MessageStreamComponentRemoved &stream) override
     {
 		for (const auto &entry : stream.Enumerate<Camera>())
+		{
+			RemoveCamera(entry.entityID);
+		}
+		for (const auto &entry : stream.Enumerate<Position>())
+		{
+			RemoveCamera(entry.entityID);
+		}
+		for (const auto &entry : stream.Enumerate<Rotation>())
 		{
 			RemoveCamera(entry.entityID);
 		}
@@ -181,6 +468,22 @@ public:
 						else
 						{
 						}
+
+						_context->OMSetRenderTargets(1, AddressOfNaked(dxWindow.renderTargetView), nullptr);
+
+						D3D11_VIEWPORT viewport{};
+						viewport.Width = static_cast<f32>(window->width);
+						viewport.Height = static_cast<f32>(window->height);
+						viewport.MaxDepth = 1.0f;
+						viewport.MinDepth = 0.0f;
+						viewport.TopLeftX = 0.0f;
+						viewport.TopLeftY = 0.0;
+						_context->RSSetViewports(1, &viewport);
+
+						auto projectionMatrix = Matrix4x4::CreatePerspectiveProjection(DegToRad(75.0f), static_cast<f32>(window->width) / static_cast<f32>(window->height), 0.1f, 1000.0f, ProjectionTarget::D3DAndMetal);
+						Matrix4x4 viewProjectionMatrix = camera.transform.ViewMatrix() * projectionMatrix;
+
+						_cube.Draw(env, viewProjectionMatrix);
 
 						dxWindow.swapChain->Present(0, 0);
 					}
@@ -235,7 +538,7 @@ public:
         constexpr D3D_FEATURE_LEVEL maxFeatureLevel = D3D_FEATURE_LEVEL_11_0;
 
         COMUniquePtr<IDXGIFactory1> dxgiFactory;
-        HRESULT dxgiFactoryResult = CreateDXGIFactory1(__uuidof(IDXGIFactory1), reinterpret_cast<void **>(&dxgiFactory));
+        HRESULT dxgiFactoryResult = CreateDXGIFactory1(__uuidof(IDXGIFactory1), reinterpret_cast<void **>(AddressOfNaked(dxgiFactory)));
         if (FAILED(dxgiFactoryResult))
         {
             env.logger.Error("Failed to create DXGI factory, error %s\n", ConvertDirectXErrToString(dxgiFactoryResult));
@@ -273,7 +576,7 @@ public:
         createDeviceFlags |= D3D11_CREATE_DEVICE_DEBUG;
     #endif
 
-        vector<D3D_FEATURE_LEVEL> featureLevels{D3D_FEATURE_LEVEL_9_1, D3D_FEATURE_LEVEL_9_2, D3D_FEATURE_LEVEL_9_3, D3D_FEATURE_LEVEL_10_0, D3D_FEATURE_LEVEL_10_1, D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_11_1, D3D_FEATURE_LEVEL_12_0, D3D_FEATURE_LEVEL_12_1};
+        vector<D3D_FEATURE_LEVEL> featureLevels{D3D_FEATURE_LEVEL_12_1, D3D_FEATURE_LEVEL_12_0, D3D_FEATURE_LEVEL_11_1, D3D_FEATURE_LEVEL_11_0, D3D_FEATURE_LEVEL_10_1, D3D_FEATURE_LEVEL_10_0, D3D_FEATURE_LEVEL_9_3, D3D_FEATURE_LEVEL_9_2, D3D_FEATURE_LEVEL_9_1};
 		featureLevels.erase(std::remove_if(featureLevels.begin(), featureLevels.end(), [maxFeatureLevel](D3D_FEATURE_LEVEL level) { return level > maxFeatureLevel; }), featureLevels.end());
 
 		auto createDevice = [&]
@@ -286,9 +589,9 @@ public:
 				featureLevels.data(),
 				(UINT)featureLevels.size(),
 				D3D11_SDK_VERSION,
-				reinterpret_cast<ID3D11Device * *>(&_device),
+				AddressOfNaked(_device),
 				&_featureLevel,
-				reinterpret_cast<ID3D11DeviceContext * *>(&_context));
+				AddressOfNaked(_context));
 		};
 
 		HRESULT result = createDevice();
@@ -308,6 +611,36 @@ public:
         _maxSupportedFeatureLevel = _device->GetFeatureLevel(); // TODO: this can be off
 
         ASSUME(_device != nullptr && _context != nullptr);
+
+		D3D11_BUFFER_DESC bd;
+		bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+		bd.ByteWidth = D3D11_REQ_CONSTANT_BUFFER_ELEMENT_COUNT * 16;
+		bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+		bd.MiscFlags = 0;
+		bd.StructureByteStride = 0;
+		bd.Usage = D3D11_USAGE_DYNAMIC;
+		result = _device->CreateBuffer(&bd, nullptr, AddressOfNaked(_uniformBuffer));
+		if (FAILED(result))
+		{
+			env.logger.Error("Failed to create uniform buffer, error %s\n", ConvertDirectXErrToString(result));
+			return;
+		}
+
+		_context->VSSetConstantBuffers(0, 1, AddressOfNaked(_uniformBuffer));
+		_context->PSSetConstantBuffers(0, 1, AddressOfNaked(_uniformBuffer));
+		if (_featureLevel >= D3D_FEATURE_LEVEL_10_0)
+		{
+			_context->GSSetConstantBuffers(0, 1, AddressOfNaked(_uniformBuffer));
+			_context->CSSetConstantBuffers(0, 1, AddressOfNaked(_uniformBuffer));
+
+			if (_featureLevel >= D3D_FEATURE_LEVEL_11_0)
+			{
+				_context->DSSetConstantBuffers(0, 1, AddressOfNaked(_uniformBuffer));
+				_context->HSSetConstantBuffers(0, 1, AddressOfNaked(_uniformBuffer));
+			}
+		}
+
+		_cube = Cube(env.logger, _device.get(), _context.get(), _uniformBuffer.get());
         
         env.logger.Info("Finished initialization\n");
     }
@@ -323,9 +656,9 @@ public:
     }
 
 private:
-    void AddCamera(EntityID id, const Camera &data)
+    void AddCamera(EntityID id, const Camera &data, const CameraTransform &transform)
     {
-        _cameras.emplace_front(id, data);
+        _cameras.emplace_front(id, data, transform);
     }
 
     void RemoveCamera(EntityID id)
@@ -390,11 +723,41 @@ private:
         UNREACHABLE;
     }
 
+	void CameraPositionChanged(EntityID id, const Position &newPosition)
+	{
+		for (auto &camera : _cameras)
+		{
+			if (camera.id == id)
+			{
+				camera.transform.Position(newPosition.position);
+				return;
+			}
+		}
+
+		UNREACHABLE;
+	}
+
+	void CameraRotationChanged(EntityID id, const Rotation &newRotation)
+	{
+		for (auto &camera : _cameras)
+		{
+			if (camera.id == id)
+			{
+				camera.transform.Rotation(newRotation.rotation.ToEuler());
+				return;
+			}
+		}
+
+		UNREACHABLE;
+	}
+
 private:
     std::forward_list<DX11Camera> _cameras{};
     COMUniquePtr<ID3D11Device> _device{};
     COMUniquePtr<ID3D11DeviceContext> _context{};
     D3D_FEATURE_LEVEL _featureLevel{}, _maxSupportedFeatureLevel{};
+	COMUniquePtr<ID3D11Buffer> _uniformBuffer{};
+	Cube _cube{};
 };
 
 unique_ptr<Renderer> RendererDX11System::New()
@@ -612,7 +975,7 @@ NOINLINE const char *ConvertDirectXErrToString(HRESULT hresult)
     }
 }
 
-DX11Window::DX11Window(DX11Window &&source) : 
+DX11Window::DX11Window(DX11Window &&source) noexcept : 
     isChanged(source.isChanged),
     window(source.window),
     hwnd(move(source.hwnd)),
@@ -626,7 +989,7 @@ DX11Window::DX11Window(DX11Window &&source) :
     ASSUME(this != &source);
 }
 
-DX11Window &DX11Window::operator = (DX11Window &&source)
+DX11Window &DX11Window::operator = (DX11Window &&source) noexcept
 {
     ASSUME(this != &source);
 
@@ -699,39 +1062,39 @@ bool DX11Window::MakeWindowAssociation(LoggerWrapper &logger)
         };
 
         COMUniquePtr<IDXGIDevice> dxgiDevice;
-        if (HRESULT hresult = device->QueryInterface(__uuidof(IDXGIDevice), reinterpret_cast<void **>(&dxgiDevice)) != S_OK)
+        if (HRESULT hresult = device->QueryInterface(__uuidof(IDXGIDevice), reinterpret_cast<void **>(AddressOfNaked(dxgiDevice))); hresult != S_OK)
         {
-            logger.Error("CreateWindowAssociation: failed to get DXGI device with error 0x%h %s\n", hresult, ConvertDirectXErrToString(hresult));
+            logger.Error("CreateWindowAssociation: failed to get DXGI device with error 0x%Xl %s\n", hresult, ConvertDirectXErrToString(hresult));
             procError();
             return false;
         }
 
         COMUniquePtr<IDXGIAdapter> dxgiAdapter;
-        if (HRESULT hresult = dxgiDevice->GetParent(__uuidof(IDXGIAdapter), reinterpret_cast<void **>(&dxgiAdapter)) != S_OK)
+        if (HRESULT hresult = dxgiDevice->GetParent(__uuidof(IDXGIAdapter), reinterpret_cast<void **>(AddressOfNaked(dxgiAdapter))); hresult != S_OK)
         {
-            logger.Error("CreateWindowAssociation: failed to get DXGI adapter with error 0x%h %s\n", hresult, ConvertDirectXErrToString(hresult));
+            logger.Error("CreateWindowAssociation: failed to get DXGI adapter with error 0x%Xl %s\n", hresult, ConvertDirectXErrToString(hresult));
             procError();
             return false;
         }
 
         COMUniquePtr<IDXGIFactory> dxgiFactory;
-        if (HRESULT hresult = dxgiAdapter->GetParent(__uuidof(IDXGIFactory), reinterpret_cast<void **>(&dxgiFactory)) != S_OK)
+        if (HRESULT hresult = dxgiAdapter->GetParent(__uuidof(IDXGIFactory), reinterpret_cast<void **>(AddressOfNaked(dxgiFactory))); hresult != S_OK)
         {
-            logger.Error("CreateWindowAssociation: failed to get DXGI factory with error 0x%h %s\n", hresult, ConvertDirectXErrToString(hresult));
+            logger.Error("CreateWindowAssociation: failed to get DXGI factory with error 0x%Xl %s\n", hresult, ConvertDirectXErrToString(hresult));
             procError();
             return false;
         }
 
-        if (HRESULT hresult = dxgiFactory->CreateSwapChain(device, &sd, reinterpret_cast<IDXGISwapChain **>(&swapChain)) != S_OK)
+        if (HRESULT hresult = dxgiFactory->CreateSwapChain(device, &sd, reinterpret_cast<IDXGISwapChain **>(AddressOfNaked(swapChain))); hresult != S_OK)
         {
-            logger.Error("CreateWindowAssociation: create swap chain for the current window failed with error 0x%h %s\n", hresult, ConvertDirectXErrToString(hresult));
+            logger.Error("CreateWindowAssociation: create swap chain for the current window failed with error 0x%Xl %s\n", hresult, ConvertDirectXErrToString(hresult));
             procError();
             return false;
         }
 
-        if (HRESULT hresult = dxgiFactory->MakeWindowAssociation(*hwnd, DXGI_MWA_NO_WINDOW_CHANGES) != S_OK)
+        if (HRESULT hresult = dxgiFactory->MakeWindowAssociation(*hwnd, DXGI_MWA_NO_WINDOW_CHANGES); hresult != S_OK)
         {
-            logger.Error("CreateWindowAssociation: failed to make window association with error 0x%h %s\n", hresult, ConvertDirectXErrToString(hresult));
+            logger.Error("CreateWindowAssociation: failed to make window association with error 0x%Xl %s\n", hresult, ConvertDirectXErrToString(hresult));
         }
 
         currentFullScreen = false;
@@ -761,22 +1124,22 @@ bool DX11Window::CreateWindowRenderTargetView(LoggerWrapper &logger)
         return false;
     }
 
-    if (HRESULT hresult = swapChain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, 0) != S_OK)
+    if (HRESULT hresult = swapChain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, 0); hresult != S_OK)
     {
-        logger.Error("CreateWindowRenderTargetView: failed to resize swap chain's buffers with error 0x%h %s\n", hresult, ConvertDirectXErrToString(hresult));
+        logger.Error("CreateWindowRenderTargetView: failed to resize swap chain's buffers with error 0x%Xl %s\n", hresult, ConvertDirectXErrToString(hresult));
         return false;
     }
 
     COMUniquePtr<ID3D11Texture2D> backBufferTexture;
-    if (HRESULT hresult = swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void **>(&backBufferTexture)) != S_OK)
+    if (HRESULT hresult = swapChain->GetBuffer(0, __uuidof(ID3D11Texture2D), reinterpret_cast<void **>(AddressOfNaked(backBufferTexture))); hresult != S_OK)
     {
-        logger.Error("CreateWindowRenderTargetView: get back buffer for the current window's swap chain failed with error 0x%h %s\n", hresult, ConvertDirectXErrToString(hresult));
+        logger.Error("CreateWindowRenderTargetView: get back buffer for the current window's swap chain failed with error 0x%Xl %s\n", hresult, ConvertDirectXErrToString(hresult));
         return false;
     }
 
-    if (HRESULT hresult = device->CreateRenderTargetView(backBufferTexture.get(), 0, reinterpret_cast<ID3D11RenderTargetView **>(&renderTargetView)) != S_OK)
+    if (HRESULT hresult = device->CreateRenderTargetView(backBufferTexture.get(), 0, AddressOfNaked(renderTargetView)); hresult != S_OK)
     {
-        logger.Error("CreateWindowRenderTargetView: create render target view for the current window failed with error 0x%h %s\n", hresult, ConvertDirectXErrToString(hresult));
+        logger.Error("CreateWindowRenderTargetView: create render target view for the current window failed with error 0x%Xl %s\n", hresult, ConvertDirectXErrToString(hresult));
         return false;
     }
 
@@ -817,9 +1180,9 @@ bool DX11Window::HandleSizeFullScreenChanges(LoggerWrapper &logger)
     {
         renderTargetView = {};
 
-        if (HRESULT hresult = swapChain->ResizeTarget(&mode) != S_OK)
+        if (HRESULT hresult = swapChain->ResizeTarget(&mode); hresult != S_OK)
         {
-            logger.Error("HandleWindowSizeFullScreenChanges: swap chain's ResizeTarget failed, error 0x%h %s\n", hresult, ConvertDirectXErrToString(hresult));
+            logger.Error("HandleWindowSizeFullScreenChanges: swap chain's ResizeTarget failed, error 0x%Xl %s\n", hresult, ConvertDirectXErrToString(hresult));
         }
         else
         {
@@ -834,9 +1197,9 @@ bool DX11Window::HandleSizeFullScreenChanges(LoggerWrapper &logger)
         prevFocus = SetFocus(*hwnd);
 
         //  will trigger a WM_SIZE event that can change current window's size
-        if (HRESULT hresult = swapChain->SetFullscreenState(window->isFullscreen ? TRUE : FALSE, 0) != S_OK)
+        if (HRESULT hresult = swapChain->SetFullscreenState(window->isFullscreen ? TRUE : FALSE, 0); hresult != S_OK)
         {
-            logger.Error("HandleWindowSizeFullScreenChanges: failed to change fullscreen state of the swap chain, error 0x%h %s\n", hresult, ConvertDirectXErrToString(hresult));
+            logger.Error("HandleWindowSizeFullScreenChanges: failed to change fullscreen state of the swap chain, error 0x%Xl %s\n", hresult, ConvertDirectXErrToString(hresult));
         }
         else
         {
@@ -846,9 +1209,9 @@ bool DX11Window::HandleSizeFullScreenChanges(LoggerWrapper &logger)
 
         mode.RefreshRate.Denominator = 0;
         mode.RefreshRate.Numerator = 0;
-        if (HRESULT hresult = swapChain->ResizeTarget(&mode) != S_OK)
+        if (HRESULT hresult = swapChain->ResizeTarget(&mode); hresult != S_OK)
         {
-            logger.Error("HandleWindowSizeFullScreenChanges: second swap chain's ResizeTarget failed, error 0x%h %s\n", hresult, ConvertDirectXErrToString(hresult));
+            logger.Error("HandleWindowSizeFullScreenChanges: second swap chain's ResizeTarget failed, error 0x%Xl %s\n", hresult, ConvertDirectXErrToString(hresult));
         }
         else
         {

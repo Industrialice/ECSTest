@@ -613,7 +613,8 @@ public:
 
             string name = "Entity"s + std::to_string(id.Hash());
             Name n;
-            MemOps::Copy(n.name.data(), name.c_str(), n.name.size());
+            MemOps::Copy(n.name.data(), name.c_str(), std::min(name.size() + 1, n.name.size()));
+			n.name.back() = '\0';
             entity.AddComponent(n);
 
             stream.AddEntity(id, move(entity));

@@ -3,73 +3,28 @@
 
 using namespace ECSTest;
 
-ComponentID::ComponentID(ui32 id) : _id(id)
-{}
-
 ui32 ComponentID::ID() const
 {
     return _id;
 }
 
-bool ComponentID::IsValid() const
-{
-    return _id != invalidId;
-}
-
-#ifndef SPACESHIP_SUPPORTED
-	bool ComponentID::operator == (const ComponentID &other) const
-	{
-		return _id == other._id;
-	}
-
-	bool ComponentID::operator != (const ComponentID &other) const
-	{
-		return _id != other._id;
-	}
-
-	bool ComponentID::operator < (const ComponentID &other) const
-	{
-		return _id < other._id;
-	}
-
-	bool ComponentID::operator <= (const ComponentID &other) const
-	{
-		return _id <= other._id;
-	}
-
-	bool ComponentID::operator > (const ComponentID &other) const
-	{
-		return _id > other._id;
-	}
-
-	bool ComponentID::operator >= (const ComponentID &other) const
-	{
-		return _id >= other._id;
-	}
-#endif
-
-ComponentID::operator bool() const
-{
-	return IsValid();
-}
-
 ComponentID ComponentIDGenerator::Generate()
 {
-    auto id = ComponentID(_current.load());
-    _current.fetch_add(1);
-    return id;
+	auto id = ComponentID(_current.load());
+	_current.fetch_add(1);
+	return id;
 }
 
 ComponentID ComponentIDGenerator::LastGenerated() const
 {
-    return ComponentID(_current.load() - 1);
+	return ComponentID(_current.load() - 1);
 }
 
-ComponentIDGenerator::ComponentIDGenerator(ComponentIDGenerator &&source) : _current(source._current.load())
+ComponentIDGenerator::ComponentIDGenerator(ComponentIDGenerator &&source) noexcept : _current(source._current.load())
 {
 }
 
-ComponentIDGenerator &ComponentIDGenerator::operator = (ComponentIDGenerator &&source)
+ComponentIDGenerator &ComponentIDGenerator::operator = (ComponentIDGenerator &&source) noexcept
 {
     ASSUME(this != &source);
     _current.store(source._current.load());

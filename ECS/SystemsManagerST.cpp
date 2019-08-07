@@ -368,7 +368,7 @@ static void AssignComponentIDs(Array<SerializedComponent> components, ComponentI
 	}
 }
 
-void SystemsManagerST::Start(EntityIDGenerator &&idGenerator, vector<WorkerThread> &&workers, vector<unique_ptr<IEntitiesStream>> &&streams)
+void SystemsManagerST::Start(AssetsManager &&assetsManager, EntityIDGenerator &&idGenerator, vector<WorkerThread> &&workers, vector<unique_ptr<IEntitiesStream>> &&streams)
 {
 	ASSUME(_entitiesLocations.empty() && _schedulerThread.get_id() == std::thread::id{});
 
@@ -378,6 +378,7 @@ void SystemsManagerST::Start(EntityIDGenerator &&idGenerator, vector<WorkerThrea
 		workers.clear();
 	}
 
+	_assetsManager = move(assetsManager);
 	_entityIdGenerator = move(idGenerator);
 
 	_isStoppingExecution = false;
@@ -605,7 +606,7 @@ void SystemsManagerST::AddEntityToArchetypeGroup(const ArchetypeFull &archetype,
 	{
 		if (group.components[index].isUnique == false)
 		{
-			MemOps::Set(group.components[index].ids.get() + group.entitiesCount * group.components[index].stride, ComponentID::invalidId & 0xFF, sizeof(ComponentID) * group.components[index].stride);
+			MemOps::Set(group.components[index].ids.get() + group.entitiesCount * group.components[index].stride, ComponentID::InvalidID() & 0xFF, sizeof(ComponentID) * group.components[index].stride);
 		}
 	}
 
@@ -848,7 +849,8 @@ void SystemsManagerST::ExecutePipeline(PipelineData &pipeline, TimeDifference ti
             _componentIdGenerator,
             _tempMessageBuilder,
             LoggerWrapper(_logger.get(), managed.system->GetTypeName()),
-            managed.system->GetKeyController()
+            managed.system->GetKeyController(),
+			_assetsManager
         };
         env.messageBuilder.SourceName(managed.system->GetTypeId().Name());
 
@@ -902,7 +904,8 @@ void SystemsManagerST::ExecutePipeline(PipelineData &pipeline, TimeDifference ti
             _componentIdGenerator,
             _tempMessageBuilder,
             LoggerWrapper(_logger.get(), managed.system->GetTypeName()),
-            managed.system->GetKeyController()
+            managed.system->GetKeyController(),
+			_assetsManager
         };
         env.messageBuilder.SourceName(managed.system->GetTypeId().Name());
 

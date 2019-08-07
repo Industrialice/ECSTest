@@ -433,7 +433,7 @@ namespace
 		};
 
 		constexpr auto testSystemRequestsTuple = TestSystem::AcquireRequestedComponents();
-		constexpr auto testSystemRequests = _SystemHelperFuncs::ComponentsTupleToRequests(testSystemRequestsTuple);
+		constexpr auto testSystemRequests = _SystemAuxFuncs::ComponentsTupleToRequests(testSystemRequestsTuple);
 
 		static_assert(matches(testSystemRequests.requiredWithoutData, MakeArray<TagTest0, TagTest1, ComponentDateOfBirth>()));
 		static_assert(matches(testSystemRequests.requiredWithData, MakeArray<ComponentArtist, ComponentProgrammer, ComponentSpouse, ComponentCompany>()));
@@ -451,7 +451,7 @@ namespace
 		static_assert(testSystemRequests.environmentIndex == 3);
 
 		constexpr auto testSystem2RequestsTuple = TestSystem2::AcquireRequestedComponents();
-		constexpr auto testSystem2Requests = _SystemHelperFuncs::ComponentsTupleToRequests(testSystem2RequestsTuple);
+		constexpr auto testSystem2Requests = _SystemAuxFuncs::ComponentsTupleToRequests(testSystem2RequestsTuple);
 
 		static_assert(matches(testSystem2Requests.requiredWithoutData, MakeArray<TagTest0, TagTest1, TagTest2>()));
 		static_assert(matches(testSystem2Requests.requiredWithData, MakeArray<>()));
@@ -469,7 +469,7 @@ namespace
 		static_assert(testSystem2Requests.environmentIndex == nullopt);
 		
 		constexpr auto testSystem3RequestsTuple = TestSystem3::AcquireRequestedComponents();
-		constexpr auto testSystem3Requests = _SystemHelperFuncs::ComponentsTupleToRequests(testSystem3RequestsTuple);
+		constexpr auto testSystem3Requests = _SystemAuxFuncs::ComponentsTupleToRequests(testSystem3RequestsTuple);
 
 		static_assert(matches(testSystem3Requests.requiredWithoutData, MakeArray<>()));
 		static_assert(matches(testSystem3Requests.requiredWithData, MakeArray<>()));
@@ -487,7 +487,7 @@ namespace
 		static_assert(testSystem3Requests.environmentIndex == nullopt);
 
 		constexpr auto testSystem4RequestsTuple = TestSystem4::AcquireRequestedComponents();
-		constexpr auto testSystem4Requests = _SystemHelperFuncs::ComponentsTupleToRequests(testSystem4RequestsTuple);
+		constexpr auto testSystem4Requests = _SystemAuxFuncs::ComponentsTupleToRequests(testSystem4RequestsTuple);
 		
 		static_assert(matches(testSystem4Requests.requiredWithoutData, MakeArray<>()));
 		static_assert(matches(testSystem4Requests.requiredWithData, MakeArray<ComponentSpouse, ComponentCompany>()));

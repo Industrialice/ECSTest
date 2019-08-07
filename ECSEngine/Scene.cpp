@@ -34,7 +34,7 @@ unique_ptr<IEntitiesStream> Scene::Create(EntityIDGenerator &idGenerator)
     camera.nearPlane = 0.1f;
     camera.fov = 75.0f;
     camera.isClearDepth = false;
-    camera.projectionType = Camera::ProjectionType::Perspective;
+    camera.projectionType = Camera::ProjectionTypet::Perspective;
 	camera.clearWith = clearColor;
     entity.AddComponent(camera);
 

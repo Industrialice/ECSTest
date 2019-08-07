@@ -22,10 +22,10 @@ WorkerThread::~WorkerThread()
     }
 }
 
-WorkerThread::WorkerThread(WorkerThread &&source) : _threadData(source._threadData.release())
+WorkerThread::WorkerThread(WorkerThread &&source) noexcept : _threadData(source._threadData.release())
 {}
 
-WorkerThread &WorkerThread::operator = (WorkerThread &&source)
+WorkerThread &WorkerThread::operator = (WorkerThread &&source) noexcept
 {
     ASSUME(this != &source);
     if (_threadData)

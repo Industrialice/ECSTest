@@ -9,7 +9,7 @@ namespace ECSTest
         return left.type < right.type;
     }
 	
-    struct _SystemHelperFuncs
+    struct _SystemAuxFuncs
     {
         template <typename... T> struct GetComponentType
         {
@@ -784,7 +784,7 @@ namespace ECSTest
 	{
 		[[nodiscard]] static constexpr auto AcquireRequestedComponents()
 		{
-			return _SystemHelperFuncs::AcquireRequestedComponents<decltype(&SystemType::Accept)>();
+			return _SystemAuxFuncs::AcquireRequestedComponents<decltype(&SystemType::Accept)>();
 		}
 
 	public:
@@ -801,7 +801,7 @@ namespace ECSTest
 		[[nodiscard]] virtual const Requests &RequestedComponents() const override final
 		{
 			static constexpr auto requestedComponentsTuple = AcquireRequestedComponents();
-			static constexpr Requests requestedComponentsArray = _SystemHelperFuncs::ComponentsTupleToRequests(requestedComponentsTuple);
+			static constexpr Requests requestedComponentsArray = _SystemAuxFuncs::ComponentsTupleToRequests(requestedComponentsTuple);
 			static_assert(requestedComponentsArray.entityIDIndex == nullopt, "Indirect systems cannot request EntityID");
 			static_assert(requestedComponentsArray.environmentIndex == nullopt, "Indirect systems cannot request Environment");
 			return requestedComponentsArray;
@@ -812,7 +812,7 @@ namespace ECSTest
 	{
 		[[nodiscard]] static constexpr auto AcquireRequestedComponents()
 		{
-			return _SystemHelperFuncs::AcquireRequestedComponents<decltype(&SystemType::Accept)>();
+			return _SystemAuxFuncs::AcquireRequestedComponents<decltype(&SystemType::Accept)>();
 		}
 
 	public:
@@ -829,7 +829,7 @@ namespace ECSTest
 		[[nodiscard]] virtual const Requests &RequestedComponents() const override final
 		{
 			static constexpr auto requestedComponentsTuple = AcquireRequestedComponents();
-			static constexpr Requests requestedComponentsArray = _SystemHelperFuncs::ComponentsTupleToRequests(requestedComponentsTuple);
+			static constexpr Requests requestedComponentsArray = _SystemAuxFuncs::ComponentsTupleToRequests(requestedComponentsTuple);
 			return requestedComponentsArray;
 		}
 
@@ -837,7 +837,7 @@ namespace ECSTest
 		{
 			using types = typename FunctionInfo::Info<decltype(&SystemType::Accept)>::args;
 			static constexpr uiw count = tuple_size_v<types>;
-			_SystemHelperFuncs::CallAccept<types>(static_cast<SystemType *>(this), array, make_index_sequence<count>());
+			_SystemAuxFuncs::CallAccept<types>(static_cast<SystemType *>(this), array, make_index_sequence<count>());
 		}
 	};
 }
