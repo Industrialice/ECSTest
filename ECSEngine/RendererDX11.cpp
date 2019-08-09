@@ -486,113 +486,30 @@ class MeshRendererObject
 public:
 	MeshRendererObject() = default;
 
-	MeshRendererObject(LoggerWrapper &logger, ID3D11Device *device, LayoutManager &layoutManager)
+	MeshRendererObject(System::Environment &env, ID3D11Device *device, LayoutManager &layoutManager, const MeshRenderer &meshRenderer)
 	{
 		bool isMaterialCreated = false;
-		_material = RenderingMaterial(logger, device, isMaterialCreated);
+		_material = RenderingMaterial(env.logger, device, isMaterialCreated);
 		if (!isMaterialCreated)
 		{
 			return;
 		}
 
-		static constexpr f32 transparency = 0.5f;
-
-		static constexpr Vector4 frontColor{1, 1, 1, transparency};
-		static constexpr Vector4 upColor{0, 1, 1, transparency};
-		static constexpr Vector4 backColor{0, 0, 1, transparency};
-		static constexpr Vector4 downColor{1, 0, 0, transparency};
-		static constexpr Vector4 leftColor{1, 1, 0, transparency};
-		static constexpr Vector4 rightColor{1, 0, 1, transparency};
-
-		struct Vertex
+		const MeshAsset *meshAsset = env.assetsManager.Load<MeshAsset>(meshRenderer.mesh);
+		if (!meshAsset)
 		{
-			Vector3 position;
-			Vector4 color;
-		};
-
-		static constexpr Vertex vertexArrayData[]
-		{
-			// front
-			{{-0.5f, -0.5f, -0.5f}, frontColor},
-			{{-0.5f, 0.5f, -0.5f}, frontColor},
-			{{0.5f, -0.5f, -0.5f}, frontColor},
-			{{0.5f, 0.5f, -0.5f}, frontColor},
-
-			// up
-			{{-0.5f, 0.5f, -0.5f}, upColor},
-			{{-0.5f, 0.5f, 0.5f}, upColor},
-			{{0.5f, 0.5f, -0.5f}, upColor},
-			{{0.5f, 0.5f, 0.5f}, upColor},
-
-			// back
-			{{0.5f, -0.5f, 0.5f}, backColor},
-			{{0.5f, 0.5f, 0.5f}, backColor},
-			{{-0.5f, -0.5f, 0.5f}, backColor},
-			{{-0.5f, 0.5f, 0.5f}, backColor},
-
-			// down
-			{{-0.5f, -0.5f, 0.5f}, downColor},
-			{{-0.5f, -0.5f, -0.5f}, downColor},
-			{{0.5f, -0.5f, 0.5f}, downColor},
-			{{0.5f, -0.5f, -0.5f}, downColor},
-
-			// left
-			{{-0.5f, -0.5f, 0.5f}, leftColor},
-			{{-0.5f, 0.5f, 0.5f}, leftColor},
-			{{-0.5f, -0.5f, -0.5f}, leftColor},
-			{{-0.5f, 0.5f, -0.5f}, leftColor},
-
-			// right
-			{{0.5f, -0.5f, -0.5f}, rightColor},
-			{{0.5f, 0.5f, -0.5f}, rightColor},
-			{{0.5f, -0.5f, 0.5f}, rightColor},
-			{{0.5f, 0.5f, 0.5f}, rightColor},
-		};
-
-		ui16 indexes[36];
-		for (ui32 index = 0; index < 6; ++index)
-		{
-			indexes[index * 6 + 0] = index * 4 + 0;
-			indexes[index * 6 + 1] = index * 4 + 1;
-			indexes[index * 6 + 2] = index * 4 + 3;
-
-			indexes[index * 6 + 3] = index * 4 + 2;
-			indexes[index * 6 + 4] = index * 4 + 0;
-			indexes[index * 6 + 5] = index * 4 + 3;
+			env.logger.Error("MeshRendererObject failed to load mesh asset\n");
+			return;
 		}
-
-		auto data = make_unique<byte[]>(sizeof(vertexArrayData) + sizeof(indexes));
-		MemOps::Copy(data.get(), reinterpret_cast<const byte *>(vertexArrayData), sizeof(vertexArrayData));
-		MemOps::Copy(data.get() + sizeof(vertexArrayData), reinterpret_cast<const byte *>(indexes), sizeof(indexes));
-
-		Mesh::SubMeshInfo subMesh;
-		subMesh.vertexCount = CountOf(vertexArrayData);
-		subMesh.indexCount = 36;
-
-		Mesh::VertexAttribute vertexAttributes[] =
-		{
-			{"POSITION", ColorFormatt::R32G32B32_Float},
-			{"COLOR", ColorFormatt::R32G32B32A32_Float}
-		};
-
-		Mesh mesh;
-		mesh.isSkinned = false;
-		mesh.subMeshInfos.push_back(subMesh);
-		mesh.vertexAttributes.assign(std::begin(vertexAttributes), std::end(vertexAttributes));
-
-		MeshAsset meshAsset;
-		meshAsset.assetId = {};
-		meshAsset.desc = mesh;
-		meshAsset.data = move(data);
 
 		bool isMeshCreated = false;
-		_mesh = MeshResource(logger, device, meshAsset, layoutManager, Array<byte>(static_cast<byte *>(_material.VertexShaderCode()->GetBufferPointer()), _material.VertexShaderCode()->GetBufferSize()), isMeshCreated);
+		_mesh = MeshResource(env.logger, device, *meshAsset, layoutManager, Array<byte>(static_cast<byte *>(_material.VertexShaderCode()->GetBufferPointer()), _material.VertexShaderCode()->GetBufferSize()), isMeshCreated);
 		if (!isMaterialCreated)
 		{
 			return;
 		}
 
-		logger.Info("Finished creating cube\n");
+		env.logger.Info("Finished creating cube\n");
 	}
 
 	void Draw(ID3D11DeviceContext *context, ID3D11Buffer *uniformBuffer, System::Environment &env, const Matrix4x4 &viewProjectionMatrix)
@@ -648,7 +565,7 @@ public:
 				auto meshRenderer = entry.FindComponent<MeshRenderer>();
 				if (meshRenderer)
 				{
-					AddMeshRenderer(env.logger, entry.entityID, *meshRenderer, entry.GetComponent<Position>().position, entry.GetComponent<Rotation>().rotation);
+					AddMeshRenderer(env, entry.entityID, *meshRenderer, entry.GetComponent<Position>().position, entry.GetComponent<Rotation>().rotation);
 				}
 			}
         }
@@ -667,7 +584,7 @@ public:
 		{
 			for (auto &entry : stream)
 			{
-				AddMeshRenderer(env.logger, entry.entityID, entry.added.Cast<MeshRenderer>(), entry.GetComponent<Position>().position, entry.GetComponent<Rotation>().rotation);
+				AddMeshRenderer(env, entry.entityID, entry.added.Cast<MeshRenderer>(), entry.GetComponent<Position>().position, entry.GetComponent<Rotation>().rotation);
 			}
 		}
         else if (stream.Type() == Position::GetTypeId() || stream.Type() == Rotation::GetTypeId())
@@ -951,9 +868,9 @@ public:
     }
 
 private:
-	void AddMeshRenderer(LoggerWrapper &logger, EntityID id, MeshRenderer meshRenderer, const Vector3 &position, const Quaternion &rotation)
+	void AddMeshRenderer(Environment &env, EntityID id, const MeshRenderer &meshRenderer, const Vector3 &position, const Quaternion &rotation)
 	{
-		auto insertResult = _meshRendererObjects.insert({id, MeshRendererObject(logger, _device.get(), _layoutManager)});
+		auto insertResult = _meshRendererObjects.insert({id, MeshRendererObject(env, _device.get(), _layoutManager, meshRenderer)});
 		ASSUME(insertResult.second);
 		insertResult.first->second.SetPosition(position);
 		insertResult.first->second.SetRotation(rotation);

@@ -28,7 +28,7 @@ namespace ECSEngine
 		using AssetId::AssetId;
 	};
 
-	struct MeshAsset
+	struct MeshAsset : TypeIdentifiable<MeshAsset>
 	{
 		MeshAssetId assetId{};
 		Mesh desc{};

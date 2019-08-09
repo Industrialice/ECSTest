@@ -115,7 +115,7 @@ namespace ECSEngine
 		using AssetId::AssetId;
 	};
 
-	struct TextureAsset
+	struct TextureAsset : TypeIdentifiable<TextureAsset>
 	{
 		TextureAssetId assetId{};
 		Texture desc{};

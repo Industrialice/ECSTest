@@ -37,7 +37,7 @@ namespace ECSTest
 		std::unordered_map<TypeId, AssetLoaderFuncType> _assetLoaders{};
 
 	public:
-		template <typename T> const T *Load(AssetId id)
+		template <typename T, typename = decltype(T::GetTypeId)> const T *Load(AssetId id)
 		{
 			auto loadedAssetIt = _loadedAssets.find(id);
 			if (loadedAssetIt != _loadedAssets.end())
@@ -57,7 +57,7 @@ namespace ECSTest
 				return nullptr;
 			}
 
-			auto loadedAsset = assetLoaderIt->second(AssetId);
+			auto loadedAsset = assetLoaderIt->second(id, T::GetTypeId());
 			if (loadedAsset.data == nullptr)
 			{
 				SOFTBREAK;

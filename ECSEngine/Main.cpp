@@ -4,6 +4,7 @@
 #include "CustomControlActions.hpp"
 #include "CameraMovementSystem.hpp"
 #include "ObjectsMoverSystem.hpp"
+#include "AssetsLoaders.hpp"
 
 using namespace ECSEngine;
 
@@ -59,7 +60,11 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
     EntityIDGenerator idGenerator;
     auto stream = Scene::Create(idGenerator);
 
-    manager->Start(move(idGenerator), move(workers), move(stream));
+	AssetsManager assetsManager;
+	AssetsLoaders assetsLoaders;
+	assetsLoaders.RegisterLoaders(assetsManager);
+
+    manager->Start(move(assetsManager), move(idGenerator), move(workers), move(stream));
 
     for (;;)
     {
