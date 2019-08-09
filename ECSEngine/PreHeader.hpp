@@ -8,6 +8,7 @@
 
 #include <PreHeader.hpp>
 #include <forward_list>
+#include <unordered_set>
 #include <SystemsManager.hpp>
 #include <KeyController.hpp>
 

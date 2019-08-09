@@ -16,6 +16,8 @@ static optional<HWND> CreateSystemWindow(LoggerWrapper &logger, const string &ti
 static LRESULT WINAPI MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 static HCURSOR AcquireCursor(Window::CursorTypet type);
 NOINLINE static const char *ConvertDirectXErrToString(HRESULT hresult);
+static DXGI_FORMAT ColorFormatToDirectX(ColorFormatt format);
+static uiw ColorFormatSizeOf(ColorFormatt format);
 
 struct _COMDeleter
 {
@@ -88,13 +90,207 @@ struct DX11Camera
     DX11Camera &operator = (DX11Camera &&) = default;
 };
 
-class Cube
+class LayoutManager
+{
+	static auto DescToTie(const D3D11_INPUT_ELEMENT_DESC &desc)
+	{
+		return std::tie(desc.Format, desc.AlignedByteOffset, desc.InputSlot, desc.InputSlotClass, desc.InstanceDataStepRate, desc.SemanticIndex, desc.SemanticName);
+	}
+
+	struct StoredElement
+	{
+		ui32 hash{};
+		vector<D3D11_INPUT_ELEMENT_DESC> descs{};
+		COMUniquePtr<ID3D11InputLayout> inputLayout{};
+	};
+
+public:
+	ID3D11InputLayout *Create(LoggerWrapper &logger, ID3D11Device *device, Array<D3D11_INPUT_ELEMENT_DESC> descs, Array<byte> shaderCode)
+	{
+		ui32 hash = descs.size();
+		for (uiw index = 0; index < descs.size(); ++index)
+		{
+			hash += Hash::FNVHash<Hash::Precision::P32>(descs[index].SemanticName) * (index + 1);
+		}
+
+		auto isEqual = [hash, &descs](const StoredElement &stored)
+		{
+			if (hash != stored.hash)
+			{
+				return false;
+			}
+
+			if (descs.size() != stored.descs.size())
+			{
+				return false;
+			}
+
+			for (uiw index = 0; index < descs.size(); ++index)
+			{
+				if (DescToTie(descs[index]) != DescToTie(stored.descs[index]))
+				{
+					return false;
+				}
+			}
+
+			return true;
+		};
+
+		for (const auto &stored : _storage)
+		{
+			if (isEqual(stored))
+			{
+				return stored.inputLayout.get();
+			}
+		}
+
+		StoredElement element;
+
+		if (HRESULT result = device->CreateInputLayout(descs.data(), descs.size(), shaderCode.data(), shaderCode.size(), AddressOfNaked(element.inputLayout)); result != S_OK)
+		{
+			logger.Error("LayoutManager.Create -> creating input layout failed, error %s\n", ConvertDirectXErrToString(result));
+			return nullptr;
+		}
+
+		element.descs.assign(descs.begin(), descs.end());
+		element.hash = hash;
+
+		_storage.emplace_back(move(element));
+		logger.Info("LayoutManager.Create -> created new input layout\n");
+
+		return _storage.back().inputLayout.get();
+	}
+
+private:
+	vector<StoredElement> _storage{};
+};
+
+class MeshResource
 {
 public:
-	Cube() = default;
-
-	Cube(LoggerWrapper &logger, ID3D11Device *device, ID3D11DeviceContext *context, ID3D11Buffer *uniformBuffer) : _device(device), _context(context), _uniformBuffer(uniformBuffer)
+	struct SubmeshInfo
 	{
+		ui32 indexCount{};
+		ui32 startIndex{};
+	};
+
+	MeshResource() = default;
+	MeshResource(MeshResource &&) = default;
+	MeshResource &operator = (MeshResource &&) = default;
+
+	MeshResource(LoggerWrapper &logger, ID3D11Device *device, const MeshAsset &mesh, LayoutManager &layoutManager, Array<byte> shaderCodeForLayout, bool &isMeshCreated)
+	{
+		isMeshCreated = false;
+
+		D3D11_INPUT_ELEMENT_DESC inputLayoutDesc[D3D11_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT];
+		if (mesh.desc.vertexAttributes.size() > D3D11_IA_VERTEX_INPUT_RESOURCE_SLOT_COUNT)
+		{
+			SOFTBREAK;
+			return;
+		}
+
+		_stride = 0;
+		for (uiw attrIndex = 0; attrIndex < mesh.desc.vertexAttributes.size(); ++attrIndex)
+		{
+			ColorFormatt format = mesh.desc.vertexAttributes[attrIndex].type;
+
+			_stride += ColorFormatSizeOf(format);
+
+			inputLayoutDesc[attrIndex].Format = ColorFormatToDirectX(format);
+			inputLayoutDesc[attrIndex].InputSlot = 0;
+			inputLayoutDesc[attrIndex].InputSlotClass = D3D11_INPUT_PER_VERTEX_DATA;
+			inputLayoutDesc[attrIndex].InstanceDataStepRate = 0;
+			inputLayoutDesc[attrIndex].SemanticIndex = 0;
+			inputLayoutDesc[attrIndex].SemanticName = mesh.desc.vertexAttributes[attrIndex].name.c_str();
+			inputLayoutDesc[attrIndex].AlignedByteOffset = D3D11_APPEND_ALIGNED_ELEMENT;
+		}
+
+		_inputLayout = layoutManager.Create(logger, device, Array(inputLayoutDesc, mesh.desc.vertexAttributes.size()), shaderCodeForLayout);
+		if (!_inputLayout)
+		{
+			return;
+		}
+
+		ui16 vertexCount = 0;
+		ui32 indexCount = 0;
+		for (const auto &subMesh : mesh.desc.subMeshInfos)
+		{
+			submeshInfos.push_back({.indexCount = subMesh.indexCount, .startIndex = indexCount});
+
+			ASSUME(subMesh.vertexCount && subMesh.indexCount);
+			ASSUME(subMesh.vertexCount <= ui16_max);
+			ASSUME(vertexCount < vertexCount + subMesh.vertexCount); // make sure there're no overflows
+
+			vertexCount += subMesh.vertexCount;
+			indexCount += subMesh.indexCount;
+		}
+
+		D3D11_BUFFER_DESC bufDesc =
+		{
+			vertexCount * _stride,
+			D3D11_USAGE_IMMUTABLE,
+			D3D11_BIND_VERTEX_BUFFER,
+			0,
+			0,
+			0
+		};
+		D3D11_SUBRESOURCE_DATA bufData;
+		bufData.pSysMem = mesh.data.get();
+		if (HRESULT result = device->CreateBuffer(&bufDesc, &bufData, AddressOfNaked(_vertexBuffer)); result != S_OK)
+		{
+			logger.Error("MeshResource -> creating vertex buffer failed, error %s\n", ConvertDirectXErrToString(result));
+			return;
+		}
+
+		bufDesc.ByteWidth = indexCount * sizeof(ui16);
+		bufDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+		bufData.pSysMem = mesh.data.get() + vertexCount * _stride;
+		if (HRESULT result = device->CreateBuffer(&bufDesc, &bufData, AddressOfNaked(_indexBuffer)); result != S_OK)
+		{
+			logger.Error("MeshResource -> creating index buffer failed, error %s\n", ConvertDirectXErrToString(result));
+			return;
+		}
+
+		isMeshCreated = true;
+	}
+
+	SubmeshInfo GetSubmeshInfo(uiw submeshIndex) const
+	{
+		return submeshInfos[submeshIndex];
+	}
+
+	void SetPipeline(ID3D11DeviceContext *context)
+	{
+		ASSUME(_inputLayout && _vertexBuffer && _indexBuffer);
+
+		UINT strides[] = {_stride};
+		UINT offsets[] = {0};
+
+		context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+		context->IASetInputLayout(_inputLayout);
+		context->IASetIndexBuffer(_indexBuffer.get(), DXGI_FORMAT_R16_UINT, 0);
+		context->IASetVertexBuffers(0, 1, AddressOfNaked(_vertexBuffer), strides, offsets);
+	}
+
+private:
+	ui32 _stride{};
+	ID3D11InputLayout *_inputLayout{};
+	COMUniquePtr<ID3D11Buffer> _vertexBuffer{};
+	COMUniquePtr<ID3D11Buffer> _indexBuffer{};
+	vector<SubmeshInfo> submeshInfos{};
+};
+
+class RenderingMaterial
+{
+public:
+	RenderingMaterial() = default;
+	RenderingMaterial(RenderingMaterial &&) = default;
+	RenderingMaterial &operator = (RenderingMaterial &&) = default;
+
+	RenderingMaterial(LoggerWrapper &logger, ID3D11Device *device, bool &isMaterialCreated)
+	{
+		isMaterialCreated = false;
+
 		D3D11_RASTERIZER_DESC rsDesc{};
 		rsDesc.AntialiasedLineEnable = false;
 		rsDesc.CullMode = D3D11_CULL_BACK;
@@ -106,9 +302,10 @@ public:
 		rsDesc.MultisampleEnable = false;
 		rsDesc.ScissorEnable = false;
 		rsDesc.SlopeScaledDepthBias = 0.0f;
-		if (HRESULT result = _device->CreateRasterizerState(&rsDesc, AddressOfNaked(_rsState)); result != S_OK)
+		if (HRESULT result = device->CreateRasterizerState(&rsDesc, AddressOfNaked(_rsState)); result != S_OK)
 		{
 			logger.Error("Failed to create rasterizer state, error %s\n", ConvertDirectXErrToString(result));
+			return;
 		}
 
 		D3D11_BLEND_DESC blendDesc{};
@@ -122,9 +319,10 @@ public:
 		blendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
 		blendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
 		blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
-		if (HRESULT result = _device->CreateBlendState(&blendDesc, AddressOfNaked(_blendState)); result != S_OK)
+		if (HRESULT result = device->CreateBlendState(&blendDesc, AddressOfNaked(_blendState)); result != S_OK)
 		{
 			logger.Error("Failed to create blend state, error %s\n", ConvertDirectXErrToString(result));
+			return;
 		}
 
 		const D3D11_DEPTH_STENCILOP_DESC stencilOpDesc = {D3D11_STENCIL_OP_KEEP, D3D11_STENCIL_OP_KEEP, D3D11_STENCIL_OP_KEEP, D3D11_COMPARISON_ALWAYS};
@@ -137,9 +335,164 @@ public:
 		dsDesc.StencilEnable = false;
 		dsDesc.StencilReadMask = D3D11_DEFAULT_STENCIL_READ_MASK;
 		dsDesc.StencilWriteMask = D3D11_DEFAULT_STENCIL_WRITE_MASK;
-		if (HRESULT result = _device->CreateDepthStencilState(&dsDesc, AddressOfNaked(_dsState)); result != S_OK)
+		if (HRESULT result = device->CreateDepthStencilState(&dsDesc, AddressOfNaked(_dsState)); result != S_OK)
 		{
 			logger.Error("Failed to create depth stencil state, error %s\n", ConvertDirectXErrToString(result));
+			return;
+		}
+
+		const char *vsCode = TOSTR(
+			cbuffer Uniforms : register(b0)
+		{
+			float4x4 ModelViewProjectionMatrix : packoffset(c0);
+		}
+
+		void VSMain(float4 pos : POSITION, float4 color : COLOR, out float4 outPos : SV_POSITION, out float4 outColor : COLOR)
+		{
+			outPos = mul(pos, ModelViewProjectionMatrix);
+			outColor = color;
+		}
+		);
+
+		const char *psCode = TOSTR(
+			float4 PSMain(float4 pos : SV_POSITION, float4 color : COLOR) : SV_TARGET
+			{
+				return color;
+			}
+		);
+
+#if defined(DEBUG)
+		const UINT compileFlags = D3DCOMPILE_DEBUG;
+#else
+		const UINT compileFlags = D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_OPTIMIZATION_LEVEL3 | D3DCOMPILE_SKIP_VALIDATION;
+#endif
+
+		D3D_FEATURE_LEVEL featureLevel = device->GetFeatureLevel();
+		auto featureLevelToTarget = [featureLevel]
+		{
+			switch (featureLevel)
+			{
+			case D3D_FEATURE_LEVEL_9_1:
+			case D3D_FEATURE_LEVEL_9_2:
+				return "xs_4_0_level_9_1";
+			case D3D_FEATURE_LEVEL_9_3:
+				return "xs_4_0_level_9_3";
+			case D3D_FEATURE_LEVEL_10_0:
+				return "xs_4_0";
+			case D3D_FEATURE_LEVEL_10_1:
+				return "xs_4_1";
+			case D3D_FEATURE_LEVEL_11_0:
+			case D3D_FEATURE_LEVEL_11_1:
+			case D3D_FEATURE_LEVEL_12_0:
+			case D3D_FEATURE_LEVEL_12_1:
+			default:
+				return "xs_5_0";
+			}
+		};
+
+		const char *featureLevelShaderStr = featureLevelToTarget();
+
+		COMUniquePtr<ID3DBlob> errors;
+		char shaderTarget[32];
+		strcpy_s(shaderTarget, featureLevelShaderStr);
+		shaderTarget[0] = 'v';
+		if (HRESULT result = D3DCompile(vsCode, strlen(vsCode), 0, nullptr, 0, "VSMain", shaderTarget, compileFlags, 0, AddressOfNaked(_vertexShaderCode), AddressOfNaked(errors)); result != S_OK)
+		{
+			if (errors)
+			{
+				logger.Error("Vertex shader compilation failed, error %s, compile errors %*s\n", ConvertDirectXErrToString(result), static_cast<i32>(errors->GetBufferSize()), static_cast<char *>(errors->GetBufferPointer()));
+			}
+			else
+			{
+				logger.Error("Vertex shader compilation failed, error %s\n", ConvertDirectXErrToString(result));
+			}
+			return;
+		}
+
+		if (HRESULT result = device->CreateVertexShader(_vertexShaderCode->GetBufferPointer(), _vertexShaderCode->GetBufferSize(), nullptr, AddressOfNaked(_vertexShader)); result != S_OK)
+		{
+			logger.Error("Vertex shader creation failed, error %s\n", ConvertDirectXErrToString(result));
+			return;
+		}
+
+		COMUniquePtr<ID3DBlob> pixelShaderCode;
+		errors = {};
+		shaderTarget[0] = 'p';
+		if (HRESULT result = D3DCompile(psCode, strlen(psCode), 0, nullptr, 0, "PSMain", shaderTarget, compileFlags, 0, AddressOfNaked(pixelShaderCode), AddressOfNaked(errors)); result != S_OK)
+		{
+			if (errors)
+			{
+				logger.Error("Pixel shader compilation failed, error %s, compile errors %*s\n", ConvertDirectXErrToString(result), static_cast<i32>(errors->GetBufferSize()), static_cast<char *>(errors->GetBufferPointer()));
+			}
+			else
+			{
+				logger.Error("Pixel shader compilation failed, error %s\n", ConvertDirectXErrToString(result));
+			}
+			return;
+		}
+
+		if (HRESULT result = device->CreatePixelShader(pixelShaderCode->GetBufferPointer(), pixelShaderCode->GetBufferSize(), nullptr, AddressOfNaked(_pixelShader)); result != S_OK)
+		{
+			logger.Error("Pixel shader creation failed, error %s\n", ConvertDirectXErrToString(result));
+			return;
+		}
+
+		isMaterialCreated = true;
+		logger.Info("Finished creating material\n");
+	}
+
+	void Draw(ID3D11DeviceContext *context, ID3D11Buffer *uniformBuffer, System::Environment &env, const Matrix4x3 &modelMatrix, const Matrix4x4 &viewProjectionMatrix, ui32 indexCount, ui32 indexBufferOffset)
+	{
+		static constexpr UINT strides[] = {sizeof(Vector3) + sizeof(Vector4)};
+		static constexpr UINT offsets[] = {0};
+
+		D3D11_MAPPED_SUBRESOURCE mapped;
+		if (HRESULT result = context->Map(uniformBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped); result != S_OK)
+		{
+			env.logger.Error("Uniform buffer mapping failed, error %s\n", ConvertDirectXErrToString(result));
+		}
+
+		Matrix4x4 mvp = modelMatrix * viewProjectionMatrix;
+		mvp.Transpose();
+		MemOps::Copy(static_cast<Matrix4x4 *>(mapped.pData), &mvp, 1);
+
+		context->Unmap(uniformBuffer, 0);
+
+		context->RSSetState(_rsState.get());
+		context->OMSetBlendState(_blendState.get(), nullptr, ui32_max);
+		context->OMSetDepthStencilState(_dsState.get(), ui32_max);
+		context->PSSetShader(_pixelShader.get(), nullptr, 0);
+		context->VSSetShader(_vertexShader.get(), nullptr, 0);
+
+		context->DrawIndexed(indexCount, 0, indexBufferOffset);
+	}
+
+	ID3DBlob *VertexShaderCode()
+	{
+		return _vertexShaderCode.get();
+	}
+
+private:
+	COMUniquePtr<ID3D11VertexShader> _vertexShader{};
+	COMUniquePtr<ID3D11PixelShader> _pixelShader{};
+	COMUniquePtr<ID3D11RasterizerState> _rsState{};
+	COMUniquePtr<ID3D11BlendState> _blendState{};
+	COMUniquePtr<ID3D11DepthStencilState> _dsState{};
+	COMUniquePtr<ID3DBlob> _vertexShaderCode{};
+};
+
+class MeshRendererObject
+{
+public:
+	MeshRendererObject() = default;
+
+	MeshRendererObject(LoggerWrapper &logger, ID3D11Device *device, LayoutManager &layoutManager)
+	{
+		bool isMaterialCreated = false;
+		_material = RenderingMaterial(logger, device, isMaterialCreated);
+		if (!isMaterialCreated)
+		{
+			return;
 		}
 
 		static constexpr f32 transparency = 0.5f;
@@ -196,22 +549,6 @@ public:
 			{{0.5f, 0.5f, 0.5f}, rightColor},
 		};
 
-		D3D11_BUFFER_DESC bufDesc =
-		{
-			sizeof(vertexArrayData),
-			D3D11_USAGE_IMMUTABLE,
-			D3D11_BIND_VERTEX_BUFFER,
-			0,
-			0,
-			0
-		};
-		D3D11_SUBRESOURCE_DATA bufData;
-		bufData.pSysMem = vertexArrayData;
-		if (HRESULT result = _device->CreateBuffer(&bufDesc, &bufData, AddressOfNaked(_vertexBuffer)); result != S_OK)
-		{
-			logger.Error("Creating vertex buffer failed, error %s", ConvertDirectXErrToString(result));
-		}
-
 		ui16 indexes[36];
 		for (ui32 index = 0; index < 6; ++index)
 		{
@@ -224,165 +561,69 @@ public:
 			indexes[index * 6 + 5] = index * 4 + 3;
 		}
 
-		bufDesc.ByteWidth = sizeof(indexes);
-		bufDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-		bufData.pSysMem = indexes;
-		if (HRESULT result = _device->CreateBuffer(&bufDesc, &bufData, AddressOfNaked(_indexBuffer)); result != S_OK)
+		auto data = make_unique<byte[]>(sizeof(vertexArrayData) + sizeof(indexes));
+		MemOps::Copy(data.get(), reinterpret_cast<const byte *>(vertexArrayData), sizeof(vertexArrayData));
+		MemOps::Copy(data.get() + sizeof(vertexArrayData), reinterpret_cast<const byte *>(indexes), sizeof(indexes));
+
+		Mesh::SubMeshInfo subMesh;
+		subMesh.vertexCount = CountOf(vertexArrayData);
+		subMesh.indexCount = 36;
+
+		Mesh::VertexAttribute vertexAttributes[] =
 		{
-			logger.Error("Creating index buffer failed, error %s", ConvertDirectXErrToString(result));
-		}
-
-		const char *vsCode = TOSTR(
-			cbuffer Uniforms : register(b0)
-			{
-				float4x4 ModelViewProjectionMatrix : packoffset(c0);
-			}
-
-			void VSMain(float4 pos : POSITION, float4 color : COLOR, out float4 outPos : SV_POSITION, out float4 outColor : COLOR)
-			{
-				outPos = mul(pos, ModelViewProjectionMatrix);
-				outColor = color;
-			}
-		);
-
-		const char *psCode = TOSTR(
-			float4 PSMain(float4 pos : SV_POSITION, float4 color : COLOR) : SV_TARGET
-			{
-				return color;
-			}
-		);
-
-		#if defined(DEBUG)
-			const UINT compileFlags = D3DCOMPILE_DEBUG;
-		#else
-			const UINT compileFlags = D3DCOMPILE_ENABLE_STRICTNESS | D3DCOMPILE_OPTIMIZATION_LEVEL3 | D3DCOMPILE_SKIP_VALIDATION;
-		#endif
-
-		D3D_FEATURE_LEVEL featureLevel = _device->GetFeatureLevel();
-		auto featureLevelToTarget = [featureLevel]
-		{
-			switch (featureLevel)
-			{
-			case D3D_FEATURE_LEVEL_9_1:
-			case D3D_FEATURE_LEVEL_9_2:
-				return "xs_4_0_level_9_1";
-			case D3D_FEATURE_LEVEL_9_3:
-				return "xs_4_0_level_9_3";
-			case D3D_FEATURE_LEVEL_10_0:
-				return "xs_4_0";
-			case D3D_FEATURE_LEVEL_10_1:
-				return "xs_4_1";
-			case D3D_FEATURE_LEVEL_11_0:
-			case D3D_FEATURE_LEVEL_11_1:
-			case D3D_FEATURE_LEVEL_12_0:
-			case D3D_FEATURE_LEVEL_12_1:
-			default:
-				return "xs_5_0";
-			}
+			{"POSITION", ColorFormatt::R32G32B32_Float},
+			{"COLOR", ColorFormatt::R32G32B32A32_Float}
 		};
 
-		const char *featureLevelShaderStr = featureLevelToTarget();
+		Mesh mesh;
+		mesh.isSkinned = false;
+		mesh.subMeshInfos.push_back(subMesh);
+		mesh.vertexAttributes.assign(std::begin(vertexAttributes), std::end(vertexAttributes));
 
-		COMUniquePtr<ID3DBlob> compiledShader, errors;
-		char shaderTarget[32];
-		strcpy_s(shaderTarget, featureLevelShaderStr);
-		shaderTarget[0] = 'v';
-		if (HRESULT result = D3DCompile(vsCode, strlen(vsCode), 0, nullptr, 0, "VSMain", shaderTarget, compileFlags, 0, AddressOfNaked(compiledShader), AddressOfNaked(errors)); result != S_OK)
+		MeshAsset meshAsset;
+		meshAsset.assetId = {};
+		meshAsset.desc = mesh;
+		meshAsset.data = move(data);
+
+		bool isMeshCreated = false;
+		_mesh = MeshResource(logger, device, meshAsset, layoutManager, Array<byte>(static_cast<byte *>(_material.VertexShaderCode()->GetBufferPointer()), _material.VertexShaderCode()->GetBufferSize()), isMeshCreated);
+		if (!isMaterialCreated)
 		{
-			if (errors)
-			{
-				logger.Error("Vertex shader compilation failed, error %s, compile errors %*s\n", ConvertDirectXErrToString(result), static_cast<i32>(errors->GetBufferSize()), static_cast<char *>(errors->GetBufferPointer()));
-			}
-			else
-			{
-				logger.Error("Vertex shader compilation failed, error %s\n", ConvertDirectXErrToString(result));
-			}
-		}
-
-		if (HRESULT result = _device->CreateVertexShader(compiledShader->GetBufferPointer(), compiledShader->GetBufferSize(), nullptr, AddressOfNaked(_vertexShader)); result != S_OK)
-		{
-			logger.Error("Vertex shader creation failed, error %s\n", ConvertDirectXErrToString(result));
-		}
-
-		static constexpr D3D11_INPUT_ELEMENT_DESC inputLayoutDesc[] =
-		{
-			{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
-			{"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0}
-		};
-
-		if (HRESULT result = _device->CreateInputLayout(inputLayoutDesc, CountOf(inputLayoutDesc), compiledShader->GetBufferPointer(), compiledShader->GetBufferSize(), AddressOfNaked(_inputLayout)); result != S_OK)
-		{
-			logger.Error("Input layout creation failed, error %s\n", ConvertDirectXErrToString(result));
-		}
-
-		compiledShader = {};
-		errors = {};
-
-		shaderTarget[0] = 'p';
-		if (HRESULT result = D3DCompile(psCode, strlen(psCode), 0, nullptr, 0, "PSMain", shaderTarget, compileFlags, 0, AddressOfNaked(compiledShader), AddressOfNaked(errors)); result != S_OK)
-		{
-			if (errors)
-			{
-				logger.Error("Pixel shader compilation failed, error %s, compile errors %*s\n", ConvertDirectXErrToString(result), static_cast<i32>(errors->GetBufferSize()), static_cast<char *>(errors->GetBufferPointer()));
-			}
-			else
-			{
-				logger.Error("Pixel shader compilation failed, error %s\n", ConvertDirectXErrToString(result));
-			}
-		}
-
-		if (HRESULT result = _device->CreatePixelShader(compiledShader->GetBufferPointer(), compiledShader->GetBufferSize(), nullptr, AddressOfNaked(_pixelShader)); result != S_OK)
-		{
-			logger.Error("Pixel shader creation failed, error %s\n", ConvertDirectXErrToString(result));
+			return;
 		}
 
 		logger.Info("Finished creating cube\n");
 	}
 
-	void Draw(System::Environment &env, const Matrix4x4 &viewProjectionMatrix)
+	void Draw(ID3D11DeviceContext *context, ID3D11Buffer *uniformBuffer, System::Environment &env, const Matrix4x4 &viewProjectionMatrix)
 	{
-		static constexpr UINT strides[] = {sizeof(Vector3) + sizeof(Vector4)};
-		static constexpr UINT offsets[] = {0};
-
-		D3D11_MAPPED_SUBRESOURCE mapped;
-		if (HRESULT result = _context->Map(_uniformBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped); result != S_OK)
+		if (!_modelMatrix)
 		{
-			env.logger.Error("Uniform buffer mapping failed, error %s\n", ConvertDirectXErrToString(result));
+			_modelMatrix = Matrix4x3::CreateRTS(_rotation, _position);
 		}
 
-		Matrix4x3 modelMatrix = Matrix4x3::CreateRTS(Vector3(0, env.timeSinceStarted.ToSec(), 0), Vector3(0, 0, 1));
+		_mesh.SetPipeline(context);
+		_material.Draw(context, uniformBuffer, env, *_modelMatrix, viewProjectionMatrix, _mesh.GetSubmeshInfo(0).indexCount, _mesh.GetSubmeshInfo(0).startIndex);
+	}
 
-		Matrix4x4 mvp = modelMatrix * viewProjectionMatrix;
-		mvp.Transpose();
-		MemOps::Copy(static_cast<Matrix4x4 *>(mapped.pData), &mvp, 1);
+	void SetPosition(const Vector3 &position)
+	{
+		_position = position;
+		_modelMatrix = {};
+	}
 
-		_context->Unmap(_uniformBuffer, 0);
-
-		_context->RSSetState(_rsState.get());
-		_context->OMSetBlendState(_blendState.get(), nullptr, ui32_max);
-		_context->OMSetDepthStencilState(_dsState.get(), ui32_max);
-		_context->IASetVertexBuffers(0, 1, AddressOfNaked(_vertexBuffer), strides, offsets);
-		_context->IASetIndexBuffer(_indexBuffer.get(), DXGI_FORMAT_R16_UINT, 0);
-		_context->PSSetShader(_pixelShader.get(), nullptr, 0);
-		_context->VSSetShader(_vertexShader.get(), nullptr, 0);
-		_context->IASetInputLayout(_inputLayout.get());
-		_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-		_context->DrawIndexed(36, 0, 0);
+	void SetRotation(const Quaternion &rotation)
+	{
+		_rotation = rotation;
+		_modelMatrix = {};
 	}
 
 private:
-	COMUniquePtr<ID3D11InputLayout> _inputLayout{};
-	COMUniquePtr<ID3D11VertexShader> _vertexShader{};
-	COMUniquePtr<ID3D11PixelShader> _pixelShader{};
-	COMUniquePtr<ID3D11Buffer> _vertexBuffer{};
-	COMUniquePtr<ID3D11Buffer> _indexBuffer{};
-	COMUniquePtr<ID3D11RasterizerState> _rsState{};
-	COMUniquePtr<ID3D11BlendState> _blendState{};
-	COMUniquePtr<ID3D11DepthStencilState> _dsState{};
-	ID3D11Device *_device{};
-	ID3D11DeviceContext *_context{};
-	ID3D11Buffer *_uniformBuffer{};
+	optional<Matrix4x3> _modelMatrix{};
+	MeshResource _mesh{};
+	RenderingMaterial _material{};
+	Vector3 _position{};
+	Quaternion _rotation{};
 };
 
 class RendereDX11SystemImpl : public RendererDX11System
@@ -402,6 +643,14 @@ public:
             {
 				AddCamera(entry.entityID, *camera, {entry.GetComponent<Position>().position, entry.GetComponent<Rotation>().rotation});
             }
+			else
+			{
+				auto meshRenderer = entry.FindComponent<MeshRenderer>();
+				if (meshRenderer)
+				{
+					AddMeshRenderer(env.logger, entry.entityID, *meshRenderer, entry.GetComponent<Position>().position, entry.GetComponent<Rotation>().rotation);
+				}
+			}
         }
     }
     
@@ -414,6 +663,13 @@ public:
                 AddCamera(entry.entityID, entry.added.Cast<Camera>(), {entry.GetComponent<Position>().position, entry.GetComponent<Rotation>().rotation});
             }
         }
+		else if (stream.Type() == MeshRenderer::GetTypeId())
+		{
+			for (auto &entry : stream)
+			{
+				AddMeshRenderer(env.logger, entry.entityID, entry.added.Cast<MeshRenderer>(), entry.GetComponent<Position>().position, entry.GetComponent<Rotation>().rotation);
+			}
+		}
         else if (stream.Type() == Position::GetTypeId() || stream.Type() == Rotation::GetTypeId())
         {
 			for (auto &entry : stream)
@@ -435,10 +691,12 @@ public:
         }
 		for (const auto &entry : stream.Enumerate<Position>())
 		{
+			MeshRendererPositionChanged(entry.entityID, entry.component);
 			CameraPositionChanged(entry.entityID, entry.component);
 		}
 		for (const auto &entry : stream.Enumerate<Rotation>())
 		{
+			MeshRendererRotationChanged(entry.entityID, entry.component);
 			CameraRotationChanged(entry.entityID, entry.component);
 		}
 
@@ -453,21 +711,28 @@ public:
 		}
 		for (const auto &entry : stream.Enumerate<Position>())
 		{
+			RemoveMeshRenderer(entry.entityID);
 			RemoveCamera(entry.entityID);
 		}
 		for (const auto &entry : stream.Enumerate<Rotation>())
 		{
+			RemoveMeshRenderer(entry.entityID);
 			RemoveCamera(entry.entityID);
 		}
+		for (const auto &entry : stream.Enumerate<MeshRenderer>())
+		{
+			RemoveMeshRenderer(entry.entityID);
+		}
 
-		ASSUME(stream.Type() == Camera::GetTypeId() || stream.Type() == Position::GetTypeId() || stream.Type() == Rotation::GetTypeId());
+		ASSUME(stream.Type() == Camera::GetTypeId() || stream.Type() == Position::GetTypeId() || stream.Type() == Rotation::GetTypeId() || stream.Type() == MeshRenderer::GetTypeId());
     }
     
     virtual void ProcessMessages(Environment &env, const MessageStreamEntityRemoved &stream) override
     {
         for (auto id : stream)
         {
-            RemoveCamera(id);
+			RemoveMeshRenderer(id);
+			RemoveCamera(id);
         }
     }
     
@@ -512,7 +777,10 @@ public:
 						auto projectionMatrix = Matrix4x4::CreatePerspectiveProjection(DegToRad(75.0f), static_cast<f32>(window->width) / static_cast<f32>(window->height), 0.1f, 1000.0f, ProjectionTarget::D3DAndMetal);
 						Matrix4x4 viewProjectionMatrix = camera.transform.ViewMatrix() * projectionMatrix;
 
-						_cube.Draw(env, viewProjectionMatrix);
+						for (auto &[id, object] : _meshRendererObjects)
+						{
+							object.Draw(_context.get(), _uniformBuffer.get(), env, viewProjectionMatrix);
+						}
 
 						dxWindow.swapChain->Present(0, 0);
 					}
@@ -669,8 +937,6 @@ public:
 			}
 		}
 
-		_cube = Cube(env.logger, _device.get(), _context.get(), _uniformBuffer.get());
-        
         env.logger.Info("Finished initialization\n");
     }
 
@@ -685,6 +951,37 @@ public:
     }
 
 private:
+	void AddMeshRenderer(LoggerWrapper &logger, EntityID id, MeshRenderer meshRenderer, const Vector3 &position, const Quaternion &rotation)
+	{
+		auto insertResult = _meshRendererObjects.insert({id, MeshRendererObject(logger, _device.get(), _layoutManager)});
+		ASSUME(insertResult.second);
+		insertResult.first->second.SetPosition(position);
+		insertResult.first->second.SetRotation(rotation);
+	}
+
+	void RemoveMeshRenderer(EntityID id)
+	{
+		_meshRendererObjects.erase(id);
+	}
+
+	void MeshRendererPositionChanged(EntityID id, const Position &newPosition)
+	{
+		auto findResult = _meshRendererObjects.find(id);
+		if (findResult != _meshRendererObjects.end())
+		{
+			findResult->second.SetPosition(newPosition.position);
+		}
+	}
+
+	void MeshRendererRotationChanged(EntityID id, const Rotation &newRotation)
+	{
+		auto findResult = _meshRendererObjects.find(id);
+		if (findResult != _meshRendererObjects.end())
+		{
+			findResult->second.SetRotation(newRotation.rotation);
+		}
+	}
+
     void AddCamera(EntityID id, const Camera &data, const CameraTransform &transform)
     {
         _cameras.emplace_front(id, data, transform);
@@ -762,8 +1059,6 @@ private:
 				return;
 			}
 		}
-
-		UNREACHABLE;
 	}
 
 	void CameraRotationChanged(EntityID id, const Rotation &newRotation)
@@ -776,17 +1071,16 @@ private:
 				return;
 			}
 		}
-
-		UNREACHABLE;
 	}
 
 private:
+	std::unordered_map<EntityID, MeshRendererObject> _meshRendererObjects{};
     std::forward_list<DX11Camera> _cameras{};
     COMUniquePtr<ID3D11Device> _device{};
     COMUniquePtr<ID3D11DeviceContext> _context{};
     D3D_FEATURE_LEVEL _featureLevel{}, _maxSupportedFeatureLevel{};
 	COMUniquePtr<ID3D11Buffer> _uniformBuffer{};
-	Cube _cube{};
+	LayoutManager _layoutManager{};
 };
 
 unique_ptr<Renderer> RendererDX11System::New()
@@ -1002,6 +1296,119 @@ NOINLINE const char *ConvertDirectXErrToString(HRESULT hresult)
         return "unidentified error";
 	#undef CASE
     }
+}
+
+DXGI_FORMAT ColorFormatToDirectX(ColorFormatt format)
+{
+	#define C(colorFormat, dxgiFormat) case ColorFormatt::colorFormat: return dxgiFormat;
+	#define U(colorFormat) case ColorFormatt::colorFormat: SOFTBREAK; return DXGI_FORMAT_UNKNOWN;
+
+	switch (format)
+	{
+		C(Undefined, DXGI_FORMAT_UNKNOWN)
+		C(R8G8B8A8, DXGI_FORMAT_R8G8B8A8_TYPELESS)
+		C(B8G8R8A8, DXGI_FORMAT_B8G8R8A8_TYPELESS)
+		U(R8G8B8)
+		U(B8G8R8)
+		C(R8G8B8X8, DXGI_FORMAT_R8G8B8A8_TYPELESS)
+		C(B8G8R8X8, DXGI_FORMAT_B8G8R8A8_TYPELESS)
+		U(R4G4B4A4)
+		U(B4G4R4A4)
+		U(R5G6B5)
+		U(B5G6R5) // supported by DX11.1 and later
+		C(R32_Float, DXGI_FORMAT_R32_FLOAT)
+		C(R32G32_Float, DXGI_FORMAT_R32G32_FLOAT)
+		C(R32G32B32_Float, DXGI_FORMAT_R32G32B32_FLOAT)
+		C(R32G32B32A32_Float, DXGI_FORMAT_R32G32B32A32_FLOAT)
+		C(R32_Int, DXGI_FORMAT_R32_SINT)
+		C(R32G32_Int, DXGI_FORMAT_R32G32_SINT)
+		C(R32G32B32_Int, DXGI_FORMAT_R32G32B32_SINT)
+		C(R32G32B32A32_Int, DXGI_FORMAT_R32G32B32A32_SINT)
+		C(R32_UInt, DXGI_FORMAT_R32_UINT)
+		C(R32G32_UInt, DXGI_FORMAT_R32G32_UINT)
+		C(R32G32B32_UInt, DXGI_FORMAT_R32G32B32_UINT)
+		C(R32G32B32A32_UInt, DXGI_FORMAT_R32G32B32A32_UINT)
+		C(R16_Float, DXGI_FORMAT_R16_FLOAT)
+		C(R16G16_Float, DXGI_FORMAT_R16G16_FLOAT)
+		U(R16G16B16_Float)
+		C(R16G16B16A16_Float, DXGI_FORMAT_R16G16B16A16_FLOAT)
+		C(R16_Int, DXGI_FORMAT_R16_SINT)
+		C(R16G16_Int, DXGI_FORMAT_R16G16_SINT)
+		U(R16G16B16_Int)
+		C(R16G16B16A16_Int, DXGI_FORMAT_R16G16B16A16_SINT)
+		C(R16_UInt, DXGI_FORMAT_R16_UINT)
+		C(R16G16_UInt, DXGI_FORMAT_R16G16_UINT)
+		U(R16G16B16_UInt)
+		C(R16G16B16A16_UInt, DXGI_FORMAT_R16G16B16A16_UINT)
+		C(R11G11B10_Float, DXGI_FORMAT_R11G11B10_FLOAT)
+		C(D32, DXGI_FORMAT_D32_FLOAT)
+		C(D24S8, DXGI_FORMAT_D24_UNORM_S8_UINT)
+		C(D24X8, DXGI_FORMAT_D24_UNORM_S8_UINT)
+	};
+
+	#undef C
+	#undef U
+
+	UNREACHABLE;
+	return {};
+}
+
+uiw ColorFormatSizeOf(ColorFormatt format)
+{
+	switch (format)
+	{
+	case ColorFormatt::Undefined:
+		SOFTBREAK;
+		return 0;
+	case ColorFormatt::R4G4B4A4:
+	case ColorFormatt::B4G4R4A4:
+	case ColorFormatt::R5G6B5:
+	case ColorFormatt::B5G6R5:
+	case ColorFormatt::R16_Float:
+	case ColorFormatt::R16_Int:
+	case ColorFormatt::R16_UInt:
+		return 2;
+	case ColorFormatt::R8G8B8:
+	case ColorFormatt::B8G8R8:
+		return 3;
+	case ColorFormatt::R8G8B8A8:
+	case ColorFormatt::B8G8R8A8:
+	case ColorFormatt::R8G8B8X8:
+	case ColorFormatt::B8G8R8X8:
+	case ColorFormatt::R32_Float:
+	case ColorFormatt::R32_Int:
+	case ColorFormatt::R32_UInt:
+	case ColorFormatt::D32:
+	case ColorFormatt::D24S8:
+	case ColorFormatt::D24X8:
+	case ColorFormatt::R16G16_Float:
+	case ColorFormatt::R16G16_Int:
+	case ColorFormatt::R16G16_UInt:
+	case ColorFormatt::R11G11B10_Float:
+		return 4;
+	case ColorFormatt::R16G16B16_Float:
+	case ColorFormatt::R16G16B16_Int:
+	case ColorFormatt::R16G16B16_UInt:
+		return 6;
+	case ColorFormatt::R32G32_Float:
+	case ColorFormatt::R32G32_Int:
+	case ColorFormatt::R32G32_UInt:
+	case ColorFormatt::R16G16B16A16_Float:
+	case ColorFormatt::R16G16B16A16_Int:
+	case ColorFormatt::R16G16B16A16_UInt:
+		return 8;
+	case ColorFormatt::R32G32B32_Float:
+	case ColorFormatt::R32G32B32_Int:
+	case ColorFormatt::R32G32B32_UInt:
+		return 12;
+	case ColorFormatt::R32G32B32A32_Float:
+	case ColorFormatt::R32G32B32A32_Int:
+	case ColorFormatt::R32G32B32A32_UInt:
+		return 16;
+	}
+
+	UNREACHABLE;
+	return {};
 }
 
 DX11Window::DX11Window(DX11Window &&source) noexcept : 

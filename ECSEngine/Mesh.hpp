@@ -4,18 +4,18 @@
 
 namespace ECSEngine
 {
-	struct VertexAttribute
-	{
-		string name{};
-		ColorFormatt colorFormat{};
-	};
-
 	struct Mesh
 	{
 		struct SubMeshInfo
 		{
 			ui32 vertexCount{};
 			ui32 indexCount{};
+		};
+
+		struct VertexAttribute
+		{
+			string name{};
+			ColorFormatt type{};
 		};
 
 		bool isSkinned{};
@@ -32,6 +32,6 @@ namespace ECSEngine
 	{
 		MeshAssetId assetId{};
 		Mesh desc{};
-		unique_ptr<byte> data{};
+		unique_ptr<byte[]> data{};
 	};
 }

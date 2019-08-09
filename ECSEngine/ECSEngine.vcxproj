@@ -222,6 +222,7 @@
     <ClInclude Include="Material.hpp" />
     <ClInclude Include="Mesh.hpp" />
     <ClInclude Include="NameManager.hpp" />
+    <ClInclude Include="ObjectsMoverSystem.hpp" />
     <ClInclude Include="PreHeader.hpp" />
     <ClInclude Include="Renderer.hpp" />
     <ClInclude Include="RendererDX11.hpp" />

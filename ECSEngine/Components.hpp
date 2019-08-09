@@ -1,6 +1,8 @@
 #pragma once
 
 #include "Color.hpp"
+#include "Mesh.hpp"
+#include "Material.hpp"
 
 namespace ECSEngine
 {
@@ -28,7 +30,8 @@ namespace ECSEngine
 
     struct MeshRenderer : Component<MeshRenderer>
     {
-		ui32 index = 0;
+		MeshAssetId mesh{};
+		MaterialAssetsArrayAssetId materials{};
 	};
 
     struct SkinnedMeshRenderer : Component<SkinnedMeshRenderer>
