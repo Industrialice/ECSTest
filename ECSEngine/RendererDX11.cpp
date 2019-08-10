@@ -32,6 +32,21 @@ struct _COMDeleter
 
 template <typename T> using COMUniquePtr = unique_ptr<T, _COMDeleter>;
 
+struct DX11DepthStencilBuffer
+{
+	ID3D11Device *device{};
+	COMUniquePtr<ID3D11DepthStencilView> depthStencilView{};
+	Camera::DepthBufferFormat depthBufferFormat{};
+	ui32 width{}, height{};
+
+public:
+	DX11DepthStencilBuffer() = default;
+	DX11DepthStencilBuffer(ID3D11Device *device, Camera::DepthBufferFormat depthBufferFormat);
+	DX11DepthStencilBuffer(DX11DepthStencilBuffer &&) = default;
+	DX11DepthStencilBuffer &operator = (DX11DepthStencilBuffer &&) = default;
+	bool Resize(LoggerWrapper &logger, ui32 width, ui32 height);
+};
+
 struct DX11Window
 {
     bool isChanged = false;
@@ -45,6 +60,7 @@ struct DX11Window
     i32 currentWidth{}, currentHeight{};
     bool currentFullScreen{};
     ID3D11Device *device{};
+	shared_ptr<DX11DepthStencilBuffer> depthStencilBuffer{};
 
 private:
     bool _isWaitingForWindowResizeNotification = false;
@@ -53,6 +69,7 @@ public:
     ~DX11Window()
     {
         renderTargetView = {};
+		depthStencilBuffer = {};
 
         if (swapChain)
         {
@@ -69,9 +86,9 @@ public:
 
     DX11Window() = default;
 
+	DX11Window(Window &window, const shared_ptr<DX11DepthStencilBuffer> &depthStencilBuffer, ID3D11Device *device, LoggerWrapper &logger);
     DX11Window(DX11Window &&source) noexcept;
-    DX11Window &operator = (DX11Window &&source) noexcept;
-    DX11Window(Window &window, ID3D11Device *device, LoggerWrapper &logger);
+	DX11Window &operator = (DX11Window &&source) noexcept;
     bool MakeWindowAssociation(LoggerWrapper &logger);
     bool CreateWindowRenderTargetView(LoggerWrapper &logger);
     bool NotifyWindowResized(LoggerWrapper &logger);
@@ -82,10 +99,11 @@ struct DX11Camera
 {
     EntityID id{};
     Camera data{};
-    DX11Window windows[8]{};
+	DX11Window windows[8]{};
 	CameraTransform transform{};
+	shared_ptr<DX11DepthStencilBuffer> depthStencilBuffer{};
 
-    DX11Camera(EntityID id, const Camera &data, const CameraTransform &transform) : id(id), data(data), transform(transform) {}
+	DX11Camera(EntityID id, ID3D11Device *device, const Camera &data, const CameraTransform &transform);
     DX11Camera(DX11Camera &&) = default;
     DX11Camera &operator = (DX11Camera &&) = default;
 };
@@ -215,7 +233,7 @@ public:
 		ui32 indexCount = 0;
 		for (const auto &subMesh : mesh.desc.subMeshInfos)
 		{
-			submeshInfos.push_back({.indexCount = subMesh.indexCount, .startIndex = indexCount});
+			_submeshInfos.push_back({.indexCount = subMesh.indexCount, .startIndex = indexCount});
 
 			ASSUME(subMesh.vertexCount && subMesh.indexCount);
 			ASSUME(subMesh.vertexCount <= ui16_max);
@@ -256,7 +274,12 @@ public:
 
 	SubmeshInfo GetSubmeshInfo(uiw submeshIndex) const
 	{
-		return submeshInfos[submeshIndex];
+		return _submeshInfos[submeshIndex];
+	}
+
+	uiw GetSubmeshCount() const
+	{
+		return _submeshInfos.size();
 	}
 
 	void SetPipeline(ID3D11DeviceContext *context)
@@ -277,7 +300,7 @@ private:
 	ID3D11InputLayout *_inputLayout{};
 	COMUniquePtr<ID3D11Buffer> _vertexBuffer{};
 	COMUniquePtr<ID3D11Buffer> _indexBuffer{};
-	vector<SubmeshInfo> submeshInfos{};
+	vector<SubmeshInfo> _submeshInfos{};
 };
 
 class RenderingMaterial
@@ -520,7 +543,11 @@ public:
 		}
 
 		_mesh.SetPipeline(context);
-		_material.Draw(context, uniformBuffer, env, *_modelMatrix, viewProjectionMatrix, _mesh.GetSubmeshInfo(0).indexCount, _mesh.GetSubmeshInfo(0).startIndex);
+
+		for (uiw meshIndex = 0; meshIndex < _mesh.GetSubmeshCount(); ++meshIndex)
+		{
+			_material.Draw(context, uniformBuffer, env, *_modelMatrix, viewProjectionMatrix, _mesh.GetSubmeshInfo(meshIndex).indexCount, _mesh.GetSubmeshInfo(meshIndex).startIndex);
+		}
 	}
 
 	void SetPosition(const Vector3 &position)
@@ -659,6 +686,14 @@ public:
 
         for (auto &camera : _cameras)
         {
+			if (camera.data.isClearDepthStencil)
+			{
+				if (camera.depthStencilBuffer->depthStencilView)
+				{
+					_context->ClearDepthStencilView(camera.depthStencilBuffer->depthStencilView.get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+				}
+			}
+
             for (uiw windowIndex = 0; windowIndex < camera.data.rt.size(); ++windowIndex)
             {
                 if (auto *window = std::get_if<Window>(&camera.data.rt[windowIndex].target); window)
@@ -666,7 +701,7 @@ public:
 					auto &dxWindow = camera.windows[windowIndex];
                     if (!dxWindow.hwnd)
                     {
-                        new (&dxWindow) DX11Window(*window, _device.get(), env.logger);
+                        new (&dxWindow) DX11Window(*window, camera.depthStencilBuffer, _device.get(), env.logger);
                     }
 					dxWindow.MakeWindowAssociation(env.logger);
 					if (dxWindow.swapChain)
@@ -680,7 +715,7 @@ public:
 						{
 						}
 
-						_context->OMSetRenderTargets(1, AddressOfNaked(dxWindow.renderTargetView), nullptr);
+						_context->OMSetRenderTargets(1, AddressOfNaked(dxWindow.renderTargetView), camera.depthStencilBuffer->depthStencilView.get());
 
 						D3D11_VIEWPORT viewport{};
 						viewport.Width = static_cast<f32>(window->width);
@@ -901,7 +936,7 @@ private:
 
     void AddCamera(EntityID id, const Camera &data, const CameraTransform &transform)
     {
-        _cameras.emplace_front(id, data, transform);
+        _cameras.emplace_front(id, _device.get(), data, transform);
     }
 
     void RemoveCamera(EntityID id)
@@ -1328,6 +1363,64 @@ uiw ColorFormatSizeOf(ColorFormatt format)
 	return {};
 }
 
+DX11DepthStencilBuffer::DX11DepthStencilBuffer(ID3D11Device *device, Camera::DepthBufferFormat depthBufferFormat) : device(device), depthBufferFormat(depthBufferFormat)
+{}
+
+bool DX11DepthStencilBuffer::Resize(LoggerWrapper &logger, ui32 newWidth, ui32 newHeight)
+{
+	if (depthBufferFormat == Camera::DepthBufferFormat::Neither)
+	{
+		ASSUME(!depthStencilView);
+		return true;
+	}
+
+	if (newWidth == width && newHeight == height)
+	{
+		return true;
+	}
+
+	width = newWidth;
+	height = newHeight;
+
+	DXGI_FORMAT format;
+	if (depthBufferFormat == Camera::DepthBufferFormat::DepthOnly)
+	{
+		format = DXGI_FORMAT_D32_FLOAT;
+	}
+	else
+	{
+		format = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
+	}
+
+	D3D11_TEXTURE2D_DESC depthStencilDesc;
+	depthStencilDesc.Width = width;
+	depthStencilDesc.Height = height;
+	depthStencilDesc.MipLevels = 1;
+	depthStencilDesc.ArraySize = 1;
+	depthStencilDesc.Format = format;
+	depthStencilDesc.SampleDesc.Count = 1;
+	depthStencilDesc.SampleDesc.Quality = 0;
+	depthStencilDesc.Usage = D3D11_USAGE_DEFAULT;
+	depthStencilDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+	depthStencilDesc.CPUAccessFlags = 0;
+	depthStencilDesc.MiscFlags = 0;
+
+	COMUniquePtr<ID3D11Texture2D> depthStencilTexture;
+	if (HRESULT hresult = device->CreateTexture2D(&depthStencilDesc, 0, AddressOfNaked(depthStencilTexture)); hresult != S_OK)
+	{
+		logger.Error("CreateWindowRenderTargetView: create depth stencil texture for the current window failed with error 0x%Xl %s\n", hresult, ConvertDirectXErrToString(hresult));
+		return false;
+	}
+
+	if (HRESULT hresult = device->CreateDepthStencilView(depthStencilTexture.get(), 0, AddressOfNaked(depthStencilView)); hresult != S_OK)
+	{
+		logger.Error("CreateWindowRenderTargetView: create depth stencil view for the current window failed with error 0x%Xl %s\n", hresult, ConvertDirectXErrToString(hresult));
+		return false;
+	}
+
+	return true;
+}
+
 DX11Window::DX11Window(DX11Window &&source) noexcept : 
     isChanged(source.isChanged),
     window(source.window),
@@ -1336,7 +1429,8 @@ DX11Window::DX11Window(DX11Window &&source) noexcept :
     hidInput(move(source.hidInput)),
     vkInput(move(source.vkInput)),
     swapChain(source.swapChain.release()), 
-    renderTargetView(source.renderTargetView.release())
+    renderTargetView(source.renderTargetView.release()),
+	depthStencilBuffer(source.depthStencilBuffer)
 {
     source.hwnd = {};
     ASSUME(this != &source);
@@ -1344,22 +1438,23 @@ DX11Window::DX11Window(DX11Window &&source) noexcept :
 
 DX11Window &DX11Window::operator = (DX11Window &&source) noexcept
 {
-    ASSUME(this != &source);
+	ASSUME(this != &source);
 
-    isChanged = source.isChanged;
-    window = source.window;
-    hwnd = move(source.hwnd);
-    source.hwnd = {};
-    controlsQueue = move(source.controlsQueue);
-    hidInput = move(source.hidInput);
-    vkInput = move(source.vkInput);
-    swapChain = move(source.swapChain);
-    renderTargetView = move(source.renderTargetView);
+	isChanged = source.isChanged;
+	window = source.window;
+	hwnd = move(source.hwnd);
+	source.hwnd = {};
+	controlsQueue = move(source.controlsQueue);
+	hidInput = move(source.hidInput);
+	vkInput = move(source.vkInput);
+	swapChain = move(source.swapChain);
+	renderTargetView = move(source.renderTargetView);
+	depthStencilBuffer = move(source.depthStencilBuffer);
 
-    return *this;
+	return *this;
 }
 
-DX11Window::DX11Window(Window &window, ID3D11Device *device, LoggerWrapper &logger) : window(&window), device(device)
+DX11Window::DX11Window(Window &window, const shared_ptr<DX11DepthStencilBuffer> &depthStencilBuffer, ID3D11Device *device, LoggerWrapper &logger) : window(&window), depthStencilBuffer(depthStencilBuffer), device(device)
 {
     string title = "RendererDX11: ";
     title += string_view(window.title.data(), window.title.size());
@@ -1477,7 +1572,7 @@ bool DX11Window::CreateWindowRenderTargetView(LoggerWrapper &logger)
         return false;
     }
 
-    if (HRESULT hresult = swapChain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, 0); hresult != S_OK)
+    if (HRESULT hresult = swapChain->ResizeBuffers(0, window->width, window->height, DXGI_FORMAT_UNKNOWN, 0); hresult != S_OK)
     {
         logger.Error("CreateWindowRenderTargetView: failed to resize swap chain's buffers with error 0x%Xl %s\n", hresult, ConvertDirectXErrToString(hresult));
         return false;
@@ -1495,6 +1590,12 @@ bool DX11Window::CreateWindowRenderTargetView(LoggerWrapper &logger)
         logger.Error("CreateWindowRenderTargetView: create render target view for the current window failed with error 0x%Xl %s\n", hresult, ConvertDirectXErrToString(hresult));
         return false;
     }
+
+	if (!depthStencilBuffer->Resize(logger, window->width, window->height))
+	{
+		logger.Error("CreateWindowRenderTargetView: failed to resuze depth stencil buffer\n");
+		return false;
+	}
 
     currentWidth = window->width;
     currentHeight = window->height;
@@ -1582,4 +1683,8 @@ bool DX11Window::HandleSizeFullScreenChanges(LoggerWrapper &logger)
     }
 
     return true;
+}
+
+DX11Camera::DX11Camera(EntityID id, ID3D11Device *device, const Camera &data, const CameraTransform &transform) : id(id), data(data), transform(transform), depthStencilBuffer(make_shared<DX11DepthStencilBuffer>(device, data.depthBufferFormat))
+{
 }

@@ -26,6 +26,7 @@ namespace ECSEngine
 		TexCube
 	};
 
+	// TODO: rename into something more appropriate
 	enum class ColorFormatt : ui8
 	{
 		Undefined,

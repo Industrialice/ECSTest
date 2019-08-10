@@ -44,7 +44,8 @@ void AddCamera(EntityIDGenerator &idGenerator, EntitiesStream &stream)
 	camera.farPlane = 1000.0f;
 	camera.nearPlane = 0.1f;
 	camera.fov = 75.0f;
-	camera.isClearDepth = false;
+	camera.isClearDepthStencil = true;
+	camera.depthBufferFormat = Camera::DepthBufferFormat::DepthOnly;
 	camera.projectionType = Camera::ProjectionTypet::Perspective;
 	camera.clearWith = clearColor;
 	entity.AddComponent(camera);

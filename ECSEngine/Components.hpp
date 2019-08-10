@@ -74,9 +74,17 @@ namespace ECSEngine
 			Orthographic
 		};
 
+		enum class DepthBufferFormat : ui8
+		{
+			Neither,
+			DepthOnly,
+			DepthAndStencil
+		};
+
 		f32 fov{};
 		f32 size{};
-		bool isClearDepth{};
+		bool isClearDepthStencil{};
+		DepthBufferFormat depthBufferFormat{};
 		f32 nearPlane{};
 		f32 farPlane{};
 		variant<std::monostate, ClearColor> clearWith{};

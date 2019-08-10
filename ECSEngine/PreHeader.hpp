@@ -6,6 +6,10 @@
 	#include <d3dcompiler.h>
 #endif
 
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
+
 #include <PreHeader.hpp>
 #include <forward_list>
 #include <unordered_set>
