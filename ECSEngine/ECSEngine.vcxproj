@@ -192,6 +192,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="AssetIdMapper.cpp" />
     <ClCompile Include="AssetsLoaders.cpp" />
     <ClCompile Include="CameraMovementSystem.cpp" />
     <ClCompile Include="CameraTransform.cpp" />
@@ -213,6 +214,7 @@
     <ClCompile Include="WinVKInput.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="AssetIdMapper.hpp" />
     <ClInclude Include="AssetsLoaders.hpp" />
     <ClInclude Include="CameraMovementSystem.hpp" />
     <ClInclude Include="CameraTransform.hpp" />

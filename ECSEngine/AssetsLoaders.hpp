@@ -5,7 +5,7 @@ namespace ECSEngine
 	class AssetsLoaders
 	{
 	public:
-		template <TypeId::idType type> AssetsManager::AssetLoaderFuncType GenerateLoaderFunction()
+		template <TypeId::idType type> [[nodiscard]] AssetsManager::AssetLoaderFuncType GenerateLoaderFunction()
 		{
 			if constexpr (type == MeshAsset::GetTypeId())
 			{
@@ -24,12 +24,12 @@ namespace ECSEngine
 			return {};
 		}
 
-		AssetsManager::AssetLoaderFuncType GenerateMeshLoaderFunction();
-		AssetsManager::AssetLoaderFuncType GenerateTextureLoaderFunction();
+		[[nodiscard]] AssetsManager::AssetLoaderFuncType GenerateMeshLoaderFunction();
+		[[nodiscard]] AssetsManager::AssetLoaderFuncType GenerateTextureLoaderFunction();
 		void RegisterLoaders(AssetsManager &manager);
 
 	private:
-		AssetsManager::LoadedAsset LoadMesh(AssetId id, TypeId expectedType);
-		AssetsManager::LoadedAsset LoadTexture(AssetId id, TypeId expectedType);
+		[[nodiscard]] AssetsManager::LoadedAsset LoadMesh(AssetId id, TypeId expectedType);
+		[[nodiscard]] AssetsManager::LoadedAsset LoadTexture(AssetId id, TypeId expectedType);
 	};
 }

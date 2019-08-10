@@ -53,96 +53,6 @@ AssetsManager::LoadedAsset AssetsLoaders::LoadMesh(AssetId id, TypeId expectedTy
 		return {};
 	}
 
-	//static constexpr f32 transparency = 0.5f;
-
-	//static constexpr Vector4 frontColor{1, 1, 1, transparency};
-	//static constexpr Vector4 upColor{0, 1, 1, transparency};
-	//static constexpr Vector4 backColor{0, 0, 1, transparency};
-	//static constexpr Vector4 downColor{1, 0, 0, transparency};
-	//static constexpr Vector4 leftColor{1, 1, 0, transparency};
-	//static constexpr Vector4 rightColor{1, 0, 1, transparency};
-
-	//struct Vertex
-	//{
-	//	Vector3 position;
-	//	Vector4 color;
-	//};
-
-	//static constexpr Vertex vertexArrayData[]
-	//{
-	//	// front
-	//	{{-0.5f, -0.5f, -0.5f}, frontColor},
-	//	{{-0.5f, 0.5f, -0.5f}, frontColor},
-	//	{{0.5f, -0.5f, -0.5f}, frontColor},
-	//	{{0.5f, 0.5f, -0.5f}, frontColor},
-
-	//	// up
-	//	{{-0.5f, 0.5f, -0.5f}, upColor},
-	//	{{-0.5f, 0.5f, 0.5f}, upColor},
-	//	{{0.5f, 0.5f, -0.5f}, upColor},
-	//	{{0.5f, 0.5f, 0.5f}, upColor},
-
-	//	// back
-	//	{{0.5f, -0.5f, 0.5f}, backColor},
-	//	{{0.5f, 0.5f, 0.5f}, backColor},
-	//	{{-0.5f, -0.5f, 0.5f}, backColor},
-	//	{{-0.5f, 0.5f, 0.5f}, backColor},
-
-	//	// down
-	//	{{-0.5f, -0.5f, 0.5f}, downColor},
-	//	{{-0.5f, -0.5f, -0.5f}, downColor},
-	//	{{0.5f, -0.5f, 0.5f}, downColor},
-	//	{{0.5f, -0.5f, -0.5f}, downColor},
-
-	//	// left
-	//	{{-0.5f, -0.5f, 0.5f}, leftColor},
-	//	{{-0.5f, 0.5f, 0.5f}, leftColor},
-	//	{{-0.5f, -0.5f, -0.5f}, leftColor},
-	//	{{-0.5f, 0.5f, -0.5f}, leftColor},
-
-	//	// right
-	//	{{0.5f, -0.5f, -0.5f}, rightColor},
-	//	{{0.5f, 0.5f, -0.5f}, rightColor},
-	//	{{0.5f, -0.5f, 0.5f}, rightColor},
-	//	{{0.5f, 0.5f, 0.5f}, rightColor},
-	//};
-
-	//ui16 indexes[36];
-	//for (ui32 index = 0; index < 6; ++index)
-	//{
-	//	indexes[index * 6 + 0] = index * 4 + 0;
-	//	indexes[index * 6 + 1] = index * 4 + 1;
-	//	indexes[index * 6 + 2] = index * 4 + 3;
-
-	//	indexes[index * 6 + 3] = index * 4 + 2;
-	//	indexes[index * 6 + 4] = index * 4 + 0;
-	//	indexes[index * 6 + 5] = index * 4 + 3;
-	//}
-
-	//auto data = make_unique<byte[]>(sizeof(vertexArrayData) + sizeof(indexes));
-	//MemOps::Copy(data.get(), reinterpret_cast<const byte *>(vertexArrayData), sizeof(vertexArrayData));
-	//MemOps::Copy(data.get() + sizeof(vertexArrayData), reinterpret_cast<const byte *>(indexes), sizeof(indexes));
-
-	//Mesh::SubMeshInfo subMesh;
-	//subMesh.vertexCount = CountOf(vertexArrayData);
-	//subMesh.indexCount = 36;
-
-	//Mesh::VertexAttribute vertexAttributes[] =
-	//{
-	//	{"POSITION", ColorFormatt::R32G32B32_Float},
-	//	{"COLOR", ColorFormatt::R32G32B32A32_Float}
-	//};
-
-	//Mesh mesh;
-	//mesh.isSkinned = false;
-	//mesh.subMeshInfos.push_back(subMesh);
-	//mesh.vertexAttributes.assign(std::begin(vertexAttributes), std::end(vertexAttributes));
-
-	//MeshAsset meshAsset;
-	//meshAsset.assetId = {};
-	//meshAsset.desc = mesh;
-	//meshAsset.data = move(data);
-
 	return {MeshAsset::GetTypeId(), make_shared<MeshAsset>(move(*loaded))};
 }
 
@@ -179,7 +89,11 @@ optional<MeshAsset> LoadWithAssimp(Array<const byte> source)
 	{
 		const aiMesh *mesh = scene->mMeshes[meshIndex];
 
-		ASSUME(mesh->mPrimitiveTypes == aiPrimitiveType_TRIANGLE);
+		if (mesh->mPrimitiveTypes != aiPrimitiveType_TRIANGLE)
+		{
+			SOFTBREAK;
+			continue;
+		}
 
 		ui16 vertexCount = static_cast<ui16>(mesh->mNumVertices);
 		ui32 indexCount = mesh->mNumFaces * 3;

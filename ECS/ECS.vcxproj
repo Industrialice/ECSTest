@@ -30,6 +30,7 @@
     <ClInclude Include="Archetype.hpp" />
     <ClInclude Include="ArchetypeReflector.hpp" />
     <ClInclude Include="Array.hpp" />
+    <ClInclude Include="AssetId.hpp" />
     <ClInclude Include="AssetsManager.hpp" />
     <ClInclude Include="Component.hpp" />
     <ClInclude Include="ComponentArrayBuilder.hpp" />

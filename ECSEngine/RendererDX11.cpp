@@ -12,6 +12,11 @@
 
 using namespace ECSEngine;
 
+namespace
+{
+	constexpr bool IsReverseZ = true;
+}
+
 static optional<HWND> CreateSystemWindow(LoggerWrapper &logger, const string &title, bool isFullscreen, bool hideBorders, bool isMaximized, RECT &dimensions, Window::CursorTypet cursorType, void *userData);
 static LRESULT WINAPI MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 static HCURSOR AcquireCursor(Window::CursorTypet type);
@@ -352,7 +357,7 @@ public:
 		D3D11_DEPTH_STENCIL_DESC dsDesc{};
 		dsDesc.BackFace = stencilOpDesc;
 		dsDesc.DepthEnable = true;
-		dsDesc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
+		dsDesc.DepthFunc = IsReverseZ ? D3D11_COMPARISON_GREATER_EQUAL : D3D11_COMPARISON_LESS_EQUAL;
 		dsDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
 		dsDesc.FrontFace = stencilOpDesc;
 		dsDesc.StencilEnable = false;
@@ -690,7 +695,7 @@ public:
 			{
 				if (camera.depthStencilBuffer->depthStencilView)
 				{
-					_context->ClearDepthStencilView(camera.depthStencilBuffer->depthStencilView.get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+					_context->ClearDepthStencilView(camera.depthStencilBuffer->depthStencilView.get(), D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, IsReverseZ ? 0.0f : 1.0f, 0);
 				}
 			}
 
@@ -726,7 +731,14 @@ public:
 						viewport.TopLeftY = 0.0;
 						_context->RSSetViewports(1, &viewport);
 
-						auto projectionMatrix = Matrix4x4::CreatePerspectiveProjection(DegToRad(75.0f), static_cast<f32>(window->width) / static_cast<f32>(window->height), 0.1f, 1000.0f, ProjectionTarget::D3DAndMetal);
+						f32 nearPlane = camera.data.nearPlane;
+						f32 farPlane = camera.data.farPlane;
+						if (IsReverseZ)
+						{
+							std::swap(nearPlane, farPlane);
+						}
+
+						auto projectionMatrix = Matrix4x4::CreatePerspectiveProjection(DegToRad(camera.data.fov), static_cast<f32>(window->width) / static_cast<f32>(window->height), nearPlane, farPlane, ProjectionTarget::D3DAndMetal);
 						Matrix4x4 viewProjectionMatrix = camera.transform.ViewMatrix() * projectionMatrix;
 
 						for (auto &[id, object] : _meshRendererObjects)

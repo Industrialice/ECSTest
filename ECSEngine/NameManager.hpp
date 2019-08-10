@@ -8,9 +8,9 @@ namespace ECSEngine
 		NameManager() = default;
 
 	public:
-		static shared_ptr<NameManager> New();
+		static [[nodiscard]] shared_ptr<NameManager> New();
 
-		virtual string_view NameOf(EntityID id) const = 0;
+		virtual [[nodiscard]] string_view NameOf(EntityID id) const = 0;
 		virtual void NameOf(EntityID id, string_view name) = 0;
 	};
 }

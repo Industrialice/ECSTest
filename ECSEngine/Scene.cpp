@@ -41,7 +41,7 @@ void AddCamera(EntityIDGenerator &idGenerator, EntitiesStream &stream)
 
 	Camera camera;
 	camera.rt[0] = rt;
-	camera.farPlane = 1000.0f;
+	camera.farPlane = FLT_MAX;
 	camera.nearPlane = 0.1f;
 	camera.fov = 75.0f;
 	camera.isClearDepthStencil = true;
