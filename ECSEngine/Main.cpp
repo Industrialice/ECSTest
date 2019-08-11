@@ -20,6 +20,7 @@ namespace
 static void LogRecipient(LogLevels::LogLevel logLevel, StringViewNullTerminated message, string_view senderName);
 static void FileLogRecipient(File &file, LogLevels::LogLevel logLevel, StringViewNullTerminated message, string_view senderName);
 static bool ReceiveInput(const ControlAction &action);
+static TypeId ResolveAssetExtensionToType(const wchar_t *ext);
 
 int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 {
@@ -56,12 +57,36 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 	manager->Register<ObjectsMoverSystem>(physicsPipeline);
 	manager->Register(move(cameraMovementSystem), physicsPipeline);
 
+	auto assetIdMapper = make_shared<AssetIdMapper>();
+
+	auto fileEnumerateCallback = [&assetIdMapper](const FileEnumInfo &info, const FilePath &currentPath)
+	{
+		const wchar_t *ext = wcsrchr(info.cFileName, '.');
+		if (!ext)
+		{
+			return;
+		}
+
+		TypeId type = ResolveAssetExtensionToType(ext + 1);
+		if (!type.IsValid())
+		{
+			SOFTBREAK;
+			return;
+		}
+
+		assetIdMapper->Register(currentPath.GetWithRemovedTopLevel() / info.cFileName, type);
+	};
+
+	FileSystem::Enumerate(L"Assets", fileEnumerateCallback, FileSystem::EnumerateOptions::ReportFiles.Combined(FileSystem::EnumerateOptions::Recursive));
+
     vector<WorkerThread> workers;
     EntityIDGenerator idGenerator;
-    auto stream = Scene::Create(idGenerator);
+    auto stream = Scene::Create(idGenerator, *assetIdMapper);
 
 	AssetsManager assetsManager;
 	AssetsLoaders assetsLoaders;
+	assetsLoaders.SetAssetIdMapper(assetIdMapper);
+	assetsLoaders.SetAssetsLocation(L"Assets");
 	assetsLoaders.RegisterLoaders(assetsManager);
 
     manager->Start(move(assetsManager), move(idGenerator), move(workers), move(stream));
@@ -197,4 +222,24 @@ bool ReceiveInput(const ControlAction &action)
     }
 
     return false;
+}
+
+TypeId ResolveAssetExtensionToType(const wchar_t *ext)
+{
+	static constexpr wchar_t meshExtensions[][8] =
+	{
+		L"fbx", L"dae", L"gltf", L"glb", L"blend", L"3ds", L"ase", L"obj", L"ifc", L"xgl", L"zgl", L"ply", L"dxf", L"lwo", L"lws", L"lxo",
+		L"stl", L"x", L"ac", L"ms3d", L"cob", L"scn", L"bvh", L"csm", L"xml", L"irrmesh", L"irr", L"mdl", L"md2", L"md3", L"pk3", L"mdc",
+		L"md5", L"smd", L"vta", L"ogex", L"3d", L"b3d", L"q3d", L"q3s", L"nff", L"nff", L"off", L"raw", L"ter", L"mdl", L"hmp", L"ndo"
+	};
+
+	for (const wchar_t *meshExt : meshExtensions)
+	{
+		if (!_wcsicmp(ext, meshExt))
+		{
+			return MeshAsset::GetTypeId();
+		}
+	}
+
+	return {};
 }

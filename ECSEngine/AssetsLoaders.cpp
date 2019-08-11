@@ -24,6 +24,16 @@ void AssetsLoaders::RegisterLoaders(AssetsManager &manager)
 	manager.AddAssetLoader(TextureAsset::GetTypeId(), GenerateTextureLoaderFunction());
 }
 
+void AssetsLoaders::SetAssetIdMapper(const shared_ptr<AssetIdMapper> &mapper)
+{
+	_assetIdMapper = mapper;
+}
+
+void AssetsLoaders::SetAssetsLocation(FilePath &&path)
+{
+	_assetsLocation = move(path);
+}
+
 AssetsManager::LoadedAsset AssetsLoaders::LoadMesh(AssetId id, TypeId expectedType)
 {
 	if (expectedType != MeshAsset::GetTypeId())
@@ -32,7 +42,27 @@ AssetsManager::LoadedAsset AssetsLoaders::LoadMesh(AssetId id, TypeId expectedTy
 		return {MeshAsset::GetTypeId()};
 	}
 
-	File file(L"Assets/Raider_Ponyhide_Armor_female.fbx", FileOpenMode::OpenExisting, FileProcModes::Read);
+	if (!_assetIdMapper)
+	{
+		SOFTBREAK;
+		return {};
+	}
+
+	auto filePathAndType = _assetIdMapper->ResolveIdToPath(id);
+	if (!filePathAndType)
+	{
+		SOFTBREAK;
+		return {};
+	}
+
+	if (filePathAndType->second != MeshAsset::GetTypeId())
+	{
+		SOFTBREAK;
+		return {};
+	}
+
+	Error<> fileError;
+	File file(_assetsLocation / filePathAndType->first, FileOpenMode::OpenExisting, FileProcModes::Read, 0, {}, {}, &fileError);
 	if (!file)
 	{
 		SOFTBREAK;
@@ -66,7 +96,8 @@ optional<MeshAsset> LoadWithAssimp(Array<const byte> source)
 {
 	MeshAsset loaded{};
 	Assimp::Importer importer;
-	const aiScene *scene = importer.ReadFileFromMemory(source.data(), source.size(), aiProcess_Triangulate | aiProcess_SortByPType);
+	constexpr auto flags = aiProcess_Triangulate | aiProcess_SortByPType | aiProcess_JoinIdenticalVertices | aiProcess_PreTransformVertices | aiProcess_FindDegenerates | aiProcess_FindInvalidData;
+	const aiScene *scene = importer.ReadFileFromMemory(source.data(), source.size(), flags);
 	if (!scene)
 	{
 		SENDLOG(Error, AssetsLoaders, "LoadWithAssimp failed to read file from memory\n");

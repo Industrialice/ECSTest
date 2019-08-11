@@ -98,7 +98,8 @@ namespace ECSEngine
 
 	struct MaterialAsset
 	{
-		MaterialAssetId assetId{};
+		using assetIdType = MaterialAssetId;
+		assetIdType assetId{};
 		Material material{};
 	};
 
@@ -109,7 +110,8 @@ namespace ECSEngine
 
 	struct MaterialAssetsArrayAsset
 	{
-		MaterialAssetsArrayAssetId assetId{};
+		using assetIdType = MaterialAssetsArrayAssetId;
+		assetIdType assetId{};
 		vector<MaterialAsset> materialAssets{};
 	};
 }

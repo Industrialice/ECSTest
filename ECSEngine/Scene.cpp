@@ -6,14 +6,14 @@
 using namespace ECSEngine;
 
 static void AddCamera(EntityIDGenerator &idGenerator, EntitiesStream &stream);
-static void AddObjects(EntityIDGenerator &idGenerator, EntitiesStream &stream);
+static void AddObjects(EntityIDGenerator &idGenerator, AssetIdMapper &assetIdMapper, EntitiesStream &stream);
 
-unique_ptr<IEntitiesStream> Scene::Create(EntityIDGenerator &idGenerator)
+unique_ptr<IEntitiesStream> Scene::Create(EntityIDGenerator &idGenerator, AssetIdMapper &assetIdMapper)
 {
     auto stream = make_unique<EntitiesStream>();
 
 	AddCamera(idGenerator, *stream);
-	AddObjects(idGenerator, *stream);
+	AddObjects(idGenerator, assetIdMapper, *stream);
 
     return move(stream);
 }
@@ -61,7 +61,7 @@ void AddCamera(EntityIDGenerator &idGenerator, EntitiesStream &stream)
 	stream.AddEntity(idGenerator.Generate(), move(entity));
 }
 
-void AddObjects(EntityIDGenerator &idGenerator, EntitiesStream &stream)
+void AddObjects(EntityIDGenerator &idGenerator, AssetIdMapper &assetIdMapper, EntitiesStream &stream)
 {
 	EntitiesStream::EntityData entity;
 
@@ -74,7 +74,7 @@ void AddObjects(EntityIDGenerator &idGenerator, EntitiesStream &stream)
 	entity.AddComponent(rotation);
 
 	MeshRenderer meshRenderer;
-	meshRenderer.mesh = {};
+	meshRenderer.mesh = assetIdMapper.Register<MeshAsset>(L"Stable_Jumpsuit_female.fbx");
 	meshRenderer.materials = {};
 	entity.AddComponent(meshRenderer);
 

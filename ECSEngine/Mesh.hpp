@@ -30,7 +30,8 @@ namespace ECSEngine
 
 	struct MeshAsset : TypeIdentifiable<MeshAsset>
 	{
-		MeshAssetId assetId{};
+		using assetIdType = MeshAssetId;
+		assetIdType assetId{};
 		Mesh desc{};
 		unique_ptr<byte[]> data{};
 	};

@@ -118,7 +118,8 @@ namespace ECSEngine
 
 	struct TextureAsset : TypeIdentifiable<TextureAsset>
 	{
-		TextureAssetId assetId{};
+		using assetIdType = TextureAssetId;
+		assetIdType assetId{};
 		Texture desc{};
 		unique_ptr<byte> data{};
 	};

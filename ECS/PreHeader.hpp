@@ -99,6 +99,8 @@ protected:
 		conditional_t<sizeof(T) == 4, ui32, ui64>>>;
 
 public:	
+	using idType = T;
+
 	OpaqueID() = default;
 	
 	explicit OpaqueID(T id) : _id(id)

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "AssetIdMapper.hpp"
+
 namespace ECSEngine
 {
 	class AssetsLoaders
@@ -27,9 +29,14 @@ namespace ECSEngine
 		[[nodiscard]] AssetsManager::AssetLoaderFuncType GenerateMeshLoaderFunction();
 		[[nodiscard]] AssetsManager::AssetLoaderFuncType GenerateTextureLoaderFunction();
 		void RegisterLoaders(AssetsManager &manager);
+		void SetAssetIdMapper(const shared_ptr<AssetIdMapper> &mapper);
+		void SetAssetsLocation(FilePath &&path);
 
 	private:
 		[[nodiscard]] AssetsManager::LoadedAsset LoadMesh(AssetId id, TypeId expectedType);
 		[[nodiscard]] AssetsManager::LoadedAsset LoadTexture(AssetId id, TypeId expectedType);
+
+		shared_ptr<AssetIdMapper> _assetIdMapper{};
+		FilePath _assetsLocation{};
 	};
 }

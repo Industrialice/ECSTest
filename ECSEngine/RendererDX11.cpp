@@ -23,6 +23,7 @@ static HCURSOR AcquireCursor(Window::CursorTypet type);
 NOINLINE static const char *ConvertDirectXErrToString(HRESULT hresult);
 static DXGI_FORMAT ColorFormatToDirectX(ColorFormatt format);
 static uiw ColorFormatSizeOf(ColorFormatt format);
+static const char *FeatureLevelToString(D3D_FEATURE_LEVEL level);
 
 struct _COMDeleter
 {
@@ -492,7 +493,7 @@ public:
 		context->PSSetShader(_pixelShader.get(), nullptr, 0);
 		context->VSSetShader(_vertexShader.get(), nullptr, 0);
 
-		context->DrawIndexed(indexCount, 0, indexBufferOffset);
+		context->DrawIndexed(indexCount, indexBufferOffset, 0);
 	}
 
 	ID3DBlob *VertexShaderCode()
@@ -870,6 +871,8 @@ public:
         }
 
         _maxSupportedFeatureLevel = _device->GetFeatureLevel(); // TODO: this can be off
+
+		env.logger.Info("Device's maximum supported feature level is %s, selected level is %s\n", FeatureLevelToString(_maxSupportedFeatureLevel), FeatureLevelToString(_featureLevel));
 
         ASSUME(_device != nullptr && _context != nullptr);
 
@@ -1375,6 +1378,30 @@ uiw ColorFormatSizeOf(ColorFormatt format)
 	return {};
 }
 
+const char *FeatureLevelToString(D3D_FEATURE_LEVEL level)
+{
+	#define C(name) case name: return TOSTR(name);
+
+	switch (level)
+	{
+		C(D3D_FEATURE_LEVEL_1_0_CORE)
+		C(D3D_FEATURE_LEVEL_12_1)
+		C(D3D_FEATURE_LEVEL_12_0)
+		C(D3D_FEATURE_LEVEL_11_1)
+		C(D3D_FEATURE_LEVEL_11_0)
+		C(D3D_FEATURE_LEVEL_10_1)
+		C(D3D_FEATURE_LEVEL_10_0)
+		C(D3D_FEATURE_LEVEL_9_3)
+		C(D3D_FEATURE_LEVEL_9_2)
+		C(D3D_FEATURE_LEVEL_9_1)
+	}
+
+	#undef C
+
+	SOFTBREAK;
+	return "unknown level";
+}
+
 DX11DepthStencilBuffer::DX11DepthStencilBuffer(ID3D11Device *device, Camera::DepthBufferFormat depthBufferFormat) : device(device), depthBufferFormat(depthBufferFormat)
 {}
 
@@ -1404,6 +1431,14 @@ bool DX11DepthStencilBuffer::Resize(LoggerWrapper &logger, ui32 newWidth, ui32 n
 		format = DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
 	}
 
+	UINT support;
+	HRESULT formatSupportResult = device->CheckFormatSupport(format, &support);
+	if (formatSupportResult != S_OK || (support & D3D11_FORMAT_SUPPORT_DEPTH_STENCIL) == 0)
+	{
+		logger.Warning("Device doesn't support 32 bit depth format, switching to 24\n");
+		format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+	}
+
 	D3D11_TEXTURE2D_DESC depthStencilDesc;
 	depthStencilDesc.Width = width;
 	depthStencilDesc.Height = height;
@@ -1420,13 +1455,13 @@ bool DX11DepthStencilBuffer::Resize(LoggerWrapper &logger, ui32 newWidth, ui32 n
 	COMUniquePtr<ID3D11Texture2D> depthStencilTexture;
 	if (HRESULT hresult = device->CreateTexture2D(&depthStencilDesc, 0, AddressOfNaked(depthStencilTexture)); hresult != S_OK)
 	{
-		logger.Error("CreateWindowRenderTargetView: create depth stencil texture for the current window failed with error 0x%Xl %s\n", hresult, ConvertDirectXErrToString(hresult));
+		logger.Error("DX11DepthStencilBuffer.Resize.ResizergetView: create depth stencil texture for the current window failed with error 0x%Xl %s\n", hresult, ConvertDirectXErrToString(hresult));
 		return false;
 	}
 
 	if (HRESULT hresult = device->CreateDepthStencilView(depthStencilTexture.get(), 0, AddressOfNaked(depthStencilView)); hresult != S_OK)
 	{
-		logger.Error("CreateWindowRenderTargetView: create depth stencil view for the current window failed with error 0x%Xl %s\n", hresult, ConvertDirectXErrToString(hresult));
+		logger.Error("DX11DepthStencilBuffer.Resize: create depth stencil view for the current window failed with error 0x%Xl %s\n", hresult, ConvertDirectXErrToString(hresult));
 		return false;
 	}
 
@@ -1605,7 +1640,7 @@ bool DX11Window::CreateWindowRenderTargetView(LoggerWrapper &logger)
 
 	if (!depthStencilBuffer->Resize(logger, window->width, window->height))
 	{
-		logger.Error("CreateWindowRenderTargetView: failed to resuze depth stencil buffer\n");
+		logger.Error("CreateWindowRenderTargetView: failed to resize depth stencil buffer\n");
 		return false;
 	}
 
