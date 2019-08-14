@@ -288,7 +288,7 @@ public:
 		return _submeshInfos.size();
 	}
 
-	void SetPipeline(ID3D11DeviceContext *context)
+	void SetPipeline(ID3D11DeviceContext *context) const
 	{
 		ASSUME(_inputLayout && _vertexBuffer && _indexBuffer);
 
@@ -372,21 +372,37 @@ public:
 
 		const char *vsCode = TOSTR(
 			cbuffer Uniforms : register(b0)
-		{
-			float4x4 ModelViewProjectionMatrix : packoffset(c0);
-		}
+			{
+				float4x4 ModelViewProjectionMatrix : packoffset(c0);
+				float4x3 ModelMatrix : packoffset(c4);
+				float3 CameraPosition : packoffset(c7.x);
+			}
 
-		void VSMain(float4 pos : POSITION, float4 color : COLOR, out float4 outPos : SV_POSITION, out float4 outColor : COLOR)
-		{
-			outPos = mul(pos, ModelViewProjectionMatrix);
-			outColor = color;
-		}
+			void VSMain(float4 pos : POSITION, float3 normal : NORMAL, out float4 outPos : SV_POSITION, out float3 worldPos : WORLDPOS, out float3 outNormal : NORMAL)
+			{
+				outPos = mul(pos, ModelViewProjectionMatrix);
+				worldPos = mul(pos, ModelMatrix);
+				outNormal = normal;
+			}
 		);
 
 		const char *psCode = TOSTR(
-			float4 PSMain(float4 pos : SV_POSITION, float4 color : COLOR) : SV_TARGET
+			cbuffer Uniforms : register(b0)
 			{
-				return color;
+				float4x4 ModelViewProjectionMatrix : packoffset(c0);
+				float4x3 ModelMatrix : packoffset(c4);
+				float3 CameraPosition : packoffset(c7.x);
+			}
+
+			float4 PSMain(float4 pos : SV_POSITION, float3 worldPos : WORLDPOS, float3 normal : NORMAL) : SV_TARGET
+			{
+				normal = normalize(normal);
+				float3 toCamera = normalize(CameraPosition - worldPos);
+				float3 lightVec = normalize(float3(100, 100, 100) - worldPos);
+				float diffuse = saturate(dot(normal, lightVec));
+				float3 reflected = reflect(-lightVec, normal);
+				float specular = pow(saturate(dot(reflected, toCamera)), 8);
+				return float4((diffuse + specular + 0.1f).xxx, 1.0f);
 			}
 		);
 
@@ -470,7 +486,7 @@ public:
 		logger.Info("Finished creating material\n");
 	}
 
-	void Draw(ID3D11DeviceContext *context, ID3D11Buffer *uniformBuffer, System::Environment &env, const Matrix4x3 &modelMatrix, const Matrix4x4 &viewProjectionMatrix, ui32 indexCount, ui32 indexBufferOffset)
+	void SetStates(ID3D11DeviceContext *context, ID3D11Buffer *uniformBuffer, System::Environment &env, const Matrix3x4 &modelTMatrix, const Matrix4x4 &mvpTMatrix, const Vector3 &cameraPosition)
 	{
 		static constexpr UINT strides[] = {sizeof(Vector3) + sizeof(Vector4)};
 		static constexpr UINT offsets[] = {0};
@@ -481,9 +497,15 @@ public:
 			env.logger.Error("Uniform buffer mapping failed, error %s\n", ConvertDirectXErrToString(result));
 		}
 
-		Matrix4x4 mvp = modelMatrix * viewProjectionMatrix;
-		mvp.Transpose();
-		MemOps::Copy(static_cast<Matrix4x4 *>(mapped.pData), &mvp, 1);
+		std::byte *memory = static_cast<std::byte *>(mapped.pData);
+
+		MemOps::Copy(reinterpret_cast<Matrix4x4 *>(memory), &mvpTMatrix, 1);
+		memory += sizeof(Matrix4x4);
+
+		MemOps::Copy(reinterpret_cast<Matrix3x4 *>(memory), &modelTMatrix, 1);
+		memory += sizeof(Matrix3x4);
+
+		MemOps::Copy(reinterpret_cast<Vector3 *>(memory), &cameraPosition, 1);
 
 		context->Unmap(uniformBuffer, 0);
 
@@ -492,7 +514,10 @@ public:
 		context->OMSetDepthStencilState(_dsState.get(), ui32_max);
 		context->PSSetShader(_pixelShader.get(), nullptr, 0);
 		context->VSSetShader(_vertexShader.get(), nullptr, 0);
+	}
 
+	void Draw(ID3D11DeviceContext *context, ui32 indexCount, ui32 indexBufferOffset)
+	{
 		context->DrawIndexed(indexCount, indexBufferOffset, 0);
 	}
 
@@ -515,44 +540,68 @@ class MeshRendererObject
 public:
 	MeshRendererObject() = default;
 
-	MeshRendererObject(System::Environment &env, ID3D11Device *device, LayoutManager &layoutManager, const MeshRenderer &meshRenderer)
+	MeshRendererObject(System::Environment &env, ID3D11Device *device, LayoutManager &layoutManager, std::unordered_map<MeshAssetId, shared_ptr<MeshResource>> &loadedMeshResources, const MeshRenderer &meshRenderer)
 	{
-		bool isMaterialCreated = false;
-		_material = RenderingMaterial(env.logger, device, isMaterialCreated);
-		if (!isMaterialCreated)
+		if (!_material)
 		{
-			return;
+			bool isMaterialCreated = false;
+			_material = make_shared<RenderingMaterial>(env.logger, device, isMaterialCreated);
+			if (!isMaterialCreated)
+			{
+				return;
+			}
 		}
 
-		const MeshAsset *meshAsset = env.assetsManager.Load<MeshAsset>(meshRenderer.mesh);
-		if (!meshAsset)
+		auto foundMeshResource = loadedMeshResources.find(meshRenderer.mesh);
+		if (foundMeshResource == loadedMeshResources.end())
 		{
-			env.logger.Error("MeshRendererObject failed to load mesh asset\n");
-			return;
+			const MeshAsset *meshAsset = env.assetsManager.Load<MeshAsset>(meshRenderer.mesh);
+			if (!meshAsset)
+			{
+				env.logger.Error("MeshRendererObject failed to load mesh asset\n");
+				return;
+			}
+
+			bool isMeshCreated = false;
+			auto mesh = make_shared<MeshResource>(env.logger, device, *meshAsset, layoutManager, Array<byte>(static_cast<byte *>(_material->VertexShaderCode()->GetBufferPointer()), _material->VertexShaderCode()->GetBufferSize()), isMeshCreated);
+			if (!isMeshCreated)
+			{
+				return;
+			}
+
+			_mesh = mesh;
+			loadedMeshResources.insert({meshRenderer.mesh, mesh});
+		}
+		else
+		{
+			_mesh = foundMeshResource->second;
 		}
 
-		bool isMeshCreated = false;
-		_mesh = MeshResource(env.logger, device, *meshAsset, layoutManager, Array<byte>(static_cast<byte *>(_material.VertexShaderCode()->GetBufferPointer()), _material.VertexShaderCode()->GetBufferSize()), isMeshCreated);
-		if (!isMaterialCreated)
-		{
-			return;
-		}
-
-		env.logger.Info("Finished creating cube\n");
+		env.logger.Info("Finished creating MeshRendererObject\n");
 	}
 
-	void Draw(ID3D11DeviceContext *context, ID3D11Buffer *uniformBuffer, System::Environment &env, const Matrix4x4 &viewProjectionMatrix)
+	void Draw(ID3D11DeviceContext *context, ID3D11Buffer *uniformBuffer, System::Environment &env, const Matrix4x4 &viewProjectionMatrix, const Vector3 &cameraPosition)
 	{
+		if (!_mesh)
+		{
+			return;
+		}
+
 		if (!_modelMatrix)
 		{
 			_modelMatrix = Matrix4x3::CreateRTS(_rotation, _position);
 		}
 
-		_mesh.SetPipeline(context);
+		_mesh->SetPipeline(context);
 
-		for (uiw meshIndex = 0; meshIndex < _mesh.GetSubmeshCount(); ++meshIndex)
+		Matrix4x4 mvp = *_modelMatrix * viewProjectionMatrix;
+		mvp.Transpose();
+
+		_material->SetStates(context, uniformBuffer, env, _modelMatrix->GetTransposed(), mvp, cameraPosition);
+
+		for (uiw meshIndex = 0; meshIndex < _mesh->GetSubmeshCount(); ++meshIndex)
 		{
-			_material.Draw(context, uniformBuffer, env, *_modelMatrix, viewProjectionMatrix, _mesh.GetSubmeshInfo(meshIndex).indexCount, _mesh.GetSubmeshInfo(meshIndex).startIndex);
+			_material->Draw(context, _mesh->GetSubmeshInfo(meshIndex).indexCount, _mesh->GetSubmeshInfo(meshIndex).startIndex);
 		}
 	}
 
@@ -570,8 +619,8 @@ public:
 
 private:
 	optional<Matrix4x3> _modelMatrix{};
-	MeshResource _mesh{};
-	RenderingMaterial _material{};
+	shared_ptr<const MeshResource> _mesh{};
+	static inline shared_ptr<RenderingMaterial> _material;
 	Vector3 _position{};
 	Quaternion _rotation{};
 };
@@ -744,15 +793,13 @@ public:
 
 						for (auto &[id, object] : _meshRendererObjects)
 						{
-							object.Draw(_context.get(), _uniformBuffer.get(), env, viewProjectionMatrix);
+							object.Draw(_context.get(), _uniformBuffer.get(), env, viewProjectionMatrix, camera.transform.Position());
 						}
 
 						dxWindow.swapChain->Present(0, 0);
 					}
                 }
             }
-
-
         }
 
         MSG msg{};
@@ -920,7 +967,7 @@ public:
 private:
 	void AddMeshRenderer(Environment &env, EntityID id, const MeshRenderer &meshRenderer, const Vector3 &position, const Quaternion &rotation)
 	{
-		auto insertResult = _meshRendererObjects.insert({id, MeshRendererObject(env, _device.get(), _layoutManager, meshRenderer)});
+		auto insertResult = _meshRendererObjects.insert({id, MeshRendererObject(env, _device.get(), _layoutManager, _meshResources, meshRenderer)});
 		ASSUME(insertResult.second);
 		insertResult.first->second.SetPosition(position);
 		insertResult.first->second.SetRotation(rotation);
@@ -1048,6 +1095,7 @@ private:
     D3D_FEATURE_LEVEL _featureLevel{}, _maxSupportedFeatureLevel{};
 	COMUniquePtr<ID3D11Buffer> _uniformBuffer{};
 	LayoutManager _layoutManager{};
+	std::unordered_map<MeshAssetId, shared_ptr<MeshResource>> _meshResources{};
 };
 
 unique_ptr<Renderer> RendererDX11System::New()
@@ -1147,8 +1195,6 @@ LRESULT WINAPI MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             window.width = LOWORD(lParam);
             window.height = HIWORD(lParam);
             data->isChanged = true;
-			LoggerWrapper logger;
-			data->NotifyWindowResized(logger);
         } break;
         // WM_EXITSIZEMOVE is sent when the user grabs the resize bars.
     case WM_ENTERSIZEMOVE:
@@ -1168,6 +1214,13 @@ LRESULT WINAPI MsgProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
         //((MINMAXINFO*)lParam)->ptMinTrackSize.x = 200;
         //((MINMAXINFO*)lParam)->ptMinTrackSize.y = 200; 
         break;
+	//case WM_SYSCOMMAND:
+	//	if (wParam == 0xF030 /*SC_MAXIMIZE*/)
+	//	{
+	//		data->window->isFullscreen = true;
+	//		data->isChanged = true;
+	//	}
+	//	break;
     }
 
     return DefWindowProcA(hwnd, msg, wParam, lParam);

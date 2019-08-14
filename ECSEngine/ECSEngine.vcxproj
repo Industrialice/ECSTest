@@ -209,6 +209,7 @@
     </ClCompile>
     <ClCompile Include="RendererDX11.cpp" />
     <ClCompile Include="Scene.cpp" />
+    <ClCompile Include="SceneFromMap.cpp" />
     <ClCompile Include="WinHIDInput.cpp" />
     <ClCompile Include="WinVirtualKeysMapping.cpp" />
     <ClCompile Include="WinVKInput.cpp" />
@@ -229,6 +230,7 @@
     <ClInclude Include="Renderer.hpp" />
     <ClInclude Include="RendererDX11.hpp" />
     <ClInclude Include="Scene.hpp" />
+    <ClInclude Include="SceneFromMap.hpp" />
     <ClInclude Include="Texture.hpp" />
     <ClInclude Include="WinAPI.hpp" />
     <ClInclude Include="WinHIDInput.hpp" />

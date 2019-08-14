@@ -10,7 +10,7 @@ void CameraMovementSystem::Update(Environment &env)
 		return;
 	}
 
-	float camMovementScale = env.timeSinceLastFrame * 5;
+	float camMovementScale = env.timeSinceLastFrame * 500;
 	if (env.keyController->GetKeyInfo(KeyCode::LShift).IsPressed())
 	{
 		camMovementScale *= 3;
@@ -144,7 +144,7 @@ bool CameraMovementSystem::ControlInput(Environment &env, const ControlAction &a
 {
 	if (_controlledCameraId)
 	{
-		if (auto *mouse = action.Get<ControlAction::MouseMove>(); mouse)
+		if (auto mouse = action.Get<ControlAction::MouseMove>(); mouse)
 		{
 			if (mouse->delta.x)
 			{
@@ -154,6 +154,14 @@ bool CameraMovementSystem::ControlInput(Environment &env, const ControlAction &a
 			if (mouse->delta.y)
 			{
 				_cameraTransform.RotateAroundRightAxis(mouse->delta.y * 0.001f);
+				_isUpdated = true;
+			}
+		}
+		else if (auto wheel = action.Get<ControlAction::MouseWheel>(); wheel)
+		{
+			if (wheel->delta)
+			{
+				_cameraTransform.MoveAlongForwardAxis(-wheel->delta * 5.0f);
 				_isUpdated = true;
 			}
 		}

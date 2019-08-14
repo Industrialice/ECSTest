@@ -10,7 +10,7 @@ namespace ECSEngine
 		{
 			for (auto &rot : rotations)
 			{
-				rot.rotation = Quaternion::FromEuler({0, env.timeSinceStarted.ToSec(), 0});
+				rot.rotation = Quaternion::FromEuler({0, env.timeSinceStarted.ToSec() * 0.4f, 0});
 			}
 		}
 	};

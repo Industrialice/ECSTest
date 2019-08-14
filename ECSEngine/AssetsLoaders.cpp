@@ -62,6 +62,15 @@ AssetsManager::LoadedAsset AssetsLoaders::LoadMesh(AssetId id, TypeId expectedTy
 	}
 
 	Error<> fileError;
+	FilePath fullPath;
+	if (_assetsLocation.IsEmpty())
+	{
+		fullPath = filePathAndType->first;
+	}
+	else
+	{
+		fullPath = _assetsLocation / filePathAndType->first;
+	}
 	File file(_assetsLocation / filePathAndType->first, FileOpenMode::OpenExisting, FileProcModes::Read, 0, {}, {}, &fileError);
 	if (!file)
 	{
@@ -96,7 +105,7 @@ optional<MeshAsset> LoadWithAssimp(Array<const byte> source)
 {
 	MeshAsset loaded{};
 	Assimp::Importer importer;
-	constexpr auto flags = aiProcess_Triangulate | aiProcess_SortByPType | aiProcess_JoinIdenticalVertices | aiProcess_PreTransformVertices | aiProcess_FindDegenerates | aiProcess_FindInvalidData;
+	constexpr auto flags = aiProcess_Triangulate | aiProcess_SortByPType | aiProcess_JoinIdenticalVertices | aiProcess_PreTransformVertices | aiProcess_FindDegenerates | aiProcess_FindInvalidData | aiProcess_MakeLeftHanded;
 	const aiScene *scene = importer.ReadFileFromMemory(source.data(), source.size(), flags);
 	if (!scene)
 	{
@@ -107,7 +116,7 @@ optional<MeshAsset> LoadWithAssimp(Array<const byte> source)
 	struct Vertex
 	{
 		Vector3 position;
-		Vector4 color;
+		Vector3 normal;
 	};
 
 	vector<Vertex> vertices;
@@ -126,6 +135,12 @@ optional<MeshAsset> LoadWithAssimp(Array<const byte> source)
 			continue;
 		}
 
+		if (!mesh->HasNormals())
+		{
+			SOFTBREAK;
+			continue;
+		}
+
 		ui16 vertexCount = static_cast<ui16>(mesh->mNumVertices);
 		ui32 indexCount = mesh->mNumFaces * 3;
 
@@ -134,14 +149,9 @@ optional<MeshAsset> LoadWithAssimp(Array<const byte> source)
 		for (uiw vertexIndex = 0; vertexIndex < mesh->mNumVertices; ++vertexIndex)
 		{
 			aiVector3D position = mesh->mVertices[vertexIndex];
+			aiVector3D normal = mesh->mNormals[vertexIndex];
 
-			Vector4 color;
-			color.x = rand() / static_cast<f32>(RAND_MAX);
-			color.y = rand() / static_cast<f32>(RAND_MAX);
-			color.z = rand() / static_cast<f32>(RAND_MAX);
-			color.w = rand() / static_cast<f32>(RAND_MAX);
-
-			vertices[totalVertices + vertexIndex] = {.position = {position.x, position.y, position.z},.color = color};
+			vertices[totalVertices + vertexIndex] = {.position = {position.x, position.y, position.z},.normal = {normal.x, normal.y, normal.z}};
 		}
 
 		indexes.resize(totalIndexes + mesh->mNumFaces * 3);
@@ -160,6 +170,12 @@ optional<MeshAsset> LoadWithAssimp(Array<const byte> source)
 		loaded.desc.subMeshInfos.push_back({.vertexCount = vertexCount,.indexCount = indexCount});
 	}
 
+	if (totalVertices == 0 || totalIndexes == 0)
+	{
+		SOFTBREAK;
+		return {};
+	}
+
 	uiw verticesSize = totalVertices * sizeof(Vertex);
 	uiw indexesSize = totalIndexes * sizeof(ui16);
 
@@ -168,7 +184,7 @@ optional<MeshAsset> LoadWithAssimp(Array<const byte> source)
 	MemOps::Copy(loaded.data.get() + verticesSize, reinterpret_cast<const byte *>(indexes.data()), indexesSize);
 
 	loaded.desc.vertexAttributes.push_back({"position", ColorFormatt::R32G32B32_Float});
-	loaded.desc.vertexAttributes.push_back({"color", ColorFormatt::R32G32B32A32_Float});
+	loaded.desc.vertexAttributes.push_back({"normal", ColorFormatt::R32G32B32_Float});
 
 	return loaded;
 }

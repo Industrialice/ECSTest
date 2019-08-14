@@ -36,3 +36,14 @@ namespace ECSEngine
 		unique_ptr<byte[]> data{};
 	};
 }
+
+namespace std
+{
+	template <> struct hash<ECSEngine::MeshAssetId>
+	{
+		[[nodiscard]] size_t operator()(const ECSEngine::MeshAssetId &value) const
+		{
+			return value.Hash();
+		}
+	};
+}

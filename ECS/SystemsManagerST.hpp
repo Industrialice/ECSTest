@@ -51,7 +51,7 @@ namespace ECSTest
             unique_ptr<TypeId[]> tags{}; // tag components of this archetype group
             ui16 tagsCount{};
 			ui16 uniqueTypedComponentsCount{};
-			ui16 reservedCount{}; // final reserved count is computed as reservedCount * stride
+			ui32 entitiesReservedCount{};
 			ui32 entitiesCount{};
 			ArchetypeFull archetype; // group's archetype
 		};

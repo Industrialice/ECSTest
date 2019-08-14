@@ -124,3 +124,14 @@ namespace ECSEngine
 		unique_ptr<byte> data{};
 	};
 }
+
+namespace std
+{
+	template <> struct hash<ECSEngine::TextureAssetId>
+	{
+		[[nodiscard]] size_t operator()(const ECSEngine::TextureAssetId &value) const
+		{
+			return value.Hash();
+		}
+	};
+}

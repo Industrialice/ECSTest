@@ -74,7 +74,7 @@ void AddObjects(EntityIDGenerator &idGenerator, AssetIdMapper &assetIdMapper, En
 	entity.AddComponent(rotation);
 
 	MeshRenderer meshRenderer;
-	meshRenderer.mesh = assetIdMapper.Register<MeshAsset>(L"Stable_Jumpsuit_female.fbx");
+	meshRenderer.mesh = assetIdMapper.Register<MeshAsset>(L"SAA_Farm_House_EX.fbx");
 	meshRenderer.materials = {};
 	entity.AddComponent(meshRenderer);
 

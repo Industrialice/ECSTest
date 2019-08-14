@@ -9,15 +9,18 @@
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
       <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
     </Filter>
+    <Filter Include="DX11R Sources">
+      <UniqueIdentifier>{32409a20-6d3f-4b45-95a7-ce9bcf364ef5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="DX11R Headers">
+      <UniqueIdentifier>{8192aa6a-4aff-499b-aad9-cf923d91e37a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="PreHeader.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="RendererDX11.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Scene.cpp">
@@ -50,6 +53,12 @@
     <ClCompile Include="AssetIdMapper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="SceneFromMap.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RendererDX11.cpp">
+      <Filter>DX11R Sources</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PreHeader.hpp">
@@ -62,9 +71,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Renderer.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="RendererDX11.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Scene.hpp">
@@ -108,6 +114,12 @@
     </ClInclude>
     <ClInclude Include="AssetIdMapper.hpp">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SceneFromMap.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RendererDX11.hpp">
+      <Filter>DX11R Headers</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

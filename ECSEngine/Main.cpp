@@ -1,6 +1,7 @@
 #include "PreHeader.hpp"
 #include "RendererDX11.hpp"
 #include "Scene.hpp"
+#include "SceneFromMap.hpp"
 #include "CustomControlActions.hpp"
 #include "CameraMovementSystem.hpp"
 #include "ObjectsMoverSystem.hpp"
@@ -54,7 +55,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
     manager->Register(move(renderer), rendererPipeline);
 
 	auto physicsPipeline = manager->CreatePipeline(TimeSecondsFP64(1.0 / 60.0), false);
-	manager->Register<ObjectsMoverSystem>(physicsPipeline);
+	//manager->Register<ObjectsMoverSystem>(physicsPipeline);
 	manager->Register(move(cameraMovementSystem), physicsPipeline);
 
 	auto assetIdMapper = make_shared<AssetIdMapper>();
@@ -81,12 +82,13 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 
     vector<WorkerThread> workers;
     EntityIDGenerator idGenerator;
-    auto stream = Scene::Create(idGenerator, *assetIdMapper);
+	auto stream = SceneFromMap::Create(L"C:\\Users\\salal\\Desktop\\pv.txt", L"C:\\Users\\salal\\Desktop\\pv_assets\\", idGenerator, *assetIdMapper);
+    //auto stream = Scene::Create(idGenerator, *assetIdMapper);
 
 	AssetsManager assetsManager;
 	AssetsLoaders assetsLoaders;
 	assetsLoaders.SetAssetIdMapper(assetIdMapper);
-	assetsLoaders.SetAssetsLocation(L"Assets");
+	//assetsLoaders.SetAssetsLocation(L"Assets");
 	assetsLoaders.RegisterLoaders(assetsManager);
 
     manager->Start(move(assetsManager), move(idGenerator), move(workers), move(stream));

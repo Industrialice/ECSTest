@@ -6,6 +6,8 @@
 	#include <d3dcompiler.h>
 #endif
 
+#include <charconv>
+
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
@@ -31,4 +33,10 @@ template <typename T, typename Deleter> T **AddressOfNaked(unique_ptr<T, Deleter
 {
 	static_assert(sizeof(unique_ptr<T, Deleter>) == sizeof(T *), "Unsafe operation");
 	return reinterpret_cast<T **>(&ptr);
+}
+
+template <typename T, typename Deleter> T *const *AddressOfNaked(const unique_ptr<T, Deleter> &ptr)
+{
+	static_assert(sizeof(unique_ptr<T, Deleter>) == sizeof(T *), "Unsafe operation");
+	return reinterpret_cast<T *const *>(&ptr);
 }

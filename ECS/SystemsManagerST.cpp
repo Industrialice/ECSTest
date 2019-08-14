@@ -522,23 +522,23 @@ auto SystemsManagerST::AddNewArchetypeGroup(const ArchetypeFull &archetype, Arra
 		ASSUME(componentArray.stride == 1 || !componentArray.isUnique);
 	}
 
-	group.reservedCount = 8; // by default initialize enough space for 8 entities
+	group.entitiesReservedCount = 8; // by default initialize enough space for 8 entities
 
 	for (ui16 index = 0; index < group.uniqueTypedComponentsCount; ++index)
 	{
 		auto &componentArray = group.components[index];
 
 		// allocate memory
-		ASSUME(componentArray.sizeOf > 0 && componentArray.stride > 0 && group.reservedCount > 0 && componentArray.alignmentOf > 0);
-		componentArray.data.reset(Allocator::MallocAlignedRuntime::Allocate(componentArray.sizeOf * componentArray.stride * group.reservedCount, componentArray.alignmentOf));
+		ASSUME(componentArray.sizeOf > 0 && componentArray.stride > 0 && group.entitiesReservedCount > 0 && componentArray.alignmentOf > 0);
+		componentArray.data.reset(Allocator::MallocAlignedRuntime::Allocate(componentArray.sizeOf * group.entitiesReservedCount, componentArray.alignmentOf));
 
 		if (!componentArray.isUnique)
 		{
-			componentArray.ids.reset(Allocator::Malloc::Allocate<ComponentID>(componentArray.stride * group.reservedCount));
+			componentArray.ids.reset(Allocator::Malloc::Allocate<ComponentID>(group.entitiesReservedCount));
 		}
 	}
 
-	group.entities.reset(Allocator::Malloc::Allocate<EntityID>(group.reservedCount));
+	group.entities.reset(Allocator::Malloc::Allocate<EntityID>(group.entitiesReservedCount));
     
     // add tag components
     vector<TypeId> tagTypes;
@@ -563,11 +563,11 @@ auto SystemsManagerST::AddNewArchetypeGroup(const ArchetypeFull &archetype, Arra
 
 void SystemsManagerST::AddEntityToArchetypeGroup(const ArchetypeFull &archetype, ArchetypeGroup &group, EntityID entityId, Array<const SerializedComponent> components, MessageBuilder *messageBuilder)
 {
-    ASSUME(group.reservedCount);
+    ASSUME(group.entitiesReservedCount);
 
-	if (group.entitiesCount == group.reservedCount)
+	if (group.entitiesCount == group.entitiesReservedCount)
 	{
-		group.reservedCount *= 2;
+		group.entitiesReservedCount *= 2;
 
 		for (ui16 index = 0; index < group.uniqueTypedComponentsCount; ++index)
 		{
@@ -576,22 +576,22 @@ void SystemsManagerST::AddEntityToArchetypeGroup(const ArchetypeFull &archetype,
 			ASSUME(componentArray.sizeOf > 0 && componentArray.stride > 0 && componentArray.alignmentOf > 0);
 
 			byte *oldPtr = componentArray.data.release();
-			byte *newPtr = Allocator::MallocAlignedRuntime::Reallocate(oldPtr, componentArray.sizeOf * componentArray.stride * group.reservedCount, componentArray.alignmentOf);
+			byte *newPtr = Allocator::MallocAlignedRuntime::Reallocate(oldPtr, componentArray.sizeOf * group.entitiesReservedCount, componentArray.alignmentOf);
 			componentArray.data.reset(newPtr);
 
 			if (!componentArray.isUnique)
 			{
 				ComponentID *oldUPtr = componentArray.ids.release();
-				ComponentID *newUPtr = Allocator::Malloc::Reallocate(oldUPtr, componentArray.stride * group.reservedCount);
+				ComponentID *newUPtr = Allocator::Malloc::Reallocate(oldUPtr, group.entitiesReservedCount);
 				componentArray.ids.reset(newUPtr);
 			}
 		}
 
 		EntityID *oldPtr = group.entities.release();
-		EntityID *newPtr = Allocator::Malloc::Reallocate(oldPtr, group.reservedCount + 1);
+		EntityID *newPtr = Allocator::Malloc::Reallocate(oldPtr, group.entitiesReservedCount + 1);
 		group.entities.reset(newPtr);
 
-		newPtr[group.reservedCount] = EntityID(); // use an extra entry to speed up predictive lookups
+		newPtr[group.entitiesReservedCount] = EntityID(); // use an extra entry to speed up predictive lookups
 	}
 
 	optional<std::reference_wrapper<ComponentArrayBuilder>> componentBuilder;
