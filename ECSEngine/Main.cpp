@@ -80,16 +80,15 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 
 	FileSystem::Enumerate(L"Assets", fileEnumerateCallback, FileSystem::EnumerateOptions::ReportFiles.Combined(FileSystem::EnumerateOptions::Recursive));
 
-    vector<WorkerThread> workers;
-    EntityIDGenerator idGenerator;
-	auto stream = SceneFromMap::Create(L"C:\\Users\\salal\\Desktop\\pv.txt", L"C:\\Users\\salal\\Desktop\\pv_assets\\", idGenerator, *assetIdMapper);
-    //auto stream = Scene::Create(idGenerator, *assetIdMapper);
-
 	AssetsManager assetsManager;
 	AssetsLoaders assetsLoaders;
 	assetsLoaders.SetAssetIdMapper(assetIdMapper);
-	//assetsLoaders.SetAssetsLocation(L"Assets");
 	assetsLoaders.RegisterLoaders(assetsManager);
+
+    vector<WorkerThread> workers;
+    EntityIDGenerator idGenerator;
+	//auto stream = SceneFromMap::Create(L"C:\\Users\\salal\\Desktop\\et.txt", L"C:\\Users\\salal\\Desktop\\et_assets\\", idGenerator, *assetIdMapper);
+    auto stream = Scene::Create(idGenerator, *assetIdMapper, assetsManager);
 
     manager->Start(move(assetsManager), move(idGenerator), move(workers), move(stream));
 

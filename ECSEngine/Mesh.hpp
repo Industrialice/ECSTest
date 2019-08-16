@@ -10,6 +10,7 @@ namespace ECSEngine
 		{
 			ui32 vertexCount{};
 			ui32 indexCount{};
+			Matrix4x3 transformation{};
 		};
 
 		struct VertexAttribute

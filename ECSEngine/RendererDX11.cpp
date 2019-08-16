@@ -382,7 +382,7 @@ public:
 			{
 				outPos = mul(pos, ModelViewProjectionMatrix);
 				worldPos = mul(pos, ModelMatrix);
-				outNormal = normal;
+				outNormal = mul(float4(normal, 0), ModelMatrix);
 			}
 		);
 
@@ -398,9 +398,8 @@ public:
 			{
 				normal = normalize(normal);
 				float3 toCamera = normalize(CameraPosition - worldPos);
-				float3 lightVec = normalize(float3(100, 100, 100) - worldPos);
-				float diffuse = saturate(dot(normal, lightVec));
-				float3 reflected = reflect(-lightVec, normal);
+				float diffuse = saturate(dot(normal, toCamera)) * 0.9f;
+				float3 reflected = reflect(-toCamera, normal);
 				float specular = pow(saturate(dot(reflected, toCamera)), 8);
 				return float4((diffuse + specular + 0.1f).xxx, 1.0f);
 			}
@@ -589,7 +588,8 @@ public:
 
 		if (!_modelMatrix)
 		{
-			_modelMatrix = Matrix4x3::CreateRTS(_rotation, _position);
+			_modelMatrix = Matrix4x3::CreateRTS(_rotation, _position, _scale);
+			_modelMatrixTransposed = _modelMatrix->GetTransposed();
 		}
 
 		_mesh->SetPipeline(context);
@@ -597,7 +597,7 @@ public:
 		Matrix4x4 mvp = *_modelMatrix * viewProjectionMatrix;
 		mvp.Transpose();
 
-		_material->SetStates(context, uniformBuffer, env, _modelMatrix->GetTransposed(), mvp, cameraPosition);
+		_material->SetStates(context, uniformBuffer, env, _modelMatrixTransposed, mvp, cameraPosition);
 
 		for (uiw meshIndex = 0; meshIndex < _mesh->GetSubmeshCount(); ++meshIndex)
 		{
@@ -617,12 +617,20 @@ public:
 		_modelMatrix = {};
 	}
 
+	void SetScale(const Vector3 &scale)
+	{
+		_scale = scale;
+		_modelMatrix = {};
+	}
+
 private:
 	optional<Matrix4x3> _modelMatrix{};
+	Matrix3x4 _modelMatrixTransposed{};
 	shared_ptr<const MeshResource> _mesh{};
 	static inline shared_ptr<RenderingMaterial> _material;
 	Vector3 _position{};
 	Quaternion _rotation{};
+	Vector3 _scale{1, 1, 1};
 };
 
 class RendereDX11SystemImpl : public RendererDX11System
@@ -647,7 +655,7 @@ public:
 				auto meshRenderer = entry.FindComponent<MeshRenderer>();
 				if (meshRenderer)
 				{
-					AddMeshRenderer(env, entry.entityID, *meshRenderer, entry.GetComponent<Position>().position, entry.GetComponent<Rotation>().rotation);
+					AddMeshRenderer(env, entry.entityID, *meshRenderer, entry.GetComponent<Position>().position, entry.GetComponent<Rotation>().rotation, entry.FindComponent<Scale>());
 				}
 			}
         }
@@ -666,7 +674,7 @@ public:
 		{
 			for (auto &entry : stream)
 			{
-				AddMeshRenderer(env, entry.entityID, entry.added.Cast<MeshRenderer>(), entry.GetComponent<Position>().position, entry.GetComponent<Rotation>().rotation);
+				AddMeshRenderer(env, entry.entityID, entry.added.Cast<MeshRenderer>(), entry.GetComponent<Position>().position, entry.GetComponent<Rotation>().rotation, entry.FindComponent<Scale>());
 			}
 		}
         else if (stream.Type() == Position::GetTypeId() || stream.Type() == Rotation::GetTypeId())
@@ -680,6 +688,13 @@ public:
 				}
 			}
         }
+		else if (stream.Type() == Scale::GetTypeId())
+		{
+			for (auto &entry : stream)
+			{
+				MeshRendererScaleChanged(entry.entityID, entry.added.Cast<Scale>());
+			}
+		}
     }
     
     virtual void ProcessMessages(Environment &env, const MessageStreamComponentChanged &stream) override
@@ -698,8 +713,12 @@ public:
 			MeshRendererRotationChanged(entry.entityID, entry.component);
 			CameraRotationChanged(entry.entityID, entry.component);
 		}
+		for (const auto &entry : stream.Enumerate<Scale>())
+		{
+			MeshRendererScaleChanged(entry.entityID, entry.component);
+		}
 
-		ASSUME(stream.Type() == Camera::GetTypeId() || stream.Type() == Position::GetTypeId() || stream.Type() == Rotation::GetTypeId());
+		ASSUME(stream.Type() == Camera::GetTypeId() || stream.Type() == Position::GetTypeId() || stream.Type() == Rotation::GetTypeId() || stream.Type() == Scale::GetTypeId());
     }
     
     virtual void ProcessMessages(Environment &env, const MessageStreamComponentRemoved &stream) override
@@ -721,6 +740,12 @@ public:
 		for (const auto &entry : stream.Enumerate<MeshRenderer>())
 		{
 			RemoveMeshRenderer(entry.entityID);
+		}
+		for (const auto &entry : stream.Enumerate<Scale>())
+		{
+			Scale newScale;
+			newScale.scale = {1, 1, 1};
+			MeshRendererScaleChanged(entry.entityID, newScale);
 		}
 
 		ASSUME(stream.Type() == Camera::GetTypeId() || stream.Type() == Position::GetTypeId() || stream.Type() == Rotation::GetTypeId() || stream.Type() == MeshRenderer::GetTypeId());
@@ -965,12 +990,16 @@ public:
     }
 
 private:
-	void AddMeshRenderer(Environment &env, EntityID id, const MeshRenderer &meshRenderer, const Vector3 &position, const Quaternion &rotation)
+	void AddMeshRenderer(Environment &env, EntityID id, const MeshRenderer &meshRenderer, const Vector3 &position, const Quaternion &rotation, const Scale *scale)
 	{
 		auto insertResult = _meshRendererObjects.insert({id, MeshRendererObject(env, _device.get(), _layoutManager, _meshResources, meshRenderer)});
 		ASSUME(insertResult.second);
 		insertResult.first->second.SetPosition(position);
 		insertResult.first->second.SetRotation(rotation);
+		if (scale)
+		{
+			insertResult.first->second.SetScale(scale->scale);
+		}
 	}
 
 	void RemoveMeshRenderer(EntityID id)
@@ -993,6 +1022,15 @@ private:
 		if (findResult != _meshRendererObjects.end())
 		{
 			findResult->second.SetRotation(newRotation.rotation);
+		}
+	}
+
+	void MeshRendererScaleChanged(EntityID id, const Scale &newScale)
+	{
+		auto findResult = _meshRendererObjects.find(id);
+		if (findResult != _meshRendererObjects.end())
+		{
+			findResult->second.SetScale(newScale.scale);
 		}
 	}
 

@@ -5,61 +5,58 @@
 
 using namespace ECSEngine;
 
-static void AddCamera(EntityIDGenerator &idGenerator, EntitiesStream &stream);
 static void AddObjectsFromMap(const FilePath &pathToMap, const FilePath &pathToMapAssets, EntityIDGenerator &idGenerator, AssetIdMapper &assetIdMapper, EntitiesStream &stream);
 static void ParseObjectIntoEntitiesStream(string_view object, const FilePath &pathToMapAssets, EntityIDGenerator &idGenerator, AssetIdMapper &assetIdMapper, EntitiesStream &stream);
+template <typename T = Vector3> T ReadVec3(string_view source);
+template <typename T = Vector4> T ReadVec4(string_view source);
 
 unique_ptr<IEntitiesStream> SceneFromMap::Create(const FilePath &pathToMap, const FilePath &pathToMapAssets, EntityIDGenerator &idGenerator, AssetIdMapper &assetIdMapper)
 {
 	auto stream = make_unique<EntitiesStream>();
 
-	AddCamera(idGenerator, *stream);
 	AddObjectsFromMap(pathToMap, pathToMapAssets, idGenerator, assetIdMapper, *stream);
 
+	//{
+	//	EntitiesStream::EntityData entity;
+
+	//	Position pos;
+	//	entity.AddComponent(pos);
+
+	//	Rotation rot;
+	//	entity.AddComponent(rot);
+
+	//	Window window;
+	//	window.height = 2160;
+	//	window.width = 3840;
+	//	window.isFullscreen = false;
+	//	window.isMaximized = false;
+	//	window.isNoBorders = false;
+	//	strcpy_s(window.title.data(), window.title.size(), "Industrialice ECS test engine");
+	//	window.x = (GetSystemMetrics(SM_CXSCREEN) - window.width) / 2;
+	//	window.y = (GetSystemMetrics(SM_CYSCREEN) - window.height) / 2;
+	//	window.cursorType = Window::CursorTypet::Normal;
+
+	//	RT rt;
+	//	rt.target = window;
+
+	//	ClearColor clearColor;
+	//	clearColor.color = ColorR8G8B8(0, 0, 0);
+
+	//	Camera camera;
+	//	camera.rt[0] = rt;
+	//	camera.farPlane = FLT_MAX;
+	//	camera.nearPlane = 0.1f;
+	//	camera.fov = 75.0f;
+	//	camera.isClearDepthStencil = true;
+	//	camera.depthBufferFormat = Camera::DepthBufferFormat::DepthOnly;
+	//	camera.projectionType = Camera::ProjectionTypet::Perspective;
+	//	camera.clearWith = clearColor;
+	//	entity.AddComponent(camera);
+
+	//	stream->AddEntity(idGenerator.Generate(), move(entity));
+	//}
+
 	return move(stream);
-}
-
-void AddCamera(EntityIDGenerator &idGenerator, EntitiesStream &stream)
-{
-	EntitiesStream::EntityData entity;
-
-	Window window;
-	window.height = 480;
-	window.width = 640;
-	window.isFullscreen = false;
-	window.isMaximized = false;
-	window.isNoBorders = false;
-	strcpy_s(window.title.data(), window.title.size(), "Industrialice ECS test engine");
-	window.x = (GetSystemMetrics(SM_CXSCREEN) - window.width) / 2;
-	window.y = (GetSystemMetrics(SM_CYSCREEN) - window.height) / 2;
-	window.cursorType = Window::CursorTypet::Normal;
-
-	RT rt;
-	rt.target = window;
-
-	ClearColor clearColor;
-	clearColor.color = ColorR8G8B8(0, 0, 0);
-
-	Camera camera;
-	camera.rt[0] = rt;
-	camera.farPlane = FLT_MAX;
-	camera.nearPlane = 0.1f;
-	camera.fov = 75.0f;
-	camera.isClearDepthStencil = true;
-	camera.depthBufferFormat = Camera::DepthBufferFormat::DepthOnly;
-	camera.projectionType = Camera::ProjectionTypet::Perspective;
-	camera.clearWith = clearColor;
-	entity.AddComponent(camera);
-
-	Position position;
-	position.position = {0, 0, -5};
-	entity.AddComponent(position);
-
-	Rotation rotation;
-	rotation.rotation = {};
-	entity.AddComponent(rotation);
-
-	stream.AddEntity(idGenerator.Generate(), move(entity));
 }
 
 void AddObjectsFromMap(const FilePath &pathToMap, const FilePath &pathToMapAssets, EntityIDGenerator &idGenerator, AssetIdMapper &assetIdMapper, EntitiesStream &stream)
@@ -98,6 +95,8 @@ void ParseObjectIntoEntitiesStream(string_view object, const FilePath &pathToMap
 {
 	EntitiesStream::EntityData entity;
 
+	string name;
+
 	for (auto current = object; current.size(); )
 	{
 		uiw delim = current.find(':');
@@ -117,87 +116,20 @@ void ParseObjectIntoEntitiesStream(string_view object, const FilePath &pathToMap
 		string_view key = current.substr(0, delim);
 		string_view value = current.substr(delim + 1, endOfLine - (delim + 1));
 
-		if (key == "position")
+		if (key == "name")
+		{
+			name = value;
+		}
+		else if (key == "position")
 		{
 			Position pos;
-
-			string_view xStr = value;
-			uiw xEnd = xStr.find(',');
-			if (xEnd == string_view::npos)
-			{
-				SOFTBREAK;
-				return;
-			}
-			if (auto [pointer, error] = std::from_chars(xStr.data(), xStr.data() + xEnd, pos.position.x); error != std::errc())
-			{
-				SOFTBREAK;
-				return;
-			}
-
-			string_view yStr = xStr.substr(xEnd + 1);
-			uiw yEnd = yStr.find(',');
-			if (yEnd == string_view::npos)
-			{
-				SOFTBREAK;
-				return;
-			}
-			if (auto [pointer, error] = std::from_chars(yStr.data(), yStr.data() + yEnd, pos.position.y); error != std::errc())
-			{
-				SOFTBREAK;
-				return;
-			}
-
-			string_view zStr = yStr.substr(yEnd + 1);
-			if (auto [pointer, error] = std::from_chars(zStr.data(), zStr.data() + zStr.size(), pos.position.z); error != std::errc())
-			{
-				SOFTBREAK;
-				return;
-			}
-
-			pos.position *= 100; // TODO: wtf
-
+			pos.position = ReadVec3(value);
 			entity.AddComponent(pos);
 		}
 		else if (key == "rotation")
 		{
-			Vector3 euler;
 			Rotation rot;
-
-			string_view xStr = value;
-			uiw xEnd = xStr.find(',');
-			if (xEnd == string_view::npos)
-			{
-				SOFTBREAK;
-				return;
-			}
-			if (auto [pointer, error] = std::from_chars(xStr.data(), xStr.data() + xEnd, euler.x); error != std::errc())
-			{
-				SOFTBREAK;
-				return;
-			}
-
-			string_view yStr = xStr.substr(xEnd + 1);
-			uiw yEnd = yStr.find(',');
-			if (yEnd == string_view::npos)
-			{
-				SOFTBREAK;
-				return;
-			}
-			if (auto [pointer, error] = std::from_chars(yStr.data(), yStr.data() + yEnd, euler.y); error != std::errc())
-			{
-				SOFTBREAK;
-				return;
-			}
-
-			string_view zStr = yStr.substr(yEnd + 1);
-			if (auto [pointer, error] = std::from_chars(zStr.data(), zStr.data() + zStr.size(), euler.z); error != std::errc())
-			{
-				SOFTBREAK;
-				return;
-			}
-
-			rot.rotation = Quaternion::FromEuler(euler);
-
+			rot.rotation = ReadVec4<Quaternion>(value);
 			entity.AddComponent(rot);
 		}
 		else if (key == "meshrenderer")
@@ -211,6 +143,43 @@ void ParseObjectIntoEntitiesStream(string_view object, const FilePath &pathToMap
 		}
 		else if (key == "scale")
 		{
+			Scale scale;
+			scale.scale = ReadVec3(value);
+
+			if (!EqualsWithEpsilon(scale.scale, {1, 1, 1}))
+			{
+				entity.AddComponent(scale);
+			}
+		}
+		else if (key == "camera")
+		{
+			Window window;
+			window.height = 2160;
+			window.width = 3840;
+			window.isFullscreen = false;
+			window.isMaximized = false;
+			window.isNoBorders = false;
+			strcpy_s(window.title.data(), window.title.size(), "Industrialice ECS test engine");
+			window.x = (GetSystemMetrics(SM_CXSCREEN) - window.width) / 2;
+			window.y = (GetSystemMetrics(SM_CYSCREEN) - window.height) / 2;
+			window.cursorType = Window::CursorTypet::Normal;
+
+			RT rt;
+			rt.target = window;
+
+			ClearColor clearColor;
+			clearColor.color = ColorR8G8B8(0, 0, 0);
+
+			Camera camera;
+			camera.rt[0] = rt;
+			camera.farPlane = FLT_MAX;
+			camera.nearPlane = 0.1f;
+			camera.fov = 75.0f;
+			camera.isClearDepthStencil = true;
+			camera.depthBufferFormat = Camera::DepthBufferFormat::DepthOnly;
+			camera.projectionType = Camera::ProjectionTypet::Perspective;
+			camera.clearWith = clearColor;
+			entity.AddComponent(camera);
 		}
 
 		current = current.substr(endOfLine + 1);
@@ -221,4 +190,97 @@ void ParseObjectIntoEntitiesStream(string_view object, const FilePath &pathToMap
 	}
 
 	stream.AddEntity(idGenerator.Generate(), move(entity));
+}
+
+template<typename T> T ReadVec3(string_view source)
+{
+	T result;
+
+	string_view xStr = source;
+	uiw xEnd = xStr.find(',');
+	if (xEnd == string_view::npos)
+	{
+		SOFTBREAK;
+		return{};
+	}
+	if (auto [pointer, error] = std::from_chars(xStr.data(), xStr.data() + xEnd, result.x); error != std::errc())
+	{
+		SOFTBREAK;
+		return{};
+	}
+
+	string_view yStr = xStr.substr(xEnd + 1);
+	uiw yEnd = yStr.find(',');
+	if (yEnd == string_view::npos)
+	{
+		SOFTBREAK;
+		return{};
+	}
+	if (auto [pointer, error] = std::from_chars(yStr.data(), yStr.data() + yEnd, result.y); error != std::errc())
+	{
+		SOFTBREAK;
+		return{};
+	}
+
+	string_view zStr = yStr.substr(yEnd + 1);
+	if (auto [pointer, error] = std::from_chars(zStr.data(), zStr.data() + zStr.size(), result.z); error != std::errc())
+	{
+		SOFTBREAK;
+		return{};
+	}
+
+	return result;
+}
+
+template<typename T> T ReadVec4(string_view source)
+{
+	T result;
+
+	string_view xStr = source;
+	uiw xEnd = xStr.find(',');
+	if (xEnd == string_view::npos)
+	{
+		SOFTBREAK;
+		return {};
+	}
+	if (auto [pointer, error] = std::from_chars(xStr.data(), xStr.data() + xEnd, result.x); error != std::errc())
+	{
+		SOFTBREAK;
+		return {};
+	}
+
+	string_view yStr = xStr.substr(xEnd + 1);
+	uiw yEnd = yStr.find(',');
+	if (yEnd == string_view::npos)
+	{
+		SOFTBREAK;
+		return {};
+	}
+	if (auto [pointer, error] = std::from_chars(yStr.data(), yStr.data() + yEnd, result.y); error != std::errc())
+	{
+		SOFTBREAK;
+		return {};
+	}
+
+	string_view zStr = yStr.substr(yEnd + 1);
+	uiw zEnd = zStr.find(',');
+	if (zEnd == string_view::npos)
+	{
+		SOFTBREAK;
+		return {};
+	}
+	if (auto [pointer, error] = std::from_chars(zStr.data(), zStr.data() + zEnd, result.z); error != std::errc())
+	{
+		SOFTBREAK;
+		return {};
+	}
+
+	string_view wStr = zStr.substr(zEnd + 1);
+	if (auto [pointer, error] = std::from_chars(wStr.data(), wStr.data() + wStr.size(), result.w); error != std::errc())
+	{
+		SOFTBREAK;
+		return {};
+	}
+
+	return result;
 }

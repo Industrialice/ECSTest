@@ -4,5 +4,5 @@
 
 namespace ECSEngine::Scene
 {
-	[[nodiscard]] unique_ptr<IEntitiesStream> Create(EntityIDGenerator &idGenerator, AssetIdMapper &assetIdMapper);
+	[[nodiscard]] unique_ptr<IEntitiesStream> Create(EntityIDGenerator &idGenerator, AssetIdMapper &assetIdMapper, AssetsManager &assetsManager);
 }

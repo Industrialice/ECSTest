@@ -6,7 +6,7 @@
 using namespace ECSEngine;
 using namespace std::placeholders;
 
-static optional<MeshAsset> LoadWithAssimp(Array<const byte> source);
+static optional<MeshAsset> LoadWithAssimp(Array<const byte> source, uiw subMesh);
 
 AssetsManager::AssetLoaderFuncType AssetsLoaders::GenerateMeshLoaderFunction()
 {
@@ -27,11 +27,6 @@ void AssetsLoaders::RegisterLoaders(AssetsManager &manager)
 void AssetsLoaders::SetAssetIdMapper(const shared_ptr<AssetIdMapper> &mapper)
 {
 	_assetIdMapper = mapper;
-}
-
-void AssetsLoaders::SetAssetsLocation(FilePath &&path)
-{
-	_assetsLocation = move(path);
 }
 
 AssetsManager::LoadedAsset AssetsLoaders::LoadMesh(AssetId id, TypeId expectedType)
@@ -61,17 +56,42 @@ AssetsManager::LoadedAsset AssetsLoaders::LoadMesh(AssetId id, TypeId expectedTy
 		return {};
 	}
 
-	Error<> fileError;
-	FilePath fullPath;
-	if (_assetsLocation.IsEmpty())
+	uiw subMeshIndex = 0;
+
+	auto platformPath = filePathAndType->first.PlatformPath();
+	uiw commaIndex = platformPath.size() - 1;
+	for (; commaIndex != uiw_max; --commaIndex)
 	{
-		fullPath = filePathAndType->first;
+		if (platformPath[commaIndex] == ',')
+		{
+			break;
+		}
+	}
+
+	if (commaIndex == uiw_max)
+	{
+		SOFTBREAK; // didn't find submesh index
 	}
 	else
 	{
-		fullPath = _assetsLocation / filePathAndType->first;
+		std::array<char, 32> temp;
+		const wchar_t *start = platformPath.data() + commaIndex + 1;
+		const wchar_t *end = platformPath.data() + platformPath.size();
+		uiw index = 0;
+		for (; index < 32 && &start[index] != end; ++index)
+		{
+			temp[index] = static_cast<char>(start[index]);
+		}
+		if (auto [ptr, error] = std::from_chars(temp.data(), temp.data() + index, subMeshIndex); error != std::errc())
+		{
+			SOFTBREAK;
+		}
+
+		platformPath = platformPath.substr(0, commaIndex);
 	}
-	File file(_assetsLocation / filePathAndType->first, FileOpenMode::OpenExisting, FileProcModes::Read, 0, {}, {}, &fileError);
+
+	Error<> fileError;
+	File file(platformPath, FileOpenMode::OpenExisting, FileProcModes::Read, 0, {}, FileShareModes::Read, &fileError);
 	if (!file)
 	{
 		SOFTBREAK;
@@ -85,7 +105,7 @@ AssetsManager::LoadedAsset AssetsLoaders::LoadMesh(AssetId id, TypeId expectedTy
 		return {};
 	}
 
-	auto loaded = LoadWithAssimp(Array(mapping.CMemory(), mapping.Size()));
+	auto loaded = LoadWithAssimp(Array(mapping.CMemory(), mapping.Size()), subMeshIndex);
 	if (!loaded)
 	{
 		SOFTBREAK;
@@ -101,16 +121,72 @@ AssetsManager::LoadedAsset AssetsLoaders::LoadTexture(AssetId id, TypeId expecte
 	return {};
 }
 
-optional<MeshAsset> LoadWithAssimp(Array<const byte> source)
+struct StoredMesh
+{
+	const aiMesh *mesh{};
+	Matrix4x3 transformation{};
+};
+
+static vector<StoredMesh> GetMeshesFromHierarchy(const aiScene *scene, const aiNode *node)
+{
+	vector<StoredMesh> results;
+
+	for (uiw index = 0; index < node->mNumMeshes; ++index)
+	{
+		uiw meshInternalIndex = node->mMeshes[index];
+		const aiMesh *mesh = scene->mMeshes[meshInternalIndex];
+		if (mesh->mPrimitiveTypes != aiPrimitiveType_TRIANGLE)
+		{
+			continue;
+		}
+		
+		Matrix4x3 transformation = {
+			node->mTransformation.a1, node->mTransformation.b1, node->mTransformation.c1,
+			node->mTransformation.a2, node->mTransformation.b2, node->mTransformation.c2,
+			node->mTransformation.a3, node->mTransformation.b3, node->mTransformation.c3,
+			node->mTransformation.a4, node->mTransformation.b4, node->mTransformation.c4};
+
+		results.push_back({mesh, transformation});
+	}
+
+	for (uiw childIndex = 0; childIndex < node->mNumChildren; ++childIndex)
+	{
+		auto childMeshes = GetMeshesFromHierarchy(scene, node->mChildren[childIndex]);
+		results.insert(results.end(), childMeshes.begin(), childMeshes.end());
+	}
+
+	return results;
+}
+
+optional<MeshAsset> LoadWithAssimp(Array<const byte> source, uiw subMesh)
 {
 	MeshAsset loaded{};
 	Assimp::Importer importer;
-	constexpr auto flags = aiProcess_Triangulate | aiProcess_SortByPType | aiProcess_JoinIdenticalVertices | aiProcess_PreTransformVertices | aiProcess_FindDegenerates | aiProcess_FindInvalidData | aiProcess_MakeLeftHanded;
+	auto flags = aiProcess_Triangulate | aiProcess_SortByPType | aiProcess_JoinIdenticalVertices | /*aiProcess_PreTransformVertices | */aiProcess_FindDegenerates | aiProcess_FindInvalidData;
+	//flags |= aiProcess_ConvertToLeftHanded;
+	flags |= aiProcess_FlipWindingOrder;
+
+	//importer.SetPropertyFloat(AI_CONFIG_GLOBAL_SCALE_FACTOR_KEY, 0.01f); // assimp’s FBX importer assuming scale is in centimeters
+	//flags |= aiProcess_GlobalScale;
+
+	if (!importer.ValidateFlags(flags))
+	{
+		SOFTBREAK;
+		return {};
+	}
+
 	const aiScene *scene = importer.ReadFileFromMemory(source.data(), source.size(), flags);
 	if (!scene)
 	{
 		SENDLOG(Error, AssetsLoaders, "LoadWithAssimp failed to read file from memory\n");
 		return {};
+	}
+
+	f64 scaleFactor = 1.0;
+	f32 scale32 = 1.0f;
+	if (scene->mMetaData && scene->mMetaData->Get("UnitScaleFactor", scaleFactor))
+	{
+		scale32 = static_cast<f32>(scaleFactor);
 	}
 
 	struct Vertex
@@ -125,50 +201,49 @@ optional<MeshAsset> LoadWithAssimp(Array<const byte> source)
 	ui16 totalVertices = 0;
 	ui32 totalIndexes = 0;
 
-	for (uiw meshIndex = 0; meshIndex < scene->mNumMeshes; ++meshIndex)
+	vector<StoredMesh> meshes = GetMeshesFromHierarchy(scene, scene->mRootNode);
+
+	if (subMesh >= meshes.size())
 	{
-		const aiMesh *mesh = scene->mMeshes[meshIndex];
-
-		if (mesh->mPrimitiveTypes != aiPrimitiveType_TRIANGLE)
-		{
-			SOFTBREAK;
-			continue;
-		}
-
-		if (!mesh->HasNormals())
-		{
-			SOFTBREAK;
-			continue;
-		}
-
-		ui16 vertexCount = static_cast<ui16>(mesh->mNumVertices);
-		ui32 indexCount = mesh->mNumFaces * 3;
-
-		vertices.resize(totalVertices + vertexCount);
-
-		for (uiw vertexIndex = 0; vertexIndex < mesh->mNumVertices; ++vertexIndex)
-		{
-			aiVector3D position = mesh->mVertices[vertexIndex];
-			aiVector3D normal = mesh->mNormals[vertexIndex];
-
-			vertices[totalVertices + vertexIndex] = {.position = {position.x, position.y, position.z},.normal = {normal.x, normal.y, normal.z}};
-		}
-
-		indexes.resize(totalIndexes + mesh->mNumFaces * 3);
-		for (uiw faceIndex = 0; faceIndex < mesh->mNumFaces; ++faceIndex)
-		{
-			ASSUME(mesh->mFaces[faceIndex].mNumIndices == 3);
-			for (uiw subIndex = 0; subIndex < 3; ++subIndex)
-			{
-				indexes[totalIndexes + faceIndex * 3 + subIndex] = mesh->mFaces[faceIndex].mIndices[subIndex] + totalVertices;
-			}
-		}
-
-		totalVertices += vertexCount;
-		totalIndexes += indexCount;
-
-		loaded.desc.subMeshInfos.push_back({.vertexCount = vertexCount,.indexCount = indexCount});
+		SOFTBREAK;
+		return {};
 	}
+
+	const aiMesh *mesh = meshes[subMesh].mesh;
+
+	if (!mesh->HasNormals())
+	{
+		SOFTBREAK;
+		return {};
+	}
+
+	ui16 vertexCount = static_cast<ui16>(mesh->mNumVertices);
+	ui32 indexCount = mesh->mNumFaces * 3;
+
+	vertices.resize(totalVertices + vertexCount);
+
+	for (uiw vertexIndex = 0; vertexIndex < mesh->mNumVertices; ++vertexIndex)
+	{
+		aiVector3D position = mesh->mVertices[vertexIndex];
+		aiVector3D normal = mesh->mNormals[vertexIndex];
+
+		vertices[totalVertices + vertexIndex] = {.position = Vector3{-position.x, position.y, position.z} * 0.01f * scale32,.normal = {-normal.x, normal.y, normal.z}};
+	}
+
+	indexes.resize(totalIndexes + mesh->mNumFaces * 3);
+	for (uiw faceIndex = 0; faceIndex < mesh->mNumFaces; ++faceIndex)
+	{
+		ASSUME(mesh->mFaces[faceIndex].mNumIndices == 3);
+		for (uiw subIndex = 0; subIndex < 3; ++subIndex)
+		{
+			indexes[totalIndexes + faceIndex * 3 + subIndex] = mesh->mFaces[faceIndex].mIndices[subIndex] + totalVertices;
+		}
+	}
+
+	totalVertices += vertexCount;
+	totalIndexes += indexCount;
+
+	loaded.desc.subMeshInfos.push_back({.vertexCount = vertexCount,.indexCount = indexCount,.transformation = meshes[subMesh].transformation});
 
 	if (totalVertices == 0 || totalIndexes == 0)
 	{

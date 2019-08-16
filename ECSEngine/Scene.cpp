@@ -6,14 +6,14 @@
 using namespace ECSEngine;
 
 static void AddCamera(EntityIDGenerator &idGenerator, EntitiesStream &stream);
-static void AddObjects(EntityIDGenerator &idGenerator, AssetIdMapper &assetIdMapper, EntitiesStream &stream);
+static void AddObjects(EntityIDGenerator &idGenerator, AssetIdMapper &assetIdMapper, AssetsManager &assetsManager, EntitiesStream &stream);
 
-unique_ptr<IEntitiesStream> Scene::Create(EntityIDGenerator &idGenerator, AssetIdMapper &assetIdMapper)
+unique_ptr<IEntitiesStream> Scene::Create(EntityIDGenerator &idGenerator, AssetIdMapper &assetIdMapper, AssetsManager &assetsManager)
 {
     auto stream = make_unique<EntitiesStream>();
 
 	AddCamera(idGenerator, *stream);
-	AddObjects(idGenerator, assetIdMapper, *stream);
+	AddObjects(idGenerator, assetIdMapper, assetsManager, *stream);
 
     return move(stream);
 }
@@ -61,20 +61,32 @@ void AddCamera(EntityIDGenerator &idGenerator, EntitiesStream &stream)
 	stream.AddEntity(idGenerator.Generate(), move(entity));
 }
 
-void AddObjects(EntityIDGenerator &idGenerator, AssetIdMapper &assetIdMapper, EntitiesStream &stream)
+void AddObjects(EntityIDGenerator &idGenerator, AssetIdMapper &assetIdMapper, AssetsManager &assetsManager, EntitiesStream &stream)
 {
+	MeshAssetId assetId = assetIdMapper.Register<MeshAsset>(L"Assets/Schoolhouse.fbx,0");
+	const MeshAsset *loadedAsset = assetsManager.Load<MeshAsset>(assetId);
+	if (!loadedAsset)
+	{
+		SOFTBREAK;
+		return;
+	}
+
+	const auto &desc = loadedAsset->desc.subMeshInfos[0];
+
 	EntitiesStream::EntityData entity;
 
 	Position position;
-	position.position = {0, 0, 1};
-	entity.AddComponent(position);
-
 	Rotation rotation;
-	rotation.rotation = {};
+	Scale scale;
+
+	desc.transformation.Decompose(&rotation.rotation, &position.position, &scale.scale);
+
+	entity.AddComponent(position);
 	entity.AddComponent(rotation);
+	entity.AddComponent(scale);
 
 	MeshRenderer meshRenderer;
-	meshRenderer.mesh = assetIdMapper.Register<MeshAsset>(L"SAA_Farm_House_EX.fbx");
+	meshRenderer.mesh = assetId;
 	meshRenderer.materials = {};
 	entity.AddComponent(meshRenderer);
 

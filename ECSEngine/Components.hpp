@@ -28,7 +28,7 @@ namespace ECSEngine
 
 	struct HasChildren : TagComponent<HasChildren> {};
 
-    struct MeshRenderer : Component<MeshRenderer>
+    struct MeshRenderer : NonUniqueComponent<MeshRenderer>
     {
 		MeshAssetId mesh{};
 		MaterialAssetsArrayAssetId materials{};
