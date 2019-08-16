@@ -87,8 +87,8 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 
     vector<WorkerThread> workers;
     EntityIDGenerator idGenerator;
-	//auto stream = SceneFromMap::Create(L"C:\\Users\\salal\\Desktop\\et.txt", L"C:\\Users\\salal\\Desktop\\et_assets\\", idGenerator, *assetIdMapper);
-    auto stream = Scene::Create(idGenerator, *assetIdMapper, assetsManager);
+	auto stream = SceneFromMap::Create(L"C:\\Users\\salal\\Desktop\\et.txt", L"C:\\Users\\salal\\Desktop\\et_assets\\", idGenerator, *assetIdMapper);
+    //auto stream = Scene::Create(idGenerator, *assetIdMapper, assetsManager);
 
     manager->Start(move(assetsManager), move(idGenerator), move(workers), move(stream));
 

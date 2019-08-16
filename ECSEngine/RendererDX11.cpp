@@ -652,10 +652,13 @@ public:
             }
 			else
 			{
-				auto meshRenderer = entry.FindComponent<MeshRenderer>();
-				if (meshRenderer)
+				for (uiw index = 0; index < entry.components.size(); ++index)
 				{
-					AddMeshRenderer(env, entry.entityID, *meshRenderer, entry.GetComponent<Position>().position, entry.GetComponent<Rotation>().rotation, entry.FindComponent<Scale>());
+					auto meshRenderer = entry.TryToGetComponentAtIndex<MeshRenderer>(index);
+					if (meshRenderer.component)
+					{
+						AddMeshRenderer(env, entry.entityID, meshRenderer.id, *meshRenderer.component, entry.GetComponent<Position>().position, entry.GetComponent<Rotation>().rotation, entry.FindComponent<Scale>());
+					}
 				}
 			}
         }
@@ -674,7 +677,7 @@ public:
 		{
 			for (auto &entry : stream)
 			{
-				AddMeshRenderer(env, entry.entityID, entry.added.Cast<MeshRenderer>(), entry.GetComponent<Position>().position, entry.GetComponent<Rotation>().rotation, entry.FindComponent<Scale>());
+				AddMeshRenderer(env, entry.entityID, entry.addedComponentID, entry.added.Cast<MeshRenderer>(), entry.GetComponent<Position>().position, entry.GetComponent<Rotation>().rotation, entry.FindComponent<Scale>());
 			}
 		}
         else if (stream.Type() == Position::GetTypeId() || stream.Type() == Rotation::GetTypeId())
@@ -729,17 +732,17 @@ public:
 		}
 		for (const auto &entry : stream.Enumerate<Position>())
 		{
-			RemoveMeshRenderer(entry.entityID);
+			RemoveMeshRenderer(entry.entityID, {});
 			RemoveCamera(entry.entityID);
 		}
 		for (const auto &entry : stream.Enumerate<Rotation>())
 		{
-			RemoveMeshRenderer(entry.entityID);
+			RemoveMeshRenderer(entry.entityID, {});
 			RemoveCamera(entry.entityID);
 		}
 		for (const auto &entry : stream.Enumerate<MeshRenderer>())
 		{
-			RemoveMeshRenderer(entry.entityID);
+			RemoveMeshRenderer(entry.entityID, entry.componentID);
 		}
 		for (const auto &entry : stream.Enumerate<Scale>())
 		{
@@ -755,7 +758,7 @@ public:
     {
         for (auto id : stream)
         {
-			RemoveMeshRenderer(id);
+			RemoveMeshRenderer(id, {});
 			RemoveCamera(id);
         }
     }
@@ -816,9 +819,12 @@ public:
 						auto projectionMatrix = Matrix4x4::CreatePerspectiveProjection(DegToRad(camera.data.fov), static_cast<f32>(window->width) / static_cast<f32>(window->height), nearPlane, farPlane, ProjectionTarget::D3DAndMetal);
 						Matrix4x4 viewProjectionMatrix = camera.transform.ViewMatrix() * projectionMatrix;
 
-						for (auto &[id, object] : _meshRendererObjects)
+						for (auto &[id, objects] : _meshRendererObjects)
 						{
-							object.Draw(_context.get(), _uniformBuffer.get(), env, viewProjectionMatrix, camera.transform.Position());
+							for (auto &[cid, renderer] : objects)
+							{
+								renderer.Draw(_context.get(), _uniformBuffer.get(), env, viewProjectionMatrix, camera.transform.Position());
+							}
 						}
 
 						dxWindow.swapChain->Present(0, 0);
@@ -990,21 +996,48 @@ public:
     }
 
 private:
-	void AddMeshRenderer(Environment &env, EntityID id, const MeshRenderer &meshRenderer, const Vector3 &position, const Quaternion &rotation, const Scale *scale)
+	void AddMeshRenderer(Environment &env, EntityID id, ComponentID componentId, const MeshRenderer &meshRenderer, const Vector3 &position, const Quaternion &rotation, const Scale *scale)
 	{
-		auto insertResult = _meshRendererObjects.insert({id, MeshRendererObject(env, _device.get(), _layoutManager, _meshResources, meshRenderer)});
-		ASSUME(insertResult.second);
-		insertResult.first->second.SetPosition(position);
-		insertResult.first->second.SetRotation(rotation);
+		auto &vec = _meshRendererObjects[id];
+		vec.push_back({componentId, MeshRendererObject(env, _device.get(), _layoutManager, _meshResources, meshRenderer)});
+
+		vec.back().second.SetPosition(position);
+		vec.back().second.SetRotation(rotation);
 		if (scale)
 		{
-			insertResult.first->second.SetScale(scale->scale);
+			vec.back().second.SetScale(scale->scale);
 		}
 	}
 
-	void RemoveMeshRenderer(EntityID id)
+	void RemoveMeshRenderer(EntityID id, ComponentID componentId)
 	{
-		_meshRendererObjects.erase(id);
+		if (componentId.IsValid())
+		{
+			auto it = _meshRendererObjects.find(id);
+			if (it != _meshRendererObjects.end())
+			{
+				for (auto rendererIt = it->second.begin(); rendererIt != it->second.end(); ++rendererIt)
+				{
+					auto &[cid, renderer] = *rendererIt;
+					if (cid == componentId)
+					{
+						if (it->second.size() == 1)
+						{
+							_meshRendererObjects.erase(it);
+						}
+						else
+						{
+							it->second.erase(rendererIt);
+						}
+						return;
+					}
+				}
+			}
+		}
+		else
+		{
+			_meshRendererObjects.erase(id);
+		}
 	}
 
 	void MeshRendererPositionChanged(EntityID id, const Position &newPosition)
@@ -1012,7 +1045,10 @@ private:
 		auto findResult = _meshRendererObjects.find(id);
 		if (findResult != _meshRendererObjects.end())
 		{
-			findResult->second.SetPosition(newPosition.position);
+			for (auto &[componentId, renderer] : findResult->second)
+			{
+				renderer.SetPosition(newPosition.position);
+			}
 		}
 	}
 
@@ -1021,7 +1057,10 @@ private:
 		auto findResult = _meshRendererObjects.find(id);
 		if (findResult != _meshRendererObjects.end())
 		{
-			findResult->second.SetRotation(newRotation.rotation);
+			for (auto &[componentId, renderer] : findResult->second)
+			{
+				renderer.SetRotation(newRotation.rotation);
+			}
 		}
 	}
 
@@ -1030,7 +1069,10 @@ private:
 		auto findResult = _meshRendererObjects.find(id);
 		if (findResult != _meshRendererObjects.end())
 		{
-			findResult->second.SetScale(newScale.scale);
+			for (auto &[componentId, renderer] : findResult->second)
+			{
+				renderer.SetScale(newScale.scale);
+			}
 		}
 	}
 
@@ -1126,7 +1168,7 @@ private:
 	}
 
 private:
-	std::unordered_map<EntityID, MeshRendererObject> _meshRendererObjects{};
+	std::unordered_map<EntityID, vector<pair<ComponentID, MeshRendererObject>>> _meshRendererObjects{};
     std::forward_list<DX11Camera> _cameras{};
     COMUniquePtr<ID3D11Device> _device{};
     COMUniquePtr<ID3D11DeviceContext> _context{};

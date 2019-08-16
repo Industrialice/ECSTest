@@ -20,10 +20,26 @@ namespace ECSTest
             EntityID entityID;
             vector<SerializedComponent> components;
 
+			template <typename T> struct NonUniqueWrapper
+			{
+				static_assert(T::IsUnique() == false, "Can't be used with unique components");
+				static_assert(T::IsTag() == false, "Can't be used with tags components");
+				const T *component{};
+				ComponentID id{};
+			};
+
+			template <typename T> struct NonUniqueRefWrapper
+			{
+				static_assert(T::IsUnique() == false, "Can't be used with unique components");
+				static_assert(T::IsTag() == false, "Can't be used with tags components");
+				const T &component{};
+				ComponentID id{};
+			};
+
             WARNING_PUSH
             WARNING_DISABLE_INCREASES_REQUIRED_ALIGNMENT
 
-            template <typename T> const T *FindComponent() const
+            template <typename T, typename = enable_if_t<T::IsUnique()>> const T *FindComponent() const
             {
                 static_assert(T::IsTag() == false, "Passed component type is a tag component, use FindTag() instead");
 
@@ -38,12 +54,31 @@ namespace ECSTest
                 return nullptr;
             }
 
-            template <typename T> const T &GetComponent() const
+            template <typename T, typename = enable_if_t<T::IsUnique()>> const T &GetComponent() const
             {
                 auto *c = FindComponent<T>();
                 ASSUME(c);
                 return *c;
             }
+
+			template <typename T, typename = enable_if_t<T::IsUnique() == false>> NonUniqueWrapper<T> TryToGetComponentAtIndex(uiw index) const
+			{
+				ASSUME(index < components.size());
+				const auto &c = components[index];
+				if (c.type == T::GetTypeId())
+				{
+					ASSUME(Funcs::IsAligned(c.data, alignof(T)));
+					return {reinterpret_cast<const T *>(c.data), c.id};
+				}
+				return {};
+			}
+
+			template <typename T, typename = enable_if_t<T::IsUnique() == false>> NonUniqueRefWrapper<T> GetComponentAtIndex(uiw index) const
+			{
+				auto c = TryToGetComponentAtIndex<T>();
+				ASSUME(c);
+				return {*c.component, c.id};
+			}
 
             WARNING_POP
 
