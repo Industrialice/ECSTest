@@ -2,11 +2,13 @@
 #include "SceneFromMap.hpp"
 #include <EntitiesStreamBuilder.hpp>
 #include "Components.hpp"
+#include "AssetsIdentification.hpp"
 
 using namespace ECSEngine;
 
 static void AddObjectsFromMap(const FilePath &pathToMap, const FilePath &pathToMapAssets, EntityIDGenerator &idGenerator, AssetIdMapper &assetIdMapper, EntitiesStream &stream);
 static void ParseObjectIntoEntitiesStream(string_view object, const FilePath &pathToMapAssets, EntityIDGenerator &idGenerator, AssetIdMapper &assetIdMapper, EntitiesStream &stream);
+static shared_ptr<MeshPathAssetIdentification> ReadMeshRenderer(const FilePath &pathPrepend, string_view data);
 template <typename T = Vector3> T ReadVec3(string_view source);
 template <typename T = Vector4> T ReadVec4(string_view source);
 
@@ -16,45 +18,45 @@ unique_ptr<IEntitiesStream> SceneFromMap::Create(const FilePath &pathToMap, cons
 
 	AddObjectsFromMap(pathToMap, pathToMapAssets, idGenerator, assetIdMapper, *stream);
 
-	//{
-	//	EntitiesStream::EntityData entity;
+	{
+		EntitiesStream::EntityData entity;
 
-	//	Position pos;
-	//	entity.AddComponent(pos);
+		Position pos;
+		entity.AddComponent(pos);
 
-	//	Rotation rot;
-	//	entity.AddComponent(rot);
+		Rotation rot;
+		entity.AddComponent(rot);
 
-	//	Window window;
-	//	window.height = 2160;
-	//	window.width = 3840;
-	//	window.isFullscreen = false;
-	//	window.isMaximized = false;
-	//	window.isNoBorders = false;
-	//	strcpy_s(window.title.data(), window.title.size(), "Industrialice ECS test engine");
-	//	window.x = (GetSystemMetrics(SM_CXSCREEN) - window.width) / 2;
-	//	window.y = (GetSystemMetrics(SM_CYSCREEN) - window.height) / 2;
-	//	window.cursorType = Window::CursorTypet::Normal;
+		Window window;
+		window.height = 2160;
+		window.width = 3840;
+		window.isFullscreen = false;
+		window.isMaximized = false;
+		window.isNoBorders = false;
+		strcpy_s(window.title.data(), window.title.size(), "Industrialice ECS test engine");
+		window.x = (GetSystemMetrics(SM_CXSCREEN) - window.width) / 2;
+		window.y = (GetSystemMetrics(SM_CYSCREEN) - window.height) / 2;
+		window.cursorType = Window::CursorTypet::Normal;
 
-	//	RT rt;
-	//	rt.target = window;
+		RT rt;
+		rt.target = window;
 
-	//	ClearColor clearColor;
-	//	clearColor.color = ColorR8G8B8(0, 0, 0);
+		ClearColor clearColor;
+		clearColor.color = ColorR8G8B8(0, 0, 0);
 
-	//	Camera camera;
-	//	camera.rt[0] = rt;
-	//	camera.farPlane = FLT_MAX;
-	//	camera.nearPlane = 0.1f;
-	//	camera.fov = 75.0f;
-	//	camera.isClearDepthStencil = true;
-	//	camera.depthBufferFormat = Camera::DepthBufferFormat::DepthOnly;
-	//	camera.projectionType = Camera::ProjectionTypet::Perspective;
-	//	camera.clearWith = clearColor;
-	//	entity.AddComponent(camera);
+		Camera camera;
+		camera.rt[0] = rt;
+		camera.farPlane = FLT_MAX;
+		camera.nearPlane = 0.1f;
+		camera.fov = 75.0f;
+		camera.isClearDepthStencil = true;
+		camera.depthBufferFormat = Camera::DepthBufferFormat::DepthOnly;
+		camera.projectionType = Camera::ProjectionTypet::Perspective;
+		camera.clearWith = clearColor;
+		entity.AddComponent(camera);
 
-	//	stream->AddEntity(idGenerator.Generate(), move(entity));
-	//}
+		stream->AddEntity(idGenerator.Generate(), move(entity));
+	}
 
 	return move(stream);
 }
@@ -135,7 +137,7 @@ void ParseObjectIntoEntitiesStream(string_view object, const FilePath &pathToMap
 		else if (key == "meshrenderer")
 		{
 			MeshRenderer meshRenderer;
-			meshRenderer.mesh = assetIdMapper.Register<MeshAsset>(pathToMapAssets + FilePath::FromChar(value));
+			meshRenderer.mesh = assetIdMapper.Register<MeshAsset>(ReadMeshRenderer(pathToMapAssets, value));
 			entity.AddComponent(meshRenderer);
 		}
 		else if (key == "children")
@@ -190,6 +192,43 @@ void ParseObjectIntoEntitiesStream(string_view object, const FilePath &pathToMap
 	}
 
 	stream.AddEntity(idGenerator.Generate(), move(entity));
+}
+
+shared_ptr<MeshPathAssetIdentification> ReadMeshRenderer(const FilePath &pathPrepend, string_view data)
+{
+	uiw sepIndex = data.find(',');
+	if (sepIndex == string_view::npos)
+	{
+		SOFTBREAK;
+		return {};
+	}
+
+	auto assetPath = data.substr(0, sepIndex);
+
+	uiw subMeshStart = sepIndex + 1;
+	sepIndex = data.find(',', subMeshStart);
+	if (sepIndex == string_view::npos)
+	{
+		SOFTBREAK;
+		return {};
+	}
+
+	ui32 subMesh;
+	if (auto [pointer, error] = std::from_chars(data.data() + subMeshStart, data.data() + sepIndex, subMesh); error != std::errc())
+	{
+		SOFTBREAK;
+		return {};
+	}
+
+	uiw globalScaleStart = sepIndex + 1;
+	f32 globalScale;
+	if (auto [pointer, error] = std::from_chars(data.data() + globalScaleStart, data.data() + data.size(), globalScale); error != std::errc())
+	{
+		SOFTBREAK;
+		return {};
+	}
+
+	return MeshPathAssetIdentification::New(pathPrepend + FilePath::FromChar(assetPath), subMesh, globalScale);
 }
 
 template<typename T> T ReadVec3(string_view source)

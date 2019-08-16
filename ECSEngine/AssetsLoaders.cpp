@@ -2,11 +2,12 @@
 #include "AssetsLoaders.hpp"
 #include "Material.hpp"
 #include "Mesh.hpp"
+#include "AssetsIdentification.hpp"
 
 using namespace ECSEngine;
 using namespace std::placeholders;
 
-static optional<MeshAsset> LoadWithAssimp(Array<const byte> source, uiw subMesh);
+static optional<MeshAsset> LoadWithAssimp(Array<const byte> source, uiw subMesh, f32 globalScale);
 
 AssetsManager::AssetLoaderFuncType AssetsLoaders::GenerateMeshLoaderFunction()
 {
@@ -43,54 +44,23 @@ AssetsManager::LoadedAsset AssetsLoaders::LoadMesh(AssetId id, TypeId expectedTy
 		return {};
 	}
 
-	auto filePathAndType = _assetIdMapper->ResolveIdToPath(id);
-	if (!filePathAndType)
+	auto *identifier = _assetIdMapper->Resolve(id);
+	if (!identifier)
 	{
 		SOFTBREAK;
 		return {};
 	}
 
-	if (filePathAndType->second != MeshAsset::GetTypeId())
+	if (identifier->AssetTypeId() != MeshAsset::GetTypeId())
 	{
 		SOFTBREAK;
 		return {};
 	}
 
-	uiw subMeshIndex = 0;
-
-	auto platformPath = filePathAndType->first.PlatformPath();
-	uiw commaIndex = platformPath.size() - 1;
-	for (; commaIndex != uiw_max; --commaIndex)
-	{
-		if (platformPath[commaIndex] == ',')
-		{
-			break;
-		}
-	}
-
-	if (commaIndex == uiw_max)
-	{
-		SOFTBREAK; // didn't find submesh index
-		return {};
-	}
-
-	std::array<char, 32> temp;
-	const wchar_t *start = platformPath.data() + commaIndex + 1;
-	const wchar_t *end = platformPath.data() + platformPath.size();
-	uiw index = 0;
-	for (; index < 32 && &start[index] != end; ++index)
-	{
-		temp[index] = static_cast<char>(start[index]);
-	}
-	if (auto [ptr, error] = std::from_chars(temp.data(), temp.data() + index, subMeshIndex); error != std::errc())
-	{
-		SOFTBREAK;
-	}
-
-	platformPath = platformPath.substr(0, commaIndex);
+	auto *meshIdentifier = static_cast<const MeshPathAssetIdentification *>(identifier);
 
 	Error<> fileError;
-	File file(platformPath, FileOpenMode::OpenExisting, FileProcModes::Read, 0, {}, FileShareModes::Read, &fileError);
+	File file(meshIdentifier->AssetFilePath(), FileOpenMode::OpenExisting, FileProcModes::Read, 0, {}, FileShareModes::Read, &fileError);
 	if (!file)
 	{
 		SOFTBREAK;
@@ -104,7 +74,7 @@ AssetsManager::LoadedAsset AssetsLoaders::LoadMesh(AssetId id, TypeId expectedTy
 		return {};
 	}
 
-	auto loaded = LoadWithAssimp(Array(mapping.CMemory(), mapping.Size()), subMeshIndex);
+	auto loaded = LoadWithAssimp(Array(mapping.CMemory(), mapping.Size()), meshIdentifier->SubMeshIndex(), meshIdentifier->GlobalScale());
 	if (!loaded)
 	{
 		SOFTBREAK;
@@ -157,7 +127,7 @@ static vector<StoredMesh> GetMeshesFromHierarchy(const aiScene *scene, const aiN
 	return results;
 }
 
-optional<MeshAsset> LoadWithAssimp(Array<const byte> source, uiw subMesh)
+optional<MeshAsset> LoadWithAssimp(Array<const byte> source, uiw subMesh, f32 globalScale)
 {
 	MeshAsset loaded{};
 	Assimp::Importer importer;
@@ -226,7 +196,7 @@ optional<MeshAsset> LoadWithAssimp(Array<const byte> source, uiw subMesh)
 		aiVector3D position = mesh->mVertices[vertexIndex];
 		aiVector3D normal = mesh->mNormals[vertexIndex];
 
-		vertices[totalVertices + vertexIndex] = {.position = Vector3{-position.x, position.y, position.z} * 0.01f * scale32,.normal = {-normal.x, normal.y, normal.z}};
+		vertices[totalVertices + vertexIndex] = {.position = Vector3{-position.x, position.y, position.z} * globalScale * 0.01f * scale32,.normal = {-normal.x, normal.y, normal.z}};
 	}
 
 	indexes.resize(totalIndexes + mesh->mNumFaces * 3);

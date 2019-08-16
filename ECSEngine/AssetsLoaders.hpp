@@ -1,6 +1,7 @@
 #pragma once
 
 #include "AssetIdMapper.hpp"
+#include "Mesh.hpp"
 
 namespace ECSEngine
 {

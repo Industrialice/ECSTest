@@ -59,6 +59,9 @@
     <ClCompile Include="RendererDX11.cpp">
       <Filter>DX11R Sources</Filter>
     </ClCompile>
+    <ClCompile Include="AssetsIdentification.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PreHeader.hpp">
@@ -120,6 +123,9 @@
     </ClInclude>
     <ClInclude Include="RendererDX11.hpp">
       <Filter>DX11R Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="AssetsIdentification.hpp">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

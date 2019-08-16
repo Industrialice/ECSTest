@@ -3,18 +3,24 @@
 
 using namespace ECSEngine;
 
-AssetId AssetIdMapper::Register(const FilePath &pathToAsset, TypeId assetType)
+AssetId AssetIdMapper::Register(const shared_ptr<AssetIdentification> &assetIdentification)
 {
-	auto pathInsertResult = _assetPathToId.insert({pathToAsset, {AssetId(_currentAssetId), assetType}});
+	if (!assetIdentification)
+	{
+		SOFTBREAK;
+		return {};
+	}
+
+	auto pathInsertResult = _assetPathToId.insert({assetIdentification, {AssetId(_currentAssetId), assetIdentification->AssetTypeId()}});
 	if (pathInsertResult.second) // registered a new path
 	{
-		auto idInsertResult = _assetIdToPath.insert({AssetId(_currentAssetId), {pathToAsset, assetType}});
+		auto idInsertResult = _assetIdToPath.insert({AssetId(_currentAssetId), assetIdentification});
 		ASSUME(idInsertResult.second);
 		++_currentAssetId;
 		ASSUME(_currentAssetId > 0); // check for overflow
 	}
 
-	if (pathInsertResult.first->second.second != assetType)
+	if (pathInsertResult.first->second.second != assetIdentification->AssetTypeId())
 	{
 		SOFTBREAK;
 		return {};
@@ -23,12 +29,12 @@ AssetId AssetIdMapper::Register(const FilePath &pathToAsset, TypeId assetType)
 	return pathInsertResult.first->second.first;
 }
 
-optional<pair<FilePath, TypeId>> AssetIdMapper::ResolveIdToPath(AssetId id) const
+auto AssetIdMapper::Resolve(AssetId id) const -> const AssetIdentification *
 {
 	auto found = _assetIdToPath.find(id);
 	if (found == _assetIdToPath.end())
 	{
-		return nullopt;
+		return nullptr;
 	}
-	return found->second;
+	return &*found->second;
 }

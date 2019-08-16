@@ -2,6 +2,7 @@
 #include "Scene.hpp"
 #include <EntitiesStreamBuilder.hpp>
 #include "Components.hpp"
+#include "AssetsIdentification.hpp"
 
 using namespace ECSEngine;
 
@@ -63,7 +64,8 @@ void AddCamera(EntityIDGenerator &idGenerator, EntitiesStream &stream)
 
 void AddObjects(EntityIDGenerator &idGenerator, AssetIdMapper &assetIdMapper, AssetsManager &assetsManager, EntitiesStream &stream)
 {
-	MeshAssetId assetId = assetIdMapper.Register<MeshAsset>(L"Assets/Schoolhouse.fbx,0");
+	auto meshIdentifier = MeshPathAssetIdentification::New(L"Assets/Schoolhouse.fbx", 0, 0.01f);
+	MeshAssetId assetId = assetIdMapper.Register<MeshAsset>(meshIdentifier);
 	const MeshAsset *loadedAsset = assetsManager.Load<MeshAsset>(assetId);
 	if (!loadedAsset)
 	{

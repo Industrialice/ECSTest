@@ -60,25 +60,25 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 
 	auto assetIdMapper = make_shared<AssetIdMapper>();
 
-	auto fileEnumerateCallback = [&assetIdMapper](const FileEnumInfo &info, const FilePath &currentPath)
-	{
-		const wchar_t *ext = wcsrchr(info.cFileName, '.');
-		if (!ext)
-		{
-			return;
-		}
+	//auto fileEnumerateCallback = [&assetIdMapper](const FileEnumInfo &info, const FilePath &currentPath)
+	//{
+	//	const wchar_t *ext = wcsrchr(info.cFileName, '.');
+	//	if (!ext)
+	//	{
+	//		return;
+	//	}
 
-		TypeId type = ResolveAssetExtensionToType(ext + 1);
-		if (!type.IsValid())
-		{
-			SOFTBREAK;
-			return;
-		}
+	//	TypeId type = ResolveAssetExtensionToType(ext + 1);
+	//	if (!type.IsValid())
+	//	{
+	//		SOFTBREAK;
+	//		return;
+	//	}
 
-		assetIdMapper->Register(currentPath.GetWithRemovedTopLevel() / info.cFileName, type);
-	};
+	//	assetIdMapper->Register(currentPath.GetWithRemovedTopLevel() / info.cFileName, type);
+	//};
 
-	FileSystem::Enumerate(L"Assets", fileEnumerateCallback, FileSystem::EnumerateOptions::ReportFiles.Combined(FileSystem::EnumerateOptions::Recursive));
+	//FileSystem::Enumerate(L"Assets", fileEnumerateCallback, FileSystem::EnumerateOptions::ReportFiles.Combined(FileSystem::EnumerateOptions::Recursive));
 
 	AssetsManager assetsManager;
 	AssetsLoaders assetsLoaders;

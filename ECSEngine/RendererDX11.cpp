@@ -118,7 +118,7 @@ class LayoutManager
 {
 	static auto DescToTie(const D3D11_INPUT_ELEMENT_DESC &desc)
 	{
-		return std::tie(desc.Format, desc.AlignedByteOffset, desc.InputSlot, desc.InputSlotClass, desc.InstanceDataStepRate, desc.SemanticIndex, desc.SemanticName);
+		return std::tie(desc.Format, desc.AlignedByteOffset, desc.InputSlot, desc.InputSlotClass, desc.InstanceDataStepRate, desc.SemanticIndex);
 	}
 
 	struct StoredElement
@@ -152,6 +152,10 @@ public:
 			for (uiw index = 0; index < descs.size(); ++index)
 			{
 				if (DescToTie(descs[index]) != DescToTie(stored.descs[index]))
+				{
+					return false;
+				}
+				if (strcmp(descs[index].SemanticName, stored.descs[index].SemanticName))
 				{
 					return false;
 				}
@@ -274,6 +278,8 @@ public:
 			logger.Error("MeshResource -> creating index buffer failed, error %s\n", ConvertDirectXErrToString(result));
 			return;
 		}
+
+		logger.Info("Finished creating MeshResource\n");
 
 		isMeshCreated = true;
 	}
@@ -576,7 +582,7 @@ public:
 			_mesh = foundMeshResource->second;
 		}
 
-		env.logger.Info("Finished creating MeshRendererObject\n");
+		//env.logger.Info("Finished creating MeshRendererObject\n");
 	}
 
 	void Draw(ID3D11DeviceContext *context, ID3D11Buffer *uniformBuffer, System::Environment &env, const Matrix4x4 &viewProjectionMatrix, const Vector3 &cameraPosition)
