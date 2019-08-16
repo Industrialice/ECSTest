@@ -530,11 +530,11 @@ auto SystemsManagerST::AddNewArchetypeGroup(const ArchetypeFull &archetype, Arra
 
 		// allocate memory
 		ASSUME(componentArray.sizeOf > 0 && componentArray.stride > 0 && group.entitiesReservedCount > 0 && componentArray.alignmentOf > 0);
-		componentArray.data.reset(Allocator::MallocAlignedRuntime::Allocate(componentArray.sizeOf * group.entitiesReservedCount, componentArray.alignmentOf));
+		componentArray.data.reset(Allocator::MallocAlignedRuntime::Allocate(componentArray.sizeOf * componentArray.stride * group.entitiesReservedCount, componentArray.alignmentOf));
 
 		if (!componentArray.isUnique)
 		{
-			componentArray.ids.reset(Allocator::Malloc::Allocate<ComponentID>(group.entitiesReservedCount));
+			componentArray.ids.reset(Allocator::Malloc::Allocate<ComponentID>(componentArray.stride * group.entitiesReservedCount));
 		}
 	}
 
@@ -576,13 +576,13 @@ void SystemsManagerST::AddEntityToArchetypeGroup(const ArchetypeFull &archetype,
 			ASSUME(componentArray.sizeOf > 0 && componentArray.stride > 0 && componentArray.alignmentOf > 0);
 
 			byte *oldPtr = componentArray.data.release();
-			byte *newPtr = Allocator::MallocAlignedRuntime::Reallocate(oldPtr, componentArray.sizeOf * group.entitiesReservedCount, componentArray.alignmentOf);
+			byte *newPtr = Allocator::MallocAlignedRuntime::Reallocate(oldPtr, componentArray.sizeOf * componentArray.stride * group.entitiesReservedCount, componentArray.alignmentOf);
 			componentArray.data.reset(newPtr);
 
 			if (!componentArray.isUnique)
 			{
 				ComponentID *oldUPtr = componentArray.ids.release();
-				ComponentID *newUPtr = Allocator::Malloc::Reallocate(oldUPtr, group.entitiesReservedCount);
+				ComponentID *newUPtr = Allocator::Malloc::Reallocate(oldUPtr, componentArray.stride * group.entitiesReservedCount);
 				componentArray.ids.reset(newUPtr);
 			}
 		}

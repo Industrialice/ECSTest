@@ -71,24 +71,23 @@ AssetsManager::LoadedAsset AssetsLoaders::LoadMesh(AssetId id, TypeId expectedTy
 	if (commaIndex == uiw_max)
 	{
 		SOFTBREAK; // didn't find submesh index
+		return {};
 	}
-	else
-	{
-		std::array<char, 32> temp;
-		const wchar_t *start = platformPath.data() + commaIndex + 1;
-		const wchar_t *end = platformPath.data() + platformPath.size();
-		uiw index = 0;
-		for (; index < 32 && &start[index] != end; ++index)
-		{
-			temp[index] = static_cast<char>(start[index]);
-		}
-		if (auto [ptr, error] = std::from_chars(temp.data(), temp.data() + index, subMeshIndex); error != std::errc())
-		{
-			SOFTBREAK;
-		}
 
-		platformPath = platformPath.substr(0, commaIndex);
+	std::array<char, 32> temp;
+	const wchar_t *start = platformPath.data() + commaIndex + 1;
+	const wchar_t *end = platformPath.data() + platformPath.size();
+	uiw index = 0;
+	for (; index < 32 && &start[index] != end; ++index)
+	{
+		temp[index] = static_cast<char>(start[index]);
 	}
+	if (auto [ptr, error] = std::from_chars(temp.data(), temp.data() + index, subMeshIndex); error != std::errc())
+	{
+		SOFTBREAK;
+	}
+
+	platformPath = platformPath.substr(0, commaIndex);
 
 	Error<> fileError;
 	File file(platformPath, FileOpenMode::OpenExisting, FileProcModes::Read, 0, {}, FileShareModes::Read, &fileError);

@@ -36,7 +36,7 @@ static void DoAllTests()
 int main()
 {
 #ifdef DEBUG
-	//_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_DELAY_FREE_MEM_DF | _CRTDBG_LEAK_CHECK_DF/* | _CRTDBG_CHECK_EVERY_1024_DF*/);
+	//_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_DELAY_FREE_MEM_DF | _CRTDBG_LEAK_CHECK_DF | _CRTDBG_CHECK_EVERY_16_DF);
 #endif
 
 	StdLib::Initialization::Initialize({});
