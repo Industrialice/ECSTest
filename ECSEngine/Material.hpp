@@ -89,6 +89,8 @@ namespace ECSEngine
 		BlendFactort blendingTargetAlphaFactor{};
 		BlendCombineModet blendingColorCombineMode{};
 		BlendCombineModet blendingAlphaCombineMode{};
+		// TODO: make blending settings per RT
+		// TODO: stencil
 	};
 
 	struct MaterialAssetId : AssetId

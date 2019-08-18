@@ -337,7 +337,13 @@ public:
 		rsDesc.MultisampleEnable = false;
 		rsDesc.ScissorEnable = false;
 		rsDesc.SlopeScaledDepthBias = 0.0f;
-		if (HRESULT result = device->CreateRasterizerState(&rsDesc, AddressOfNaked(_rsState)); result != S_OK)
+		if (HRESULT result = device->CreateRasterizerState(&rsDesc, AddressOfNaked(_rsStateBackCulled)); result != S_OK)
+		{
+			logger.Error("Failed to create rasterizer state, error %s\n", ConvertDirectXErrToString(result));
+			return;
+		}
+		rsDesc.CullMode = D3D11_CULL_FRONT;
+		if (HRESULT result = device->CreateRasterizerState(&rsDesc, AddressOfNaked(_rsStateFrontCulled)); result != S_OK)
 		{
 			logger.Error("Failed to create rasterizer state, error %s\n", ConvertDirectXErrToString(result));
 			return;
@@ -404,10 +410,10 @@ public:
 			{
 				normal = normalize(normal);
 				float3 toCamera = normalize(CameraPosition - worldPos);
-				float diffuse = saturate(dot(normal, toCamera)) * 0.9f;
+				float diffuse = saturate(dot(normal, toCamera));
 				float3 reflected = reflect(-toCamera, normal);
 				float specular = pow(saturate(dot(reflected, toCamera)), 8);
-				float4 finalColor = float4((diffuse + 0.1f).rrr, 1.0f);
+				float4 finalColor = float4((diffuse * 0.9f + 0.1f).rrr, 1.0f);
 				//finalColor.gb += specular * 0.75f;
 				finalColor.b += specular;
 				return finalColor;
@@ -517,15 +523,15 @@ public:
 
 		context->Unmap(uniformBuffer, 0);
 
-		context->RSSetState(_rsState.get());
 		context->OMSetBlendState(_blendState.get(), nullptr, ui32_max);
 		context->OMSetDepthStencilState(_dsState.get(), ui32_max);
 		context->PSSetShader(_pixelShader.get(), nullptr, 0);
 		context->VSSetShader(_vertexShader.get(), nullptr, 0);
 	}
 
-	void Draw(ID3D11DeviceContext *context, ui32 indexCount, ui32 indexBufferOffset)
+	void Draw(ID3D11DeviceContext *context, ui32 indexCount, ui32 indexBufferOffset, bool isBackCulled)
 	{
+		context->RSSetState(isBackCulled ? _rsStateBackCulled.get() : _rsStateFrontCulled.get());
 		context->DrawIndexed(indexCount, indexBufferOffset, 0);
 	}
 
@@ -537,7 +543,7 @@ public:
 private:
 	COMUniquePtr<ID3D11VertexShader> _vertexShader{};
 	COMUniquePtr<ID3D11PixelShader> _pixelShader{};
-	COMUniquePtr<ID3D11RasterizerState> _rsState{};
+	COMUniquePtr<ID3D11RasterizerState> _rsStateBackCulled{}, _rsStateFrontCulled{};
 	COMUniquePtr<ID3D11BlendState> _blendState{};
 	COMUniquePtr<ID3D11DepthStencilState> _dsState{};
 	COMUniquePtr<ID3DBlob> _vertexShaderCode{};
@@ -610,7 +616,7 @@ public:
 
 		for (uiw meshIndex = 0; meshIndex < _mesh->GetSubmeshCount(); ++meshIndex)
 		{
-			_material->Draw(context, _mesh->GetSubmeshInfo(meshIndex).indexCount, _mesh->GetSubmeshInfo(meshIndex).startIndex);
+			_material->Draw(context, _mesh->GetSubmeshInfo(meshIndex).indexCount, _mesh->GetSubmeshInfo(meshIndex).startIndex, _isBackCulled);
 		}
 	}
 
@@ -629,12 +635,18 @@ public:
 	void SetScale(const Vector3 &scale)
 	{
 		_scale = scale;
+		ui32 negativeCount = 0;
+		if (scale.x < 0) ++negativeCount;
+		if (scale.y < 0) ++negativeCount;
+		if (scale.z < 0) ++negativeCount;
+		_isBackCulled = negativeCount % 2 == 0;
 		_modelMatrix = {};
 	}
 
 private:
 	optional<Matrix4x3> _modelMatrix{};
 	Matrix3x4 _modelMatrixTransposed{};
+	bool _isBackCulled = true;
 	shared_ptr<const MeshResource> _mesh{};
 	static inline shared_ptr<RenderingMaterial> _material;
 	Vector3 _position{};
