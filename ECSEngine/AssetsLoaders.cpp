@@ -7,6 +7,7 @@
 using namespace ECSEngine;
 using namespace std::placeholders;
 
+static optional<MeshAsset> LoadProcedural(Array<const byte> source, uiw subMesh, f32 globalScale);
 static optional<MeshAsset> LoadWithAssimp(Array<const byte> source, uiw subMesh, f32 globalScale);
 
 AssetsManager::AssetLoaderFuncType AssetsLoaders::GenerateMeshLoaderFunction()
@@ -74,14 +75,26 @@ AssetsManager::LoadedAsset AssetsLoaders::LoadMesh(AssetId id, TypeId expectedTy
 		return {};
 	}
 
-	auto loaded = LoadWithAssimp(Array(mapping.CMemory(), mapping.Size()), meshIdentifier->SubMeshIndex(), meshIdentifier->GlobalScale());
-	if (!loaded)
+	if (meshIdentifier->AssetFilePath().ExtensionView() == TSTR("procedural"))
 	{
-		SOFTBREAK;
-		return {};
+		auto loaded = LoadProcedural(Array(mapping.CMemory(), mapping.Size()), meshIdentifier->SubMeshIndex(), meshIdentifier->GlobalScale());
+		if (!loaded)
+		{
+			SOFTBREAK;
+			return {};
+		}
+		return {MeshAsset::GetTypeId(), make_shared<MeshAsset>(move(*loaded))};
 	}
-
-	return {MeshAsset::GetTypeId(), make_shared<MeshAsset>(move(*loaded))};
+	else
+	{
+		auto loaded = LoadWithAssimp(Array(mapping.CMemory(), mapping.Size()), meshIdentifier->SubMeshIndex(), meshIdentifier->GlobalScale());
+		if (!loaded)
+		{
+			SOFTBREAK;
+			return {};
+		}
+		return {MeshAsset::GetTypeId(), make_shared<MeshAsset>(move(*loaded))};
+	}
 }
 
 AssetsManager::LoadedAsset AssetsLoaders::LoadTexture(AssetId id, TypeId expectedType)
@@ -108,12 +121,25 @@ static vector<StoredMesh> GetMeshesFromHierarchy(const aiScene *scene, const aiN
 		{
 			continue;
 		}
-		
-		Matrix4x3 transformation = {
-			node->mTransformation.a1, node->mTransformation.b1, node->mTransformation.c1,
-			node->mTransformation.a2, node->mTransformation.b2, node->mTransformation.c2,
-			node->mTransformation.a3, node->mTransformation.b3, node->mTransformation.c3,
-			node->mTransformation.a4, node->mTransformation.b4, node->mTransformation.c4};
+
+		auto AssimpMatrixToStdLib = [](const aiMatrix4x4 &matrix)
+		{
+			Matrix4x3 transformation = {
+				matrix.a1, matrix.b1, matrix.c1,
+				matrix.a2, matrix.b2, matrix.c2,
+				matrix.a3, matrix.b3, matrix.c3,
+				matrix.a4, matrix.b4, matrix.c4};
+			return transformation;
+		};
+
+		Matrix4x3 transformation = AssimpMatrixToStdLib(node->mTransformation);
+
+		const aiNode *parent = node->mParent;
+		while (parent)
+		{
+			transformation *= AssimpMatrixToStdLib(parent->mTransformation);
+			parent = parent->mParent;
+		}
 
 		results.push_back({mesh, transformation});
 	}
@@ -127,11 +153,66 @@ static vector<StoredMesh> GetMeshesFromHierarchy(const aiScene *scene, const aiN
 	return results;
 }
 
+optional<MeshAsset> LoadProcedural(Array<const byte> source, uiw subMesh, f32 globalScale)
+{
+	MeshAsset loaded{};
+	const byte *ptr = source.data();
+
+	ui32 verticesCount, indexesCount;
+	MemOps::Copy(&verticesCount, reinterpret_cast<const ui32 *>(ptr), 1);
+	MemOps::Copy(&indexesCount, reinterpret_cast<const ui32 *>(ptr + sizeof(ui32)), 1);
+	ptr += sizeof(ui32) * 2;
+
+	struct Vertex
+	{
+		Vector3 position;
+		Vector3 normal;
+	};
+
+	const byte *verticesStart = ptr;
+	ptr += verticesCount * sizeof(Vertex);
+
+	vector<ui32> indexesTemp(indexesCount);
+	MemOps::Copy(indexesTemp.data(), reinterpret_cast<const ui32 *>(ptr), indexesCount);
+
+	vector<ui16> indexes(indexesCount);
+	for (uiw index = 0; index < indexesCount; ++index)
+	{
+		ASSUME(indexesTemp[index] <= ui16_max);
+		indexes[index] = static_cast<ui16>(indexesTemp[index]);
+	}
+
+	loaded.desc.subMeshInfos.push_back({.vertexCount = verticesCount,.indexCount = indexesCount,.transformation = {}});
+
+	if (verticesCount == 0 || indexesCount == 0)
+	{
+		SOFTBREAK;
+		return {};
+	}
+
+	uiw verticesSize = verticesCount * sizeof(Vertex);
+	uiw indexesSize = indexesCount * sizeof(ui16);
+
+	loaded.data = make_unique<byte[]>(verticesSize + indexesSize);
+	MemOps::Copy(loaded.data.get(), verticesStart, verticesSize);
+	MemOps::Copy(loaded.data.get() + verticesSize, reinterpret_cast<const byte *>(indexes.data()), indexesSize);
+
+	loaded.desc.vertexAttributes.push_back({"position", ColorFormatt::R32G32B32_Float});
+	loaded.desc.vertexAttributes.push_back({"normal", ColorFormatt::R32G32B32_Float});
+
+	return loaded;
+}
+
 optional<MeshAsset> LoadWithAssimp(Array<const byte> source, uiw subMesh, f32 globalScale)
 {
 	MeshAsset loaded{};
 	Assimp::Importer importer;
-	auto flags = aiProcess_Triangulate | aiProcess_SortByPType | aiProcess_JoinIdenticalVertices | /*aiProcess_PreTransformVertices | */aiProcess_FindDegenerates | aiProcess_FindInvalidData;
+	int flags = aiProcess_Triangulate;
+	flags |= aiProcess_SortByPType;
+	flags |= aiProcess_JoinIdenticalVertices;
+	flags |= aiProcess_FindDegenerates;
+	flags |= aiProcess_FindInvalidData;
+	//flags |= aiProcess_PreTransformVertices;
 	//flags |= aiProcess_ConvertToLeftHanded;
 	flags |= aiProcess_FlipWindingOrder;
 
@@ -191,12 +272,18 @@ optional<MeshAsset> LoadWithAssimp(Array<const byte> source, uiw subMesh, f32 gl
 
 	vertices.resize(totalVertices + vertexCount);
 
+	//File testOutput(L"C:\\Users\\salal\\Desktop\\assimp.txt", FileOpenMode::CreateAlways, FileProcModes::Write);
+
 	for (uiw vertexIndex = 0; vertexIndex < mesh->mNumVertices; ++vertexIndex)
 	{
 		aiVector3D position = mesh->mVertices[vertexIndex];
 		aiVector3D normal = mesh->mNormals[vertexIndex];
 
-		vertices[totalVertices + vertexIndex] = {.position = Vector3{-position.x, position.y, position.z} * globalScale * 0.01f * scale32,.normal = {-normal.x, normal.y, normal.z}};
+		constexpr f32 scaleAdjust = 0.01f; // Assimp assumes FBX uses cm
+		vertices[totalVertices + vertexIndex] = {.position = Vector3{-position.x, position.y, position.z} * globalScale * scaleAdjust * scale32,.normal = {-normal.x, normal.y, normal.z}};
+
+		//Vector3 pos = vertices[totalVertices + vertexIndex].position;
+		//testOutput.WriteFormatted("%.3f,%.3f,%.3f\n", pos.x, pos.y, pos.z);
 	}
 
 	indexes.resize(totalIndexes + mesh->mNumFaces * 3);

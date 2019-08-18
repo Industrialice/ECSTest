@@ -64,7 +64,7 @@ void AddCamera(EntityIDGenerator &idGenerator, EntitiesStream &stream)
 
 void AddObjects(EntityIDGenerator &idGenerator, AssetIdMapper &assetIdMapper, AssetsManager &assetsManager, EntitiesStream &stream)
 {
-	auto meshIdentifier = MeshPathAssetIdentification::New(L"Assets/Schoolhouse.fbx", 0, 0.01f);
+	auto meshIdentifier = MeshPathAssetIdentification::New(L"Assets/Barrel_wooden.fbx", 0, 1);
 	MeshAssetId assetId = assetIdMapper.Register<MeshAsset>(meshIdentifier);
 	const MeshAsset *loadedAsset = assetsManager.Load<MeshAsset>(assetId);
 	if (!loadedAsset)

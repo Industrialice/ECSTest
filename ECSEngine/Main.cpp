@@ -85,9 +85,11 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 	assetsLoaders.SetAssetIdMapper(assetIdMapper);
 	assetsLoaders.RegisterLoaders(assetsManager);
 
+	std::wstring mapName = L"pv";
+
     vector<WorkerThread> workers;
     EntityIDGenerator idGenerator;
-	auto stream = SceneFromMap::Create(L"C:\\Users\\salal\\Desktop\\pv.txt", L"C:\\Users\\salal\\Desktop\\pv_assets\\", idGenerator, *assetIdMapper);
+	auto stream = SceneFromMap::Create(L"C:\\Users\\salal\\Desktop\\" + mapName + L".txt", L"C:\\Users\\salal\\Desktop\\" + mapName + L"_assets\\", idGenerator, *assetIdMapper);
     //auto stream = Scene::Create(idGenerator, *assetIdMapper, assetsManager);
 
     manager->Start(move(assetsManager), move(idGenerator), move(workers), move(stream));

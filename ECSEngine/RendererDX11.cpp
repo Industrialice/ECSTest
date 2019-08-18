@@ -407,7 +407,10 @@ public:
 				float diffuse = saturate(dot(normal, toCamera)) * 0.9f;
 				float3 reflected = reflect(-toCamera, normal);
 				float specular = pow(saturate(dot(reflected, toCamera)), 8);
-				return float4((diffuse + specular + 0.1f).xxx, 1.0f);
+				float4 finalColor = float4((diffuse + 0.1f).rrr, 1.0f);
+				//finalColor.gb += specular * 0.75f;
+				finalColor.b += specular;
+				return finalColor;
 			}
 		);
 
