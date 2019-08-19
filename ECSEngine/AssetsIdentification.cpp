@@ -4,15 +4,15 @@
 
 using namespace ECSEngine;
 
-shared_ptr<MeshPathAssetIdentification> MeshPathAssetIdentification::New(const FilePath &path, ui32 subMesh, f32 globalScale)
+shared_ptr<MeshPathAssetIdentification> MeshPathAssetIdentification::New(const FilePath &path, ui32 subMesh, f32 globalScale, bool isUseFileScale)
 {
 	struct Derived final : public MeshPathAssetIdentification
 	{
 		//using MeshPathAssetIdentification::MeshPathAssetIdentification;
-		Derived(const FilePath &path, ui32 subMesh, f32 globalScale) : MeshPathAssetIdentification(path, subMesh, globalScale)
+		Derived(const FilePath &path, ui32 subMesh, f32 globalScale, bool isUseFileScale) : MeshPathAssetIdentification(path, subMesh, globalScale, isUseFileScale)
 		{}
 	};
-	return make_shared<Derived>(path, subMesh, globalScale);
+	return make_shared<Derived>(path, subMesh, globalScale, isUseFileScale);
 }
 
 bool MeshPathAssetIdentification::operator == (const AssetIdentification &other) const
@@ -50,6 +50,11 @@ f32 MeshPathAssetIdentification::GlobalScale() const
 	return _globalScale;
 }
 
-MeshPathAssetIdentification::MeshPathAssetIdentification(const FilePath &path, ui32 subMesh, f32 globalScale) : _path(path), _subMesh(subMesh), _globalScale(globalScale)
+bool MeshPathAssetIdentification::IsUseFileScale() const
+{
+	return _isUseFileScale;
+}
+
+MeshPathAssetIdentification::MeshPathAssetIdentification(const FilePath &path, ui32 subMesh, f32 globalScale, bool isUseFileScale) : _path(path), _subMesh(subMesh), _globalScale(globalScale), _isUseFileScale(isUseFileScale)
 {
 }

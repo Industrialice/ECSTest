@@ -10,7 +10,7 @@ void CameraMovementSystem::Update(Environment &env)
 		return;
 	}
 
-	float camMovementScale = env.timeSinceLastFrame * 5;
+	float camMovementScale = env.timeSinceLastFrame * 15;
 	if (env.keyController->GetKeyInfo(KeyCode::LShift).IsPressed())
 	{
 		camMovementScale *= 3;

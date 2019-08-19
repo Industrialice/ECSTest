@@ -73,6 +73,17 @@ namespace ECSEngine
 		vector<Uniform> uniforms{};
 	};
 
+	struct BlendStates
+	{
+		bool isBlendingEnabled{};
+		BlendFactort blendingSourceColorFactor{};
+		BlendFactort blendingSourceAlphaFactor{};
+		BlendFactort blendingTargetColorFactor{};
+		BlendFactort blendingTargetAlphaFactor{};
+		BlendCombineModet blendingColorCombineMode{};
+		BlendCombineModet blendingAlphaCombineMode{};
+	};
+
 	struct Material
 	{
 		Shader shader{};
@@ -82,15 +93,9 @@ namespace ECSEngine
 		DepthComparisonFunct depthComparisonFunc{};
 		bool isPolygonFrontCounterClockwise{};
 		bool isDepthWriteEnabled{};
-		bool isBlendingEnabled{};
-		BlendFactort blendingSourceColorFactor{};
-		BlendFactort blendingSourceAlphaFactor{};
-		BlendFactort blendingTargetColorFactor{};
-		BlendFactort blendingTargetAlphaFactor{};
-		BlendCombineModet blendingColorCombineMode{};
-		BlendCombineModet blendingAlphaCombineMode{};
-		// TODO: make blending settings per RT
+		BlendStates blendStates[8]{};
 		// TODO: stencil
+		// TODO: scissors
 	};
 
 	struct MaterialAssetId : AssetId

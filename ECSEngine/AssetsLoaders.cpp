@@ -8,7 +8,7 @@ using namespace ECSEngine;
 using namespace std::placeholders;
 
 static optional<MeshAsset> LoadProcedural(Array<const byte> source, uiw subMesh, f32 globalScale);
-static optional<MeshAsset> LoadWithAssimp(Array<const byte> source, uiw subMesh, f32 globalScale);
+static optional<MeshAsset> LoadWithAssimp(Array<const byte> source, uiw subMesh, f32 globalScale, bool isUseFileScale);
 
 AssetsManager::AssetLoaderFuncType AssetsLoaders::GenerateMeshLoaderFunction()
 {
@@ -61,7 +61,7 @@ AssetsManager::LoadedAsset AssetsLoaders::LoadMesh(AssetId id, TypeId expectedTy
 	auto *meshIdentifier = static_cast<const MeshPathAssetIdentification *>(identifier);
 
 	Error<> fileError;
-	File file(meshIdentifier->AssetFilePath(), FileOpenMode::OpenExisting, FileProcModes::Read, 0, {}, FileShareModes::Read, &fileError);
+	File file(meshIdentifier->AssetFilePath(), FileOpenMode::OpenExisting, FileProcModes::Read, 0, FileCacheModes::LinearRead, FileShareModes::Read, &fileError);
 	if (!file)
 	{
 		SOFTBREAK;
@@ -87,7 +87,7 @@ AssetsManager::LoadedAsset AssetsLoaders::LoadMesh(AssetId id, TypeId expectedTy
 	}
 	else
 	{
-		auto loaded = LoadWithAssimp(Array(mapping.CMemory(), mapping.Size()), meshIdentifier->SubMeshIndex(), meshIdentifier->GlobalScale());
+		auto loaded = LoadWithAssimp(Array(mapping.CMemory(), mapping.Size()), meshIdentifier->SubMeshIndex(), meshIdentifier->GlobalScale(), meshIdentifier->IsUseFileScale());
 		if (!loaded)
 		{
 			SOFTBREAK;
@@ -203,7 +203,7 @@ optional<MeshAsset> LoadProcedural(Array<const byte> source, uiw subMesh, f32 gl
 	return loaded;
 }
 
-optional<MeshAsset> LoadWithAssimp(Array<const byte> source, uiw subMesh, f32 globalScale)
+optional<MeshAsset> LoadWithAssimp(Array<const byte> source, uiw subMesh, f32 globalScale, bool isUseFileScale)
 {
 	MeshAsset loaded{};
 	Assimp::Importer importer;
@@ -234,7 +234,7 @@ optional<MeshAsset> LoadWithAssimp(Array<const byte> source, uiw subMesh, f32 gl
 
 	f64 scaleFactor = 1.0;
 	f32 scale32 = 1.0f;
-	if (scene->mMetaData && scene->mMetaData->Get("UnitScaleFactor", scaleFactor))
+	if (isUseFileScale && scene->mMetaData && scene->mMetaData->Get("UnitScaleFactor", scaleFactor))
 	{
 		scale32 = static_cast<f32>(scaleFactor);
 	}

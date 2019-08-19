@@ -64,7 +64,7 @@ void AddCamera(EntityIDGenerator &idGenerator, EntitiesStream &stream)
 
 void AddObjects(EntityIDGenerator &idGenerator, AssetIdMapper &assetIdMapper, AssetsManager &assetsManager, EntitiesStream &stream)
 {
-	auto meshIdentifier = MeshPathAssetIdentification::New(L"Assets/Barrel_wooden.fbx", 0, 1);
+	auto meshIdentifier = MeshPathAssetIdentification::New(L"Assets/pony_female_body.fbx", 0, 1, true);
 	MeshAssetId assetId = assetIdMapper.Register<MeshAsset>(meshIdentifier);
 	const MeshAsset *loadedAsset = assetsManager.Load<MeshAsset>(assetId);
 	if (!loadedAsset)
@@ -81,7 +81,7 @@ void AddObjects(EntityIDGenerator &idGenerator, AssetIdMapper &assetIdMapper, As
 	Rotation rotation;
 	Scale scale;
 
-	desc.transformation.Decompose(&rotation.rotation, &position.position, &scale.scale);
+	//desc.transformation.Decompose(&rotation.rotation, &position.position, &scale.scale);
 
 	entity.AddComponent(position);
 	entity.AddComponent(rotation);

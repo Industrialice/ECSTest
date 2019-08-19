@@ -22,6 +22,7 @@ unique_ptr<IEntitiesStream> SceneFromMap::Create(const FilePath &pathToMap, cons
 		EntitiesStream::EntityData entity;
 
 		Position pos;
+		pos.position = {0, 75, 0};
 		entity.AddComponent(pos);
 
 		Rotation rot;
@@ -134,7 +135,7 @@ void ParseObjectIntoEntitiesStream(string_view object, const FilePath &pathToMap
 			rot.rotation = ReadVec4<Quaternion>(value);
 			entity.AddComponent(rot);
 		}
-		else if (key == "meshrenderer")
+		else if (key == "meshrenderer" || key == "terrain")
 		{
 			MeshRenderer meshRenderer;
 			meshRenderer.mesh = assetIdMapper.Register<MeshAsset>(ReadMeshRenderer(pathToMapAssets, value));
@@ -221,14 +222,28 @@ shared_ptr<MeshPathAssetIdentification> ReadMeshRenderer(const FilePath &pathPre
 	}
 
 	uiw globalScaleStart = sepIndex + 1;
+	sepIndex = data.find(',', globalScaleStart);
+	if (sepIndex == string_view::npos)
+	{
+		SOFTBREAK;
+		return {};
+	}
 	f32 globalScale;
-	if (auto [pointer, error] = std::from_chars(data.data() + globalScaleStart, data.data() + data.size(), globalScale); error != std::errc())
+	if (auto [pointer, error] = std::from_chars(data.data() + globalScaleStart, data.data() + sepIndex, globalScale); error != std::errc())
 	{
 		SOFTBREAK;
 		return {};
 	}
 
-	return MeshPathAssetIdentification::New(pathPrepend + FilePath::FromChar(assetPath), subMesh, globalScale);
+	uiw isUseFileScaleStart = sepIndex + 1;
+	i32 isUseFileScale;
+	if (auto [pointer, error] = std::from_chars(data.data() + isUseFileScaleStart, data.data() + data.size(), isUseFileScale); error != std::errc())
+	{
+		SOFTBREAK;
+		return {};
+	}
+
+	return MeshPathAssetIdentification::New(pathPrepend + FilePath::FromChar(assetPath), subMesh, globalScale, isUseFileScale != 0);
 }
 
 template<typename T> T ReadVec3(string_view source)

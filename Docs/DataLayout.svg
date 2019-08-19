@@ -19,13 +19,28 @@
   <defs
      id="defs2">
     <marker
+       inkscape:isstock="true"
+       style="overflow:visible;"
+       id="marker5025"
+       refX="0.0"
+       refY="0.0"
+       orient="auto"
+       inkscape:stockid="Arrow1Mend">
+      <path
+         transform="scale(0.4) rotate(180) translate(10,0)"
+         style="fill-rule:evenodd;stroke:#000000;stroke-width:1pt;stroke-opacity:1;fill:#000000;fill-opacity:1"
+         d="M 0.0,0.0 L 5.0,-5.0 L -12.5,0.0 L 5.0,5.0 L 0.0,0.0 z "
+         id="path5023" />
+    </marker>
+    <marker
        inkscape:stockid="Arrow1Mend"
        orient="auto"
        refY="0.0"
        refX="0.0"
        id="marker14641"
        style="overflow:visible;"
-       inkscape:isstock="true">
+       inkscape:isstock="true"
+       inkscape:collect="always">
       <path
          id="path14639"
          d="M 0.0,0.0 L 5.0,-5.0 L -12.5,0.0 L 5.0,5.0 L 0.0,0.0 z "
@@ -615,8 +630,8 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="0.41129356"
-     inkscape:cx="-1018.0086"
-     inkscape:cy="1430.4754"
+     inkscape:cx="-1413.1035"
+     inkscape:cy="1041.4589"
      inkscape:document-units="mm"
      inkscape:current-layer="layer1"
      showgrid="false"
@@ -624,10 +639,10 @@
      inkscape:snap-bbox="true"
      inkscape:snap-global="false"
      showborder="false"
-     inkscape:window-width="1280"
-     inkscape:window-height="1024"
-     inkscape:window-x="5760"
-     inkscape:window-y="755"
+     inkscape:window-width="3738"
+     inkscape:window-height="2137"
+     inkscape:window-x="2014"
+     inkscape:window-y="-8"
      inkscape:window-maximized="1" />
   <metadata
      id="metadata5">
@@ -829,37 +844,7 @@
          x="-220.00713"
          y="-46.830307"
          style="stroke-width:0.26458332"
-         id="tspan10031">  bool isBlendingEnabled;</tspan><tspan
-         sodipodi:role="line"
-         x="-220.00713"
-         y="-33.601139"
-         style="stroke-width:0.26458332"
-         id="tspan10033">  BlendFactort blendingSourceColorFactor;</tspan><tspan
-         sodipodi:role="line"
-         x="-220.00713"
-         y="-20.371973"
-         style="stroke-width:0.26458332"
-         id="tspan10035">  BlendFactort blendingSourceAlphaFactor;</tspan><tspan
-         sodipodi:role="line"
-         x="-220.00713"
-         y="-7.1428065"
-         style="stroke-width:0.26458332"
-         id="tspan10037">  BlendFactort blendingTargetColorFactor;</tspan><tspan
-         sodipodi:role="line"
-         x="-220.00713"
-         y="6.08636"
-         style="stroke-width:0.26458332"
-         id="tspan10039">  BlendFactort blendingTargetAlphaFactor;</tspan><tspan
-         sodipodi:role="line"
-         x="-220.00713"
-         y="19.315527"
-         style="stroke-width:0.26458332"
-         id="tspan10041">  BlendCombineModet blendingColorCombineMode;</tspan><tspan
-         sodipodi:role="line"
-         x="-220.00713"
-         y="32.544693"
-         style="stroke-width:0.26458332"
-         id="tspan10043">  BlendCombineModet blendingAlphaCombineMode;</tspan></text>
+         id="tspan10043">  BlendStates blendStates[8];</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-weight:normal;font-size:10.58333302px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
@@ -1157,6 +1142,67 @@
        d="M -562.88362,-33.653933 V 28.102443"
        id="path14637"
        inkscape:connector-type="orthogonal"
+       inkscape:connector-curvature="0" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:10.58333302px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="91.347984"
+       y="-45.876549"
+       id="text3934"><tspan
+         sodipodi:role="line"
+         id="tspan3932"
+         x="91.347984"
+         y="-45.876549"
+         style="stroke-width:0.26458332">BlendStates</tspan><tspan
+         sodipodi:role="line"
+         x="91.347984"
+         y="-32.647381"
+         style="stroke-width:0.26458332"
+         id="tspan3936">  bool isBlendingEnabled;</tspan><tspan
+         sodipodi:role="line"
+         x="91.347984"
+         y="-19.418217"
+         style="stroke-width:0.26458332"
+         id="tspan3938">  BlendFactort blendingSourceColorFactor;</tspan><tspan
+         sodipodi:role="line"
+         x="91.347984"
+         y="-6.1890492"
+         style="stroke-width:0.26458332"
+         id="tspan3940">  BlendFactort blendingSourceAlphaFactor;</tspan><tspan
+         sodipodi:role="line"
+         x="91.347984"
+         y="7.0401168"
+         style="stroke-width:0.26458332"
+         id="tspan3942">  BlendFactort blendingTargetColorFactor;</tspan><tspan
+         sodipodi:role="line"
+         x="91.347984"
+         y="20.269283"
+         style="stroke-width:0.26458332"
+         id="tspan3944">  BlendFactort blendingTargetAlphaFactor;</tspan><tspan
+         sodipodi:role="line"
+         x="91.347984"
+         y="33.498447"
+         style="stroke-width:0.26458332"
+         id="tspan3946">  BlendCombineModet blendingColorCombineMode;</tspan><tspan
+         sodipodi:role="line"
+         x="91.347984"
+         y="46.727615"
+         style="stroke-width:0.26458332"
+         id="tspan3948">  BlendCombineModet blendingAlphaCombineMode;</tspan></text>
+    <flowRoot
+       xml:space="preserve"
+       id="flowRoot3950"
+       style="fill:black;fill-opacity:1;stroke:none;font-family:sans-serif;font-style:normal;font-weight:normal;font-size:40px;line-height:1.25;letter-spacing:0px;word-spacing:0px"><flowRegion
+         id="flowRegion3952"><rect
+           id="rect3954"
+           width="80.234665"
+           height="63.215187"
+           x="697.7984"
+           y="-212.29333" /></flowRegion><flowPara
+         id="flowPara3956"></flowPara></flowRoot>    <path
+       style="fill:none;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none;marker-end:url(#marker5025)"
+       d="m -61.113079,-49.736321 c 150.531164,0.643294 150.531164,0.643294 150.531164,0.643294"
+       id="path3958"
        inkscape:connector-curvature="0" />
   </g>
 </svg>
