@@ -13,10 +13,14 @@
 #include <assimp/postprocess.h>
 
 #include <PreHeader.hpp>
+#include <MathFunctions.hpp>
 #include <forward_list>
 #include <unordered_set>
 #include <SystemsManager.hpp>
 #include <KeyController.hpp>
+#include <FilePath.hpp>
+#include <File.hpp>
+#include <MemoryMappedFile.hpp>
 
 using namespace ECSTest;
 

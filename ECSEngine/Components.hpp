@@ -3,6 +3,7 @@
 #include "Color.hpp"
 #include "Mesh.hpp"
 #include "Material.hpp"
+#include "PhysicsProperties.hpp"
 
 namespace ECSEngine
 {
@@ -21,6 +22,16 @@ namespace ECSEngine
 		Vector3 scale = {1, 1, 1};
     };
 
+	struct LinearVelocity : Component<LinearVelocity>
+	{
+		Vector3 velocity{};
+	};
+
+	struct AngularVelocity : Component<AngularVelocity>
+	{
+		Vector3 velocity{};
+	};
+
     struct Parent : Component<Parent>
     {
 		EntityID parent{};
@@ -37,6 +48,42 @@ namespace ECSEngine
     struct SkinnedMeshRenderer : Component<SkinnedMeshRenderer>
     {
 		char : 8;
+	};
+
+	struct BoxCollider : Component<BoxCollider>
+	{
+		bool isTrigger = false;
+		Vector3 center = {0, 0, 0};
+		Vector3 size = {1, 1, 1};
+	};
+
+	struct SphereCollider : Component<SphereCollider>
+	{
+		bool isTrigger = false;
+		Vector3 center = {0, 0, 0};
+		f32 radius = 1;
+	};
+
+	struct CapsuleCollider : Component<CapsuleCollider>
+	{
+		enum class Direction { X, Y, Z };
+
+		bool isTrigger = false;
+		Vector3 center = {0, 0, 0};
+		f32 radius = 1;
+		f32 height = 1;
+		Direction direction{Direction::X};
+	};
+
+	struct MeshCollider : Component<MeshCollider>
+	{
+		bool isTrigger = false;
+		MeshAssetId mesh{};
+	};
+
+	struct Physics : Component<Physics>
+	{
+		PhysicsAssetId physics{};
 	};
 
     struct Window

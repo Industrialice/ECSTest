@@ -47,6 +47,9 @@
 #include <algorithm>
 #include <numeric>
 #include <PreHeader.hpp>
+#include <SystemInfo.hpp>
+#include <UnitTestsLogger.hpp>
+#include <NativeConsole.hpp>
 #include <SystemsManager.hpp>
 #include <SystemCreation.hpp>
 #include <EntitiesStreamBuilder.hpp>

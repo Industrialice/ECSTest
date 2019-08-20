@@ -8,7 +8,7 @@ shared_ptr<KeyController> KeyController::New()
 {
     struct Proxy : public KeyController
     {
-        Proxy() : KeyController() {}
+		using KeyController::KeyController;
     };
     return make_shared<Proxy>();
 }

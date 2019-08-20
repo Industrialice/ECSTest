@@ -62,6 +62,9 @@
     <ClCompile Include="AssetsIdentification.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="PhysicsSystem.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="PreHeader.hpp">
@@ -125,6 +128,12 @@
       <Filter>DX11R Headers</Filter>
     </ClInclude>
     <ClInclude Include="AssetsIdentification.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PhysicsSystem.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PhysicsProperties.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

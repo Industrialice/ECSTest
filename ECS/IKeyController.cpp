@@ -85,7 +85,7 @@ shared_ptr<EmptyKeyController> EmptyKeyController::New()
 {
 	struct Proxy : public EmptyKeyController
 	{
-		Proxy() : EmptyKeyController() {}
+		using EmptyKeyController::EmptyKeyController;
 	};
 	return make_shared<Proxy>();
 }
