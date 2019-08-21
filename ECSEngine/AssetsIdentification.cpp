@@ -58,3 +58,37 @@ bool MeshPathAssetIdentification::IsUseFileScale() const
 MeshPathAssetIdentification::MeshPathAssetIdentification(const FilePath &path, ui32 subMesh, f32 globalScale, bool isUseFileScale) : _path(path), _subMesh(subMesh), _globalScale(globalScale), _isUseFileScale(isUseFileScale)
 {
 }
+
+shared_ptr<PhysicsPropertiesAssetIdentification> PhysicsPropertiesAssetIdentification::New(PhysicsProperties &&properties)
+{
+	return shared_ptr<PhysicsPropertiesAssetIdentification>();
+}
+
+bool PhysicsPropertiesAssetIdentification::operator == (const AssetIdentification &other) const
+{
+	if (other.AssetTypeId() != PhysicsPropertiesAsset::GetTypeId())
+	{
+		return false;
+	}
+	auto casted = static_cast<const PhysicsPropertiesAssetIdentification &>(other);
+	return _properties == casted._properties;
+}
+
+uiw PhysicsPropertiesAssetIdentification::operator () () const
+{
+	return _properties.Hash();
+}
+
+TypeId PhysicsPropertiesAssetIdentification::AssetTypeId() const
+{
+	return PhysicsPropertiesAsset::GetTypeId();
+}
+
+const PhysicsProperties &PhysicsPropertiesAssetIdentification::Properties() const
+{
+	return _properties;
+}
+
+PhysicsPropertiesAssetIdentification::PhysicsPropertiesAssetIdentification(PhysicsProperties &&properties) : _properties(move(properties))
+{
+}

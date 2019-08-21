@@ -83,7 +83,7 @@ namespace ECSEngine
 
 	struct Physics : Component<Physics>
 	{
-		PhysicsAssetId physics{};
+		PhysicsPropertiesAssetId physics{};
 	};
 
     struct Window

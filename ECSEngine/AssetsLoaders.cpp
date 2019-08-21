@@ -20,10 +20,16 @@ AssetsManager::AssetLoaderFuncType AssetsLoaders::GenerateTextureLoaderFunction(
 	return std::bind(&AssetsLoaders::LoadTexture, this, _1, _2);
 }
 
+AssetsManager::AssetLoaderFuncType AssetsLoaders::GeneratePhysicsPropertiesLoaderFunction()
+{
+	return std::bind(&AssetsLoaders::LoadPhysicsProperties, this, _1, _2);
+}
+
 void AssetsLoaders::RegisterLoaders(AssetsManager &manager)
 {
 	manager.AddAssetLoader(MeshAsset::GetTypeId(), GenerateMeshLoaderFunction());
 	manager.AddAssetLoader(TextureAsset::GetTypeId(), GenerateTextureLoaderFunction());
+	manager.AddAssetLoader(PhysicsPropertiesAsset::GetTypeId(), GeneratePhysicsPropertiesLoaderFunction());
 }
 
 void AssetsLoaders::SetAssetIdMapper(const shared_ptr<AssetIdMapper> &mapper)
@@ -101,6 +107,32 @@ AssetsManager::LoadedAsset AssetsLoaders::LoadTexture(AssetId id, TypeId expecte
 {
 	NOIMPL;
 	return {};
+}
+
+AssetsManager::LoadedAsset AssetsLoaders::LoadPhysicsProperties(AssetId id, TypeId expectedType)
+{
+	if (!_assetIdMapper)
+	{
+		SOFTBREAK;
+		return {};
+	}
+
+	auto *identifier = _assetIdMapper->Resolve(id);
+	if (!identifier)
+	{
+		SOFTBREAK;
+		return {};
+	}
+
+	if (identifier->AssetTypeId() != PhysicsPropertiesAsset::GetTypeId())
+	{
+		SOFTBREAK;
+		return {};
+	}
+
+	auto *properties = static_cast<const PhysicsPropertiesAssetIdentification *>(identifier);
+
+	return {PhysicsPropertiesAsset::GetTypeId(), make_shared<PhysicsProperties>(properties->Properties())};
 }
 
 struct StoredMesh
@@ -267,6 +299,11 @@ optional<MeshAsset> LoadWithAssimp(Array<const byte> source, uiw subMesh, f32 gl
 		return {};
 	}
 
+	constexpr f32 scaleAdjust = 0.01f; // Assimp assumes FBX uses cm
+	f32 vertexScale = globalScale * scaleAdjust * scale32;
+
+	meshes[subMesh].transformation.SetRow(3, meshes[subMesh].transformation.GetRow(3) *vertexScale);
+
 	ui16 vertexCount = static_cast<ui16>(mesh->mNumVertices);
 	ui32 indexCount = mesh->mNumFaces * 3;
 
@@ -279,8 +316,7 @@ optional<MeshAsset> LoadWithAssimp(Array<const byte> source, uiw subMesh, f32 gl
 		aiVector3D position = mesh->mVertices[vertexIndex];
 		aiVector3D normal = mesh->mNormals[vertexIndex];
 
-		constexpr f32 scaleAdjust = 0.01f; // Assimp assumes FBX uses cm
-		vertices[totalVertices + vertexIndex] = {.position = Vector3{-position.x, position.y, position.z} * globalScale * scaleAdjust * scale32,.normal = {-normal.x, normal.y, normal.z}};
+		vertices[totalVertices + vertexIndex] = {.position = Vector3{-position.x, position.y, position.z} *vertexScale,.normal = {-normal.x, normal.y, normal.z}};
 
 		//Vector3 pos = vertices[totalVertices + vertexIndex].position;
 		//testOutput.WriteFormatted("%.3f,%.3f,%.3f\n", pos.x, pos.y, pos.z);

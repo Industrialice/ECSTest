@@ -837,7 +837,15 @@ public:
 							std::swap(nearPlane, farPlane);
 						}
 
-						auto projectionMatrix = Matrix4x4::CreatePerspectiveProjection(DegToRad(camera.data.fov), static_cast<f32>(window->width) / static_cast<f32>(window->height), nearPlane, farPlane, ProjectionTarget::D3DAndMetal);
+						Matrix4x4 projectionMatrix;
+						if (camera.data.projectionType == Camera::ProjectionTypet::Perspective)
+						{
+							projectionMatrix = Matrix4x4::CreatePerspectiveProjection(DegToRad(camera.data.fov), static_cast<f32>(window->width) / static_cast<f32>(window->height), nearPlane, farPlane, ProjectionTarget::D3DAndMetal);
+						}
+						else
+						{
+							projectionMatrix = Matrix4x4::CreateOrthographicProjection({0, 0, camera.data.nearPlane}, {static_cast<f32>(window->width), static_cast<f32>(window->height), camera.data.farPlane}, ProjectionTarget::D3DAndMetal); // TODO: broken
+						}
 						Matrix4x4 viewProjectionMatrix = camera.transform.ViewMatrix() * projectionMatrix;
 
 						for (auto &[id, objects] : _meshRendererObjects)
