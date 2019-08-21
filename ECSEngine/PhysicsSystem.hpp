@@ -16,6 +16,9 @@ namespace ECSEngine
 			const Array<SphereCollider> *,
 			const Array<CapsuleCollider> *,
 			const Array<MeshCollider> *,
+			const Array<Physics> *,
 			RequiredComponentAny<BoxCollider, SphereCollider, CapsuleCollider, MeshCollider>) {}
+
+		[[nodiscard]] static unique_ptr<PhysicsSystem> New();
 	};
 }

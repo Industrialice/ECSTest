@@ -88,7 +88,7 @@ public:
     {
         void Accept(Array<Position> &);
 
-        virtual bool ControlInput(Environment &env, const ControlAction &input) override
+        virtual void ControlInput(Environment &env, const ControlAction &input) override
         {
             if (auto key = input.Get<ControlAction::Key>(); key)
             {
@@ -112,8 +112,6 @@ public:
             {
                 SOFTBREAK;
             }
-
-            return false;
         }
 
     #ifdef PHYSICS_INDIRECT
@@ -127,7 +125,7 @@ public:
     {
 		void Accept(const Array<Position> &) {}
 
-        virtual bool ControlInput(Environment &env, const ControlAction &input) override
+        virtual void ControlInput(Environment &env, const ControlAction &input) override
         {
             if (auto key = input.Get<ControlAction::Key>(); key)
             {
@@ -151,8 +149,6 @@ public:
             {
                 SOFTBREAK;
             }
-
-            return false;
         }
 
         virtual void Update(Environment &env) override

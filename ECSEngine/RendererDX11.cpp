@@ -657,9 +657,8 @@ private:
 class RendereDX11SystemImpl : public RendererDX11System
 {
 public:
-    virtual bool ControlInput(Environment &env, const ControlAction &input) override
+    virtual void ControlInput(Environment &env, const ControlAction &input) override
     {
-        return false;
     }
 
     virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override

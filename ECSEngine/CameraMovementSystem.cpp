@@ -140,7 +140,7 @@ void CameraMovementSystem::ProcessMessages(System::Environment &env, const Messa
 	}
 }
 
-bool CameraMovementSystem::ControlInput(Environment &env, const ControlAction &action)
+void CameraMovementSystem::ControlInput(Environment &env, const ControlAction &action)
 {
 	if (_controlledCameraId)
 	{
@@ -166,6 +166,4 @@ bool CameraMovementSystem::ControlInput(Environment &env, const ControlAction &a
 			}
 		}
 	}
-
-	return false;
 }

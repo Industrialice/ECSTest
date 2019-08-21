@@ -15,7 +15,7 @@ namespace ECSEngine
 		virtual void ProcessMessages(System::Environment &env, const MessageStreamComponentChanged &stream) override;
 		virtual void ProcessMessages(System::Environment &env, const MessageStreamComponentRemoved &stream) override;
 		virtual void ProcessMessages(System::Environment &env, const MessageStreamEntityRemoved &stream) override;
-		virtual bool ControlInput(Environment &env, const ControlAction &action) override;
+		virtual void ControlInput(Environment &env, const ControlAction &action) override;
 
 	private:
 		CameraTransform _cameraTransform{};

@@ -5,6 +5,7 @@
 #include "CustomControlActions.hpp"
 #include "CameraMovementSystem.hpp"
 #include "ObjectsMoverSystem.hpp"
+#include "PhysicsSystem.hpp"
 #include "AssetsLoaders.hpp"
 
 using namespace ECSEngine;
@@ -57,6 +58,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 	auto physicsPipeline = manager->CreatePipeline(TimeSecondsFP64(1.0 / 60.0), false);
 	//manager->Register<ObjectsMoverSystem>(physicsPipeline);
 	manager->Register(move(cameraMovementSystem), physicsPipeline);
+	manager->Register(PhysicsSystem::New(), physicsPipeline);
 
 	auto assetIdMapper = make_shared<AssetIdMapper>();
 

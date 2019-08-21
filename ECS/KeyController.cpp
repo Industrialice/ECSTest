@@ -101,10 +101,7 @@ void KeyController::Dispatch(const ControlAction &action)
         const auto &listener = _listeners[index];
         if (listener.deviceMask.Contains(action.device))
         {
-            if (listener.listener(cookedAction))
-            {
-                break;
-            }
+			listener.listener(cookedAction);
         }
     }
     _isDispatchingInProgress = false;
