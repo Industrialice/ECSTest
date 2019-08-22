@@ -22,6 +22,36 @@ namespace ECSEngine
 		bool isSkinned{};
 		vector<SubMeshInfo> subMeshInfos{};
 		vector<VertexAttribute> vertexAttributes{};
+
+		uiw Stride() const
+		{
+			uiw stride = 0;
+			for (const auto &attr : vertexAttributes)
+			{
+				stride += ColorFormatSizeOf(attr.type);
+			}
+			return stride;
+		}
+
+		uiw TotalVertexCount() const
+		{
+			uiw total = 0;
+			for (const auto &info : subMeshInfos)
+			{
+				total += info.vertexCount;
+			}
+			return total;
+		}
+
+		uiw TotalIndexCount() const
+		{
+			uiw total = 0;
+			for (const auto &info : subMeshInfos)
+			{
+				total += info.indexCount;
+			}
+			return total;
+		}
 	};
 
 	struct MeshAssetId : AssetId

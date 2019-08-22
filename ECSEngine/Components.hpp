@@ -79,6 +79,7 @@ namespace ECSEngine
 	struct MeshCollider : Component<MeshCollider>
 	{
 		bool isTrigger = false;
+		ui8 vertexLimit = 255;
 		MeshAssetId mesh{};
 	};
 

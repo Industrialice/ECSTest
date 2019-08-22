@@ -123,6 +123,8 @@ namespace ECSEngine
 		Texture desc{};
 		unique_ptr<byte> data{};
 	};
+
+	uiw ColorFormatSizeOf(ColorFormatt format);
 }
 
 namespace std

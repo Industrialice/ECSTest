@@ -147,6 +147,26 @@ struct PhysXSystem : PhysicsSystem
 		f32 contactOffset = isDynamic && physicsProperties->contactOffset ? *physicsProperties->contactOffset : _contactOffset;
 		f32 restOffset = isDynamic && physicsProperties->restOffset ? *physicsProperties->restOffset : _restOffset;
 
+		/*
+		optional<f32> mass = nullopt; // 0 means infinity mass, if mass is not set it'll be computed based on physical material and attached colliders
+		f32 linearDamping = 0.001f; // 0 means infinity inertia
+		f32 angularDamping = 0.001f; // 0 means infinity inertia
+		MotionControl motionControl = MotionControl::OthersAndGravity;
+		boolVector3 lockPositionAxis = {false, false, false};
+		boolVector3 lockRotationAxis = {false, false, false};
+		optional<Vector3> centerOfMass = nullopt; // if not set it will be computed based on attached colliders
+		optional<Vector3> inertiaTensor = nullopt; // if not set it will be computed based on attached colliders
+		optional<Quaternion> inertiaTensorRotation = nullopt; // if not set it will be computed based on attached colliders
+		optional<ui32> solverIterations = nullopt; // when not set the value from the physics settings will be used
+		optional<ui32> solverVelocityIterations = nullopt; // when not set the value from the physics settings will be used
+		optional<f32> maxAngularVelocity = nullopt; // when not set the value from the physics settings will be used, 0 means infinity velocity
+		optional<f32> maxDepenetrationVelocity = nullopt; // when not set the value from the physics settings will be used, 0 means infinity velocity
+		optional<f32> sleepThreshold = nullopt; // when not set the value from the physics settings will be used
+		optional<f32> wakeCounter = nullopt; // when not set the value from the physics settings will be used
+		optional<f32> contactOffset = nullopt; // when not set the value from the physics settings will be used
+		optional<f32> restOffset = nullopt; // when not set the value from the physics settings will be used
+		*/
+
 		PxShape *shape;
 		PxRigidActor *actor;
 
@@ -202,13 +222,108 @@ struct PhysXSystem : PhysicsSystem
 		}
 		if (mesh)
 		{
+			const MeshAsset *meshAsset = env.assetsManager.Load<MeshAsset>(mesh->mesh);
+			if (!meshAsset)
+			{
+				env.logger.Error("AddObject failed to load mesh asset\n");
+				return;
+			}
+
+			PxConvexFlags convexFlags = PxConvexFlag::eCOMPUTE_CONVEX | PxConvexFlag::eSHIFT_VERTICES;
+
+			PxU16 vertexLimit = mesh->vertexLimit;
+			if (vertexLimit < 8)
+			{
+				if (vertexLimit < 4)
+				{
+					SOFTBREAK;
+					vertexLimit = 4;
+				}
+				convexFlags |= PxConvexFlag::ePLANE_SHIFTING;
+			}
+
+			PxConvexMeshDesc convexMeshDesc;
+			convexMeshDesc.points.data = meshAsset->data.get();
+			convexMeshDesc.points.count = meshAsset->desc.TotalVertexCount();
+			convexMeshDesc.points.stride = meshAsset->desc.Stride();
+			convexMeshDesc.flags = convexFlags;
+			convexMeshDesc.vertexLimit = vertexLimit;
+
+			// Set up cooking
+			//const PxCookingParams currentParams = _cooking->getParams();
+			//PxCookingParams newParams = currentParams;
+
+			//if (!!(CookFlags & EPhysXMeshCookFlags::SuppressFaceRemapTable))
+			//{
+			//	newParams.suppressTriangleMeshRemapTable = true;
+			//}
+
+			//if (!!(CookFlags & EPhysXMeshCookFlags::DeformableMesh))
+			//{
+			//	// Meshes which can be deformed need different cooking parameters to inhibit vertex welding and add an extra skin around the collision mesh for safety.
+			//	// We need to set the meshWeldTolerance to zero, even when disabling 'clean mesh' as PhysX will attempt to perform mesh cleaning anyway according to this meshWeldTolerance
+			//	// if the convex hull is not well formed.
+			//	// Set the skin thickness as a proportion of the overall size of the mesh as PhysX's internal tolerances also use the overall size to calculate the epsilon used.
+			//	const FBox Bounds(SrcBuffer);
+			//	const float MaxExtent = (Bounds.Max - Bounds.Min).Size();
+
+			//	newParams.meshPreprocessParams = PxMeshPreprocessingFlags(PxMeshPreprocessingFlag::eDISABLE_CLEAN_MESH);
+			//	newParams.meshWeldTolerance = 0.0f;
+			//}
+
+			// Do we want to do a 'fast' cook on this mesh, may slow down collision performance at runtime
+			//if (!!(CookFlags & EPhysXMeshCookFlags::FastCook))
+			//{
+			//	newParams.meshCookingHint = PxMeshCookingHint::eCOOKING_PERFORMANCE;
+			//}
+
+			//_cooking->setParams(newParams);
+
+			//if (bUseBuffer)
+			//{
+			//	// Cook the convex mesh to a temp buffer
+			//	TArray<uint8> CookedMeshBuffer;
+			//	FPhysXOutputStream Buffer(&CookedMeshBuffer);
+			//	if (_cooking->cookConvexMesh(convexMeshDesc, Buffer))
+			//	{
+			//		CookResult = EPhysXCookingResult::Succeeded;
+			//	}
+			//	else
+			//	{
+			//	}
+
+			//	if (CookedMeshBuffer.Num() == 0)
+			//	{
+			//		CookResult = EPhysXCookingResult::Failed;
+			//	}
+
+			//	if (CookResult != EPhysXCookingResult::Failed)
+			//	{
+			//		// Append the cooked data into cooked buffer
+			//		OutBuffer.Append(CookedMeshBuffer);
+			//	}
+			//}
+			//else
+			//{
+				PxConvexMesh *cookedMesh = _cooking->createConvexMesh(convexMeshDesc, _physics->getPhysicsInsertionCallback());
+				if (!cookedMesh)
+				{
+					env.logger.Error("createConvexMesh failed\n");
+					return;
+				}
+			//}
+
+			// Return default cooking params to normal
+			//_cooking->setParams(currentParams);
+
+			attachShape(PxConvexMeshGeometry{cookedMesh, PxVec3{objectScale.x, objectScale.y, objectScale.z}}, mesh->isTrigger);
 		}
 
 		if (isDynamic)
 		{
 			PxRigidDynamic *dynamicActor = static_cast<PxRigidDynamic *>(actor);
 
-			bool result = PxRigidBodyExt::updateMassAndInertia(*dynamicActor, 1.0f);
+			bool result = PxRigidBodyExt::updateMassAndInertia(*dynamicActor, 100.0f);
 			ASSUME(result);
 
 			if (linearVelocity)
@@ -219,6 +334,17 @@ struct PhysXSystem : PhysicsSystem
 			{
 				dynamicActor->setAngularVelocity(PxVec3{angularVelocity->x, angularVelocity->y, angularVelocity->z});
 			}
+
+			if (physicsProperties->mass)
+			{
+				dynamicActor->setMass(*physicsProperties->mass);
+			}
+			if (physicsProperties->inertiaTensor)
+			{
+				//dynamicActor->setMassSpaceInertiaTensor(
+			}
+			dynamicActor->setLinearDamping(physicsProperties->linearDamping);
+			dynamicActor->setAngularDamping(physicsProperties->angularDamping);
 		}
 
 		static_assert(sizeof(actor->userData) >= sizeof(EntityID));
@@ -255,7 +381,18 @@ struct PhysXSystem : PhysicsSystem
 			return;
 		}
 
-		_cooking.reset(PxCreateCooking(PX_PHYSICS_VERSION, *_foundation, PxCookingParams(_physics->getTolerancesScale())));
+		PxTolerancesScale toleranceScale;
+		//toleranceScale.length = 1.0f;
+		//toleranceScale.speed = 10.0f;
+
+		PxCookingParams cookingParams(_physics->getTolerancesScale());
+		cookingParams.meshWeldTolerance = 0.01f; // 1mm precision
+		cookingParams.meshPreprocessParams = PxMeshPreprocessingFlags(PxMeshPreprocessingFlag::eWELD_VERTICES);
+		cookingParams.midphaseDesc = PxMeshMidPhase::eBVH34;
+		//cookingParams.meshCookingHint = PxMeshCookingHint::eCOOKING_PERFORMANCE;
+		//cookingParams.meshSizePerformanceTradeOff = 0.0f;
+
+		_cooking.reset(PxCreateCooking(PX_PHYSICS_VERSION, *_foundation, cookingParams));
 		if (!_cooking)
 		{
 			SENDLOG(Error, PhysXSystem, "Initialization -> PxCreateCooking failed\n");
@@ -338,7 +475,7 @@ struct PhysXSystem : PhysicsSystem
 			pvdClient->setScenePvdFlag(PxPvdSceneFlag::eTRANSMIT_SCENEQUERIES, true);
 		}
 
-		_physXMaterial.reset(_physics->createMaterial(0.75f, 0.5f, 0.25f));
+		_physXMaterial.reset(_physics->createMaterial(0.6f, 0.6f, 0));
 
 		//PhysXPlaneData.actor = PxCreatePlane(*Physics, PxPlane(0, 1, 0, 1), *PhysXMaterial);
 		//PhysXScene->addActor(*PhysXPlaneData.actor);

@@ -194,7 +194,7 @@ void AddObjectsFromMap(const FilePath &pathToMap, const FilePath &pathToMapAsset
 	} while (dataStart < dataEnd);
 }
 
-void ParseObjectIntoEntitiesStream(string_view object, const FilePath &pathToMapAssets, EntityIDGenerator &idGenerator, AssetIdMapper &assetIdMapper, EntitiesStream &stream, struct KeyValue &keyValueStorage)
+void ParseObjectIntoEntitiesStream(string_view object, const FilePath &pathToMapAssets, EntityIDGenerator &idGenerator, AssetIdMapper &assetIdMapper, EntitiesStream &stream, KeyValue &keyValueStorage)
 {
 	EntitiesStream::EntityData entity;
 
@@ -266,7 +266,7 @@ void ParseObjectIntoEntitiesStream(string_view object, const FilePath &pathToMap
 	stream.AddEntity(idGenerator.Generate(), move(entity));
 }
 
-void ParseSubobjectIntoEntity(string_view object, const FilePath &pathToMapAssets, EntityIDGenerator &idGenerator, AssetIdMapper &assetIdMapper, EntitiesStream::EntityData &entity, struct KeyValue &keyValueStorage)
+void ParseSubobjectIntoEntity(string_view object, const FilePath &pathToMapAssets, EntityIDGenerator &idGenerator, AssetIdMapper &assetIdMapper, EntitiesStream::EntityData &entity, KeyValue &keyValueStorage)
 {
 	uiw delim = object.find(':');
 	if (delim == string_view::npos)
@@ -280,13 +280,12 @@ void ParseSubobjectIntoEntity(string_view object, const FilePath &pathToMapAsset
 
 	keyValueStorage.Parse(subObjectFields);
 
-	if (subObjectName == "meshrenderer" || subObjectName == "terrain")
+	auto createMeshAsset = [&pathToMapAssets, &assetIdMapper](const KeyValue &keyValueStorage) -> MeshAssetId
 	{
 		string_view assetPath;
 		f32 globalScale = 1.0f;
-		ui32 subMeshIndex = 0;
+		optional<ui8> subMeshIndex{};
 		bool isUseFileScale = true;
-		MeshRenderer meshRenderer;
 		for (const auto &[key, value] : keyValueStorage.storage)
 		{
 			if (key == "path")
@@ -305,13 +304,25 @@ void ParseSubobjectIntoEntity(string_view object, const FilePath &pathToMapAsset
 			{
 				isUseFileScale = ReadUI32(value) != 0;
 			}
-			else
-			{
-				SOFTBREAK;
-			}
 		}
 		auto identification = MeshPathAssetIdentification::New(pathToMapAssets + FilePath::FromChar(assetPath), subMeshIndex, globalScale, isUseFileScale);
-		meshRenderer.mesh = assetIdMapper.Register<MeshAsset>(identification);
+		MeshAssetId id = assetIdMapper.Register<MeshAsset>(identification);
+		#ifdef DEBUG
+			uiw copyLen = std::min(CountOf(id._debugName) - 1, assetPath.size());
+			if (copyLen < assetPath.size())
+			{
+				assetPath = assetPath.substr(assetPath.size() - copyLen, copyLen);
+			}
+			MemOps::Copy(id._debugName, assetPath.data(), copyLen);
+			id._debugName[copyLen] = '\0';
+		#endif
+		return id;
+	};
+
+	if (subObjectName == "meshrenderer" || subObjectName == "terrain")
+	{
+		MeshRenderer meshRenderer;
+		meshRenderer.mesh = createMeshAsset(keyValueStorage);
 		entity.AddComponent(meshRenderer);
 	}
 	else if (subObjectName == "camera")
@@ -466,14 +477,18 @@ void ParseSubobjectIntoEntity(string_view object, const FilePath &pathToMapAsset
 			{
 				meshCollider.isTrigger = ReadUI32(value) != 0;
 			}
-			else if (key == "meshPath")
+			else if (key == "vertexlimit")
 			{
-			}
-			else
-			{
-				SOFTBREAK;
+				ui32 decoded = ReadUI32(value);
+				if (auto limit = std::numeric_limits<decltype(meshCollider.vertexLimit)>::max(); decoded > limit)
+				{
+					SOFTBREAK;
+					decoded = limit;
+				}
+				meshCollider.vertexLimit = static_cast<decltype(meshCollider.vertexLimit)>(decoded);
 			}
 		}
+		meshCollider.mesh = createMeshAsset(keyValueStorage);
 		entity.AddComponent(meshCollider);
 	}
 	else if (subObjectName == "rigidbody")

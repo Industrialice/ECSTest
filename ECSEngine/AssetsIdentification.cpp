@@ -4,11 +4,11 @@
 
 using namespace ECSEngine;
 
-shared_ptr<MeshPathAssetIdentification> MeshPathAssetIdentification::New(const FilePath &path, ui32 subMesh, f32 globalScale, bool isUseFileScale)
+shared_ptr<MeshPathAssetIdentification> MeshPathAssetIdentification::New(const FilePath &path, optional<ui8> subMesh, f32 globalScale, bool isUseFileScale)
 {
 	struct Proxy final : public MeshPathAssetIdentification
 	{
-		Proxy(const FilePath &path, ui32 subMesh, f32 globalScale, bool isUseFileScale) : MeshPathAssetIdentification(path, subMesh, globalScale, isUseFileScale)
+		Proxy(const FilePath &path, optional<ui8> subMesh, f32 globalScale, bool isUseFileScale) : MeshPathAssetIdentification(path, subMesh, globalScale, isUseFileScale)
 		{}
 	};
 	return make_shared<Proxy>(path, subMesh, globalScale, isUseFileScale);
@@ -26,7 +26,7 @@ bool MeshPathAssetIdentification::operator == (const AssetIdentification &other)
 
 uiw MeshPathAssetIdentification::operator () () const
 {
-	return std::hash<FilePath>()(_path) ^ _subMesh ^ std::hash<f32>()(_globalScale);
+	return std::hash<FilePath>()(_path) ^ _subMesh.value_or(ui8_max);
 }
 
 TypeId MeshPathAssetIdentification::AssetTypeId() const
@@ -39,7 +39,7 @@ const FilePath &MeshPathAssetIdentification::AssetFilePath() const
 	return _path;
 }
 
-ui32 MeshPathAssetIdentification::SubMeshIndex() const
+optional<ui8> MeshPathAssetIdentification::SubMeshIndex() const
 {
 	return _subMesh;
 }
@@ -54,7 +54,7 @@ bool MeshPathAssetIdentification::IsUseFileScale() const
 	return _isUseFileScale;
 }
 
-MeshPathAssetIdentification::MeshPathAssetIdentification(const FilePath &path, ui32 subMesh, f32 globalScale, bool isUseFileScale) : _path(path), _subMesh(subMesh), _globalScale(globalScale), _isUseFileScale(isUseFileScale)
+MeshPathAssetIdentification::MeshPathAssetIdentification(const FilePath &path, optional<ui8> subMesh, f32 globalScale, bool isUseFileScale) : _path(path), _subMesh(subMesh), _globalScale(globalScale), _isUseFileScale(isUseFileScale)
 {
 }
 

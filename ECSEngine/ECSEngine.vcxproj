@@ -213,6 +213,7 @@
     <ClCompile Include="RendererDX11.cpp" />
     <ClCompile Include="Scene.cpp" />
     <ClCompile Include="SceneFromMap.cpp" />
+    <ClCompile Include="Texture.cpp" />
     <ClCompile Include="WinHIDInput.cpp" />
     <ClCompile Include="WinVirtualKeysMapping.cpp" />
     <ClCompile Include="WinVKInput.cpp" />

@@ -7,8 +7,8 @@
 using namespace ECSEngine;
 using namespace std::placeholders;
 
-static optional<MeshAsset> LoadProcedural(Array<const byte> source, uiw subMesh, f32 globalScale);
-static optional<MeshAsset> LoadWithAssimp(Array<const byte> source, uiw subMesh, f32 globalScale, bool isUseFileScale);
+static optional<MeshAsset> LoadProcedural(Array<const byte> source, optional<ui8> subMesh, f32 globalScale);
+static optional<MeshAsset> LoadWithAssimp(Array<const byte> source, optional<ui8> subMesh, f32 globalScale, bool isUseFileScale);
 
 AssetsManager::AssetLoaderFuncType AssetsLoaders::GenerateMeshLoaderFunction()
 {
@@ -185,7 +185,7 @@ static vector<StoredMesh> GetMeshesFromHierarchy(const aiScene *scene, const aiN
 	return results;
 }
 
-optional<MeshAsset> LoadProcedural(Array<const byte> source, uiw subMesh, f32 globalScale)
+optional<MeshAsset> LoadProcedural(Array<const byte> source, optional<ui8> subMesh, f32 globalScale)
 {
 	MeshAsset loaded{};
 	const byte *ptr = source.data();
@@ -235,7 +235,7 @@ optional<MeshAsset> LoadProcedural(Array<const byte> source, uiw subMesh, f32 gl
 	return loaded;
 }
 
-optional<MeshAsset> LoadWithAssimp(Array<const byte> source, uiw subMesh, f32 globalScale, bool isUseFileScale)
+optional<MeshAsset> LoadWithAssimp(Array<const byte> source, optional<ui8> subMesh, f32 globalScale, bool isUseFileScale)
 {
 	MeshAsset loaded{};
 	Assimp::Importer importer;
@@ -271,6 +271,9 @@ optional<MeshAsset> LoadWithAssimp(Array<const byte> source, uiw subMesh, f32 gl
 		scale32 = static_cast<f32>(scaleFactor);
 	}
 
+	constexpr f32 scaleAdjust = 0.01f; // Assimp assumes FBX uses cm
+	f32 vertexScale = globalScale * scaleAdjust * scale32;
+
 	struct Vertex
 	{
 		Vector3 position;
@@ -285,57 +288,60 @@ optional<MeshAsset> LoadWithAssimp(Array<const byte> source, uiw subMesh, f32 gl
 
 	vector<StoredMesh> meshes = GetMeshesFromHierarchy(scene, scene->mRootNode);
 
-	if (subMesh >= meshes.size())
+	if (subMesh.value_or(0) >= meshes.size())
 	{
 		SOFTBREAK;
 		return {};
 	}
 
-	const aiMesh *mesh = meshes[subMesh].mesh;
-
-	if (!mesh->HasNormals())
+	uiw beginIndex = 0;
+	uiw endIndex = meshes.size();
+	if (subMesh)
 	{
-		SOFTBREAK;
-		return {};
+		beginIndex = *subMesh;
+		endIndex = beginIndex + 1;
 	}
 
-	constexpr f32 scaleAdjust = 0.01f; // Assimp assumes FBX uses cm
-	f32 vertexScale = globalScale * scaleAdjust * scale32;
-
-	meshes[subMesh].transformation.SetRow(3, meshes[subMesh].transformation.GetRow(3) *vertexScale);
-
-	ui16 vertexCount = static_cast<ui16>(mesh->mNumVertices);
-	ui32 indexCount = mesh->mNumFaces * 3;
-
-	vertices.resize(totalVertices + vertexCount);
-
-	//File testOutput(L"C:\\Users\\salal\\Desktop\\assimp.txt", FileOpenMode::CreateAlways, FileProcModes::Write);
-
-	for (uiw vertexIndex = 0; vertexIndex < mesh->mNumVertices; ++vertexIndex)
+	for (uiw meshIndex = beginIndex; meshIndex < endIndex; ++meshIndex)
 	{
-		aiVector3D position = mesh->mVertices[vertexIndex];
-		aiVector3D normal = mesh->mNormals[vertexIndex];
+		const aiMesh *mesh = meshes[meshIndex].mesh;
 
-		vertices[totalVertices + vertexIndex] = {.position = Vector3{-position.x, position.y, position.z} *vertexScale,.normal = {-normal.x, normal.y, normal.z}};
-
-		//Vector3 pos = vertices[totalVertices + vertexIndex].position;
-		//testOutput.WriteFormatted("%.3f,%.3f,%.3f\n", pos.x, pos.y, pos.z);
-	}
-
-	indexes.resize(totalIndexes + mesh->mNumFaces * 3);
-	for (uiw faceIndex = 0; faceIndex < mesh->mNumFaces; ++faceIndex)
-	{
-		ASSUME(mesh->mFaces[faceIndex].mNumIndices == 3);
-		for (uiw subIndex = 0; subIndex < 3; ++subIndex)
+		if (!mesh->HasNormals())
 		{
-			indexes[totalIndexes + faceIndex * 3 + subIndex] = mesh->mFaces[faceIndex].mIndices[subIndex] + totalVertices;
+			SOFTBREAK;
+			return {};
 		}
+
+		meshes[meshIndex].transformation.SetRow(3, meshes[meshIndex].transformation.GetRow(3) * vertexScale);
+
+		ui16 vertexCount = static_cast<ui16>(mesh->mNumVertices);
+		ui32 indexCount = mesh->mNumFaces * 3;
+
+		vertices.resize(totalVertices + vertexCount);
+
+		for (uiw vertexIndex = 0; vertexIndex < mesh->mNumVertices; ++vertexIndex)
+		{
+			aiVector3D position = mesh->mVertices[vertexIndex];
+			aiVector3D normal = mesh->mNormals[vertexIndex];
+
+			vertices[totalVertices + vertexIndex] = {.position = Vector3{-position.x, position.y, position.z} *vertexScale,.normal = {-normal.x, normal.y, normal.z}};
+		}
+
+		indexes.resize(totalIndexes + mesh->mNumFaces * 3);
+		for (uiw faceIndex = 0; faceIndex < mesh->mNumFaces; ++faceIndex)
+		{
+			ASSUME(mesh->mFaces[faceIndex].mNumIndices == 3);
+			for (uiw subIndex = 0; subIndex < 3; ++subIndex)
+			{
+				indexes[totalIndexes + faceIndex * 3 + subIndex] = mesh->mFaces[faceIndex].mIndices[subIndex] + totalVertices;
+			}
+		}
+
+		totalVertices += vertexCount;
+		totalIndexes += indexCount;
+
+		loaded.desc.subMeshInfos.push_back({.vertexCount = vertexCount,.indexCount = indexCount,.transformation = meshes[meshIndex].transformation});
 	}
-
-	totalVertices += vertexCount;
-	totalIndexes += indexCount;
-
-	loaded.desc.subMeshInfos.push_back({.vertexCount = vertexCount,.indexCount = indexCount,.transformation = meshes[subMesh].transformation});
 
 	if (totalVertices == 0 || totalIndexes == 0)
 	{
