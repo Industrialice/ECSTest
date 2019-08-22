@@ -6,6 +6,8 @@
 	#include <d3dcompiler.h>
 #endif
 
+#include <PxPhysicsAPI.h>
+
 #include <charconv>
 
 #include <assimp/Importer.hpp>

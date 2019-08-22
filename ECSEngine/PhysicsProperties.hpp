@@ -45,3 +45,14 @@ namespace ECSEngine
 		PhysicsProperties data{};
 	};
 }
+
+namespace std
+{
+	template <> struct hash<ECSEngine::PhysicsPropertiesAssetId>
+	{
+		[[nodiscard]] size_t operator()(const ECSEngine::PhysicsPropertiesAssetId &value) const
+		{
+			return value.Hash();
+		}
+	};
+}

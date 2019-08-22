@@ -370,6 +370,10 @@ void ParseSubobjectIntoEntity(string_view object, const FilePath &pathToMapAsset
 			{
 				box.center = ReadVec3(value);
 			}
+			else if (key == "rotation")
+			{
+				box.rotation = ReadVec4<Quaternion>(value);
+			}
 			else if (key == "size")
 			{
 				box.size = ReadVec3(value);

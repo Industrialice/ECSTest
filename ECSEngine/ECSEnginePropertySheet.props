@@ -3,12 +3,12 @@
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <IncludePath>$(SolutionDir)\ECS\;$(SolutionDir)\Helpers\;$(SolutionDir)\External\Assimp\include;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)$(Configuration)_$(PlatformTarget)\;$(VisualStudioDir)\Projects\StdLib2018\$(Configuration)_$(PlatformTarget)\;$(SolutionDir)\External\Assimp\$(PlatformTarget)\$(Configuration);$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)\ECS\;$(SolutionDir)\Helpers\;$(SolutionDir)\External\Assimp\include;$(PHYSX_SDK)/physx/Include;$(PHYSX_SDK)/pxshared/include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)$(Configuration)_$(PlatformTarget)\;$(VisualStudioDir)\Projects\StdLib2018\$(Configuration)_$(PlatformTarget)\;$(SolutionDir)\External\Assimp\$(PlatformTarget)\$(Configuration);$(SolutionDir)External\PhysX\$(PlatformTarget)\$(Configuration)\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <Link>
-      <AdditionalDependencies>assimp.lib;zlib.lib;IrrXML.lib;ECS.lib;Core.lib;Platform.lib;Misc.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>PhysXFoundation_$(PlatformArchitecture).lib;PhysXCooking_$(PlatformArchitecture).lib;PhysXExtensions_static_$(PlatformArchitecture).lib;PhysXPvdSDK_static_$(PlatformArchitecture).lib;PhysXCommon_$(PlatformArchitecture).lib;PhysX_$(PlatformArchitecture).lib;assimp.lib;zlib.lib;IrrXML.lib;ECS.lib;Core.lib;Platform.lib;Misc.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <FixedBaseAddress>true</FixedBaseAddress>
     </Link>

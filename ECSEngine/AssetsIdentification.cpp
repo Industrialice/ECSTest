@@ -6,13 +6,12 @@ using namespace ECSEngine;
 
 shared_ptr<MeshPathAssetIdentification> MeshPathAssetIdentification::New(const FilePath &path, ui32 subMesh, f32 globalScale, bool isUseFileScale)
 {
-	struct Derived final : public MeshPathAssetIdentification
+	struct Proxy final : public MeshPathAssetIdentification
 	{
-		//using MeshPathAssetIdentification::MeshPathAssetIdentification;
-		Derived(const FilePath &path, ui32 subMesh, f32 globalScale, bool isUseFileScale) : MeshPathAssetIdentification(path, subMesh, globalScale, isUseFileScale)
+		Proxy(const FilePath &path, ui32 subMesh, f32 globalScale, bool isUseFileScale) : MeshPathAssetIdentification(path, subMesh, globalScale, isUseFileScale)
 		{}
 	};
-	return make_shared<Derived>(path, subMesh, globalScale, isUseFileScale);
+	return make_shared<Proxy>(path, subMesh, globalScale, isUseFileScale);
 }
 
 bool MeshPathAssetIdentification::operator == (const AssetIdentification &other) const
@@ -61,7 +60,12 @@ MeshPathAssetIdentification::MeshPathAssetIdentification(const FilePath &path, u
 
 shared_ptr<PhysicsPropertiesAssetIdentification> PhysicsPropertiesAssetIdentification::New(PhysicsProperties &&properties)
 {
-	return shared_ptr<PhysicsPropertiesAssetIdentification>();
+	struct Proxy final : public PhysicsPropertiesAssetIdentification
+	{
+		Proxy(PhysicsProperties &&properties) : PhysicsPropertiesAssetIdentification(move(properties))
+		{}
+	};
+	return make_shared<Proxy>(move(properties));
 }
 
 bool PhysicsPropertiesAssetIdentification::operator == (const AssetIdentification &other) const

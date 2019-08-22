@@ -55,6 +55,7 @@ namespace ECSEngine
 		bool isTrigger = false;
 		Vector3 center = {0, 0, 0};
 		Vector3 size = {1, 1, 1};
+		Quaternion rotation{};
 	};
 
 	struct SphereCollider : Component<SphereCollider>

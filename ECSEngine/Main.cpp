@@ -58,7 +58,9 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 	auto physicsPipeline = manager->CreatePipeline(TimeSecondsFP64(1.0 / 60.0), false);
 	//manager->Register<ObjectsMoverSystem>(physicsPipeline);
 	manager->Register(move(cameraMovementSystem), physicsPipeline);
-	manager->Register(PhysicsSystem::New(), physicsPipeline);
+
+	PhysicsSystemSettings physicsSystemSettings{};
+	manager->Register(PhysicsSystem::New(physicsSystemSettings), physicsPipeline);
 
 	auto assetIdMapper = make_shared<AssetIdMapper>();
 
