@@ -23,6 +23,7 @@
 #include <FilePath.hpp>
 #include <File.hpp>
 #include <MemoryMappedFile.hpp>
+#include <SystemInfo.hpp>
 
 using namespace ECSTest;
 

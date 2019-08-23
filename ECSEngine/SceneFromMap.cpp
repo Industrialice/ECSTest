@@ -327,15 +327,19 @@ void ParseSubobjectIntoEntity(string_view object, const FilePath &pathToMapAsset
 	}
 	else if (subObjectName == "camera")
 	{
+		auto monitors = SystemInfo::MonitorsInfo();
+		i32 screenWidth = monitors[0].width;
+		i32 screenHeight = monitors[0].height;
+
 		Window window;
-		window.height = 2160;
-		window.width = 3840;
+		window.height = screenHeight;
+		window.width = screenWidth;
 		window.isFullscreen = false;
 		window.isMaximized = false;
 		window.isNoBorders = false;
 		strcpy_s(window.title.data(), window.title.size(), "Industrialice ECS test engine");
-		window.x = (GetSystemMetrics(SM_CXSCREEN) - window.width) / 2;
-		window.y = (GetSystemMetrics(SM_CYSCREEN) - window.height) / 2;
+		window.x = (screenWidth - window.width) / 2;
+		window.y = (screenHeight - window.height) / 2;
 		window.cursorType = Window::CursorTypet::Normal;
 
 		RT rt;
