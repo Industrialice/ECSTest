@@ -22,6 +22,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <FloatingPointModel>Fast</FloatingPointModel>
       <AdditionalOptions>/Gw %(AdditionalOptions)</AdditionalOptions>
+      <PreprocessorDefinitions>NDEBUG;_HAS_EXCEPTIONS=0;STDLIB_ENABLE_FILE_STATS;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <OptimizeReferences>true</OptimizeReferences>

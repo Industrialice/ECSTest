@@ -6,10 +6,10 @@
   <ItemDefinitionGroup>
     <ClCompile>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
-      <PreprocessorDefinitions>_ALLOW_RTCc_IN_STL;DEBUG;STDLIB_ENABLE_FILE_STATS;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SmallerTypeCheck>false</SmallerTypeCheck>
       <StringPooling>false</StringPooling>
       <FloatingPointModel>Fast</FloatingPointModel>
+      <PreprocessorDefinitions>DEBUG;_HAS_EXCEPTIONS=0;STDLIB_ENABLE_FILE_STATS;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup />

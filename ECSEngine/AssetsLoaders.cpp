@@ -41,26 +41,26 @@ AssetsManager::LoadedAsset AssetsLoaders::LoadMesh(AssetId id, TypeId expectedTy
 {
 	if (expectedType != MeshAsset::GetTypeId())
 	{
-		SOFTBREAK;
+		SENDLOG(Error, AssetsLoaders, "LoadMesh received incorrect expectedType\n");
 		return {MeshAsset::GetTypeId()};
 	}
 
 	if (!_assetIdMapper)
 	{
-		SOFTBREAK;
+		SENDLOG(Error, AssetsLoaders, "LoadMesh requested while _assetIdMapper is null\n");
 		return {};
 	}
 
 	auto *identifier = _assetIdMapper->Resolve(id);
 	if (!identifier)
 	{
-		SOFTBREAK;
+		SENDLOG(Error, AssetsLoaders, "LoadMesh _assetIdMapper failed to resolve id\n");
 		return {};
 	}
 
 	if (identifier->AssetTypeId() != MeshAsset::GetTypeId())
 	{
-		SOFTBREAK;
+		SENDLOG(Error, AssetsLoaders, "LoadMesh wrong asset identifier\n");
 		return {};
 	}
 
@@ -70,14 +70,14 @@ AssetsManager::LoadedAsset AssetsLoaders::LoadMesh(AssetId id, TypeId expectedTy
 	File file(meshIdentifier->AssetFilePath(), FileOpenMode::OpenExisting, FileProcModes::Read, 0, FileCacheModes::LinearRead, FileShareModes::Read, &fileError);
 	if (!file)
 	{
-		SOFTBREAK;
+		SENDLOG(Error, AssetsLoaders, "LoadMesh failed to open file %ls\n", meshIdentifier->AssetFilePath().PlatformPath().data());
 		return {};
 	}
 
 	MemoryMappedFile mapping(file);
 	if (!mapping)
 	{
-		SOFTBREAK;
+		SENDLOG(Error, AssetsLoaders, "LoadMesh failed to memory map asset file\n");
 		return {};
 	}
 
@@ -86,7 +86,7 @@ AssetsManager::LoadedAsset AssetsLoaders::LoadMesh(AssetId id, TypeId expectedTy
 		auto loaded = LoadProcedural(Array(mapping.CMemory(), mapping.Size()), meshIdentifier->SubMeshIndex(), meshIdentifier->GlobalScale());
 		if (!loaded)
 		{
-			SOFTBREAK;
+			SENDLOG(Error, AssetsLoaders, "LoadMesh -> LoadProcedural failed\n");
 			return {};
 		}
 		return {MeshAsset::GetTypeId(), make_shared<MeshAsset>(move(*loaded))};
@@ -96,7 +96,7 @@ AssetsManager::LoadedAsset AssetsLoaders::LoadMesh(AssetId id, TypeId expectedTy
 		auto loaded = LoadWithAssimp(Array(mapping.CMemory(), mapping.Size()), meshIdentifier->SubMeshIndex(), meshIdentifier->GlobalScale(), meshIdentifier->IsUseFileScale());
 		if (!loaded)
 		{
-			SOFTBREAK;
+			SENDLOG(Error, AssetsLoaders, "LoadMesh -> LoadWithAssimp failed\n");
 			return {};
 		}
 		return {MeshAsset::GetTypeId(), make_shared<MeshAsset>(move(*loaded))};
@@ -113,20 +113,20 @@ AssetsManager::LoadedAsset AssetsLoaders::LoadPhysicsProperties(AssetId id, Type
 {
 	if (!_assetIdMapper)
 	{
-		SOFTBREAK;
+		SENDLOG(Error, AssetsLoaders, "LoadPhysicsProperties called, but _assetIdMapper is null\n");
 		return {};
 	}
 
 	auto *identifier = _assetIdMapper->Resolve(id);
 	if (!identifier)
 	{
-		SOFTBREAK;
+		SENDLOG(Error, AssetsLoaders, "LoadPhysicsProperties _assetIdMapper failed to resolve asset id\n");
 		return {};
 	}
 
 	if (identifier->AssetTypeId() != PhysicsPropertiesAsset::GetTypeId())
 	{
-		SOFTBREAK;
+		SENDLOG(Error, AssetsLoaders, "LoadPhysicsProperties wrong identifier type\n");
 		return {};
 	}
 
@@ -218,7 +218,7 @@ optional<MeshAsset> LoadProcedural(Array<const byte> source, optional<ui8> subMe
 
 	if (verticesCount == 0 || indexesCount == 0)
 	{
-		SOFTBREAK;
+		SENDLOG(Error, AssetsLoaders, "LoadProcedural empty vertices/indexes\n");
 		return {};
 	}
 
@@ -253,7 +253,7 @@ optional<MeshAsset> LoadWithAssimp(Array<const byte> source, optional<ui8> subMe
 
 	if (!importer.ValidateFlags(flags))
 	{
-		SOFTBREAK;
+		SENDLOG(Error, AssetsLoaders, "LoadWithAssimp invalid importer flags\n");
 		return {};
 	}
 
@@ -290,7 +290,7 @@ optional<MeshAsset> LoadWithAssimp(Array<const byte> source, optional<ui8> subMe
 
 	if (subMesh.value_or(0) >= meshes.size())
 	{
-		SOFTBREAK;
+		SENDLOG(Error, AssetsLoaders, "LoadWithAssimp invalid subMesh index\n");
 		return {};
 	}
 
@@ -308,7 +308,7 @@ optional<MeshAsset> LoadWithAssimp(Array<const byte> source, optional<ui8> subMe
 
 		if (!mesh->HasNormals())
 		{
-			SOFTBREAK;
+			SENDLOG(Error, AssetsLoaders, "LoadWithAssimp mesh doesn't have normals\n");
 			return {};
 		}
 
@@ -345,7 +345,7 @@ optional<MeshAsset> LoadWithAssimp(Array<const byte> source, optional<ui8> subMe
 
 	if (totalVertices == 0 || totalIndexes == 0)
 	{
-		SOFTBREAK;
+		SENDLOG(Error, AssetsLoaders, "LoadWithAssimp no vertices/indexes\n");
 		return {};
 	}
 

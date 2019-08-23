@@ -534,7 +534,7 @@ struct PhysXSystem : PhysicsSystem
 
 	bool SetSceneProcessing(PxSceneDesc &desc, PhysXProcessingTarget processingOn, BroadPhaseType broadPhaseType)
 	{
-		if (processingOn == PhysXProcessingTarget::CPU || broadPhaseType == BroadPhaseType::SAP)
+		if (processingOn == PhysXProcessingTarget::GPU || broadPhaseType == BroadPhaseType::GPU)
 		{
 			/*PxU32 constraintBufferCapacity;	//!< Capacity of constraint buffer allocated in GPU global memory
 			PxU32 contactBufferCapacity;	//!< Capacity of contact buffer allocated in GPU global memory
@@ -563,10 +563,20 @@ struct PhysXSystem : PhysicsSystem
 			_cudaContexManager.reset(PxCreateCudaContextManager(*_foundation, cudaContextManagerDesc));
 			if (!_cudaContexManager || !_cudaContexManager->contextIsValid())
 			{
-				SENDLOG(Error, PhysXSystem, "Initialization -> PxCreateCudaContextManager failed\n");
-				return false;
+				SENDLOG(Error, PhysXSystem, "Initialization -> PxCreateCudaContextManager failed, cannot use GPU for processing\n");
+				if (processingOn == PhysXProcessingTarget::GPU)
+				{
+					processingOn = PhysXProcessingTarget::CPU;
+				}
+				if (broadPhaseType == BroadPhaseType::GPU)
+				{
+					broadPhaseType = BroadPhaseType::SAP;
+				}
 			}
-			desc.cudaContextManager = _cudaContexManager.get();
+			else
+			{
+				desc.cudaContextManager = _cudaContexManager.get();
+			}
 		}
 
 		switch (broadPhaseType)
