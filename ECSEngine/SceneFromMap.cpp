@@ -336,7 +336,7 @@ void ParseSubobjectIntoEntity(string_view object, const FilePath &pathToMapAsset
 		window.width = screenWidth;
 		window.isFullscreen = false;
 		window.isMaximized = false;
-		window.isNoBorders = false;
+		window.isNoBorders = true;
 		strcpy_s(window.title.data(), window.title.size(), "Industrialice ECS test engine");
 		window.x = (screenWidth - window.width) / 2;
 		window.y = (screenHeight - window.height) / 2;
