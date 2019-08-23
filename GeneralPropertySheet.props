@@ -18,7 +18,7 @@
       <TreatSpecificWarningsAsErrors>4715;4716;4172;4099;4263;4264;4266;4553;4018;4287;4062;4717;4240;4293;4800;4477;4474;4002;4129;4201;4238;4239;4251;4273;4390;4456;4457;4458;4459;4473;4474;4522;4552;4554;4700;4706;4927;4063;4310;</TreatSpecificWarningsAsErrors>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>PreHeader.hpp</PrecompiledHeaderFile>
-      <PreprocessorDefinitions>_HAS_EXCEPTIONS=0;STDLIB_ENABLE_FILE_STATS;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_HAS_EXCEPTIONS=0;STDLIB_ENABLE_FILE_STATS;_MBCS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <EnforceTypeConversionRules>true</EnforceTypeConversionRules>
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <OpenMPSupport>false</OpenMPSupport>
