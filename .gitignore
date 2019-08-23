@@ -229,3 +229,10 @@ ModelManifest.xml
 /ReleaseXP_x86
 /Release_x86
 /ECSEngine/VTune Amplifier Results/ECSEngine
+/ECS/Debug/ECS.vcxproj.FileListAbsolute.txt
+/ECS/Release_x86/ECS.vcxproj.FileListAbsolute.txt
+/ECSEngine/Debug/ECSEngine.vcxproj.FileListAbsolute.txt
+/UnitTests/Debug/UnitTests.vcxproj.FileListAbsolute.txt
+/UnitTests/Debug/UnitTests.vcxproj.FileListAbsolute.txt
+/UnitTests/Release_x86/UnitTests.vcxproj.FileListAbsolute.txt
+/UnitTests/Release_x86/UnitTests.vcxproj.FileListAbsolute.txt

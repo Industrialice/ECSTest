@@ -28,6 +28,7 @@
     </Link>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <GenerateDebugInformation>DebugFastLink</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup />
