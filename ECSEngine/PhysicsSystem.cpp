@@ -215,7 +215,9 @@ struct PhysXSystem : PhysicsSystem
 		}
 		if (capsule)
 		{
-			auto *capsuleShape = attachShape(PxCapsuleGeometry(capsule->radius, capsule->height * 0.5f), capsule->isTrigger);
+			f32 radius = std::max(capsule->radius, DefaultF32Epsilon);
+			f32 height = std::max((capsule->height - radius * 2) * 0.5f, DefaultF32Epsilon);
+			auto *capsuleShape = attachShape(PxCapsuleGeometry(radius, height), capsule->isTrigger);
 			if (capsule->direction != CapsuleCollider::Direction::X)
 			{
 				PxQuat localRotation = capsule->direction == CapsuleCollider::Direction::Y ? PxQuat(PxHalfPi, PxVec3(0, 0, 1)) : PxQuat(PxHalfPi, PxVec3(0, 1, 0));
@@ -392,12 +394,15 @@ struct PhysXSystem : PhysicsSystem
 		//PxPvdTransport* transport = PxDefaultPvdSocketTransportCreate(PVD_HOST, 5425, 10);
 		//Pvd->connect(*transport, PxPvdInstrumentationFlag::eALL);
 
-		_physics.reset(PxCreatePhysics(PX_PHYSICS_VERSION, *_foundation, PxTolerancesScale(), false, _pvd.get()));
+		_physics.reset(PxCreateBasePhysics(PX_PHYSICS_VERSION, *_foundation, PxTolerancesScale(), false, _pvd.get()));
 		if (!_physics)
 		{
 			SENDLOG(Error, PhysXSystem, "Initialization -> PxCreatePhysics failed\n");
 			return;
 		}
+		//PxRegisterArticulations(*_physics);
+		//PxRegisterArticulationsReducedCoordinate(*_physics);
+		PxRegisterHeightFields(*_physics);
 
 		PxTolerancesScale toleranceScale;
 		//toleranceScale.length = 1.0f;

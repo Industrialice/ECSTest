@@ -83,6 +83,10 @@ namespace ECSEngine
 		MeshAssetId mesh{};
 	};
 
+	struct TerrainCollider : Component<TerrainCollider>
+	{
+	};
+
 	struct Physics : Component<Physics>
 	{
 		PhysicsPropertiesAssetId physics{};
