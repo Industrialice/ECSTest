@@ -118,6 +118,23 @@ struct PhysXSystem : PhysicsSystem
 	{
 	}
 
+	//optional<f32> mass // used
+	//f32 linearDamping // used
+	//f32 angularDamping // used
+	//boolVector3 lockPositionAxis // used
+	//boolVector3 lockRotationAxis // used
+	//optional<Vector3> centerOfMass // used
+	//optional<Vector3> inertiaTensor
+	//optional<Quaternion> inertiaTensorRotation
+	//optional<ui32> solverPositionIterations // used
+	//optional<ui32> solverVelocityIterations // used
+	//optional<f32> maxAngularVelocity // used
+	//optional<f32> maxDepenetrationVelocity // used
+	//optional<f32> sleepThreshold // used
+	//optional<f32> wakeCounter // used
+	//optional<f32> contactOffset // used
+	//optional<f32> restOffset // used
+
 	void AddObject(System::Environment &env, EntityID entityId, const Vector3 &position, const Quaternion &rotation, const Vector3 *scale, const Vector3 *linearVelocity, const Vector3 *angularVelocity, const BoxCollider *box, const SphereCollider *sphere, const CapsuleCollider *capsule, const MeshCollider *mesh, PhysicsPropertiesAssetId physicsPropertiesId)
 	{
 		const PhysicsProperties *physicsProperties = nullptr;
@@ -146,26 +163,10 @@ struct PhysXSystem : PhysicsSystem
 		f32 wakeCounter = isDynamic && physicsProperties->wakeCounter ? *physicsProperties->wakeCounter : _wakeCounter;
 		f32 contactOffset = isDynamic && physicsProperties->contactOffset ? *physicsProperties->contactOffset : _contactOffset;
 		f32 restOffset = isDynamic && physicsProperties->restOffset ? *physicsProperties->restOffset : _restOffset;
-
-		/*
-		optional<f32> mass = nullopt; // 0 means infinity mass, if mass is not set it'll be computed based on physical material and attached colliders
-		f32 linearDamping = 0.001f; // 0 means infinity inertia
-		f32 angularDamping = 0.001f; // 0 means infinity inertia
-		MotionControl motionControl = MotionControl::OthersAndGravity;
-		boolVector3 lockPositionAxis = {false, false, false};
-		boolVector3 lockRotationAxis = {false, false, false};
-		optional<Vector3> centerOfMass = nullopt; // if not set it will be computed based on attached colliders
-		optional<Vector3> inertiaTensor = nullopt; // if not set it will be computed based on attached colliders
-		optional<Quaternion> inertiaTensorRotation = nullopt; // if not set it will be computed based on attached colliders
-		optional<ui32> solverIterations = nullopt; // when not set the value from the physics settings will be used
-		optional<ui32> solverVelocityIterations = nullopt; // when not set the value from the physics settings will be used
-		optional<f32> maxAngularVelocity = nullopt; // when not set the value from the physics settings will be used, 0 means infinity velocity
-		optional<f32> maxDepenetrationVelocity = nullopt; // when not set the value from the physics settings will be used, 0 means infinity velocity
-		optional<f32> sleepThreshold = nullopt; // when not set the value from the physics settings will be used
-		optional<f32> wakeCounter = nullopt; // when not set the value from the physics settings will be used
-		optional<f32> contactOffset = nullopt; // when not set the value from the physics settings will be used
-		optional<f32> restOffset = nullopt; // when not set the value from the physics settings will be used
-		*/
+		ui32 solverPositionIterations = isDynamic && physicsProperties->solverPositionIterations ? *physicsProperties->solverPositionIterations : _solverPositionIterations;
+		ui32 solverVelocityIterations = isDynamic && physicsProperties->solverVelocityIterations ? *physicsProperties->solverVelocityIterations : _solverVelocityIterations;
+		f32 maxAngularVelocity = isDynamic && physicsProperties->maxAngularVelocity ? *physicsProperties->maxAngularVelocity : _maxAngularVelocity;
+		f32 maxDepenetrationVelocity = isDynamic && physicsProperties->maxDepenetrationVelocity ? *physicsProperties->maxDepenetrationVelocity : _maxDepenetrationVelocity;
 
 		PxShape *shape;
 		PxRigidActor *actor;
@@ -177,6 +178,19 @@ struct PhysXSystem : PhysicsSystem
 			PxRigidDynamic *dynamicActor = _physics->createRigidDynamic(PxTransform(position.x, position.y, position.z, PxQuat{rotation.x, rotation.y, rotation.z, rotation.w}));
 			dynamicActor->setSleepThreshold(sleepThreshold);
 			dynamicActor->setWakeCounter(wakeCounter);
+
+			PxRigidDynamicLockFlags lockFlags{};
+			if (physicsProperties->lockPositionAxis[0]) lockFlags |= PxRigidDynamicLockFlag::eLOCK_LINEAR_X;
+			if (physicsProperties->lockPositionAxis[1]) lockFlags |= PxRigidDynamicLockFlag::eLOCK_LINEAR_Y;
+			if (physicsProperties->lockPositionAxis[2]) lockFlags |= PxRigidDynamicLockFlag::eLOCK_LINEAR_Z;
+			if (physicsProperties->lockRotationAxis[0]) lockFlags |= PxRigidDynamicLockFlag::eLOCK_ANGULAR_X;
+			if (physicsProperties->lockRotationAxis[1]) lockFlags |= PxRigidDynamicLockFlag::eLOCK_ANGULAR_Y;
+			if (physicsProperties->lockRotationAxis[2]) lockFlags |= PxRigidDynamicLockFlag::eLOCK_ANGULAR_Z;
+			if (lockFlags)
+			{
+				dynamicActor->setRigidDynamicLockFlags(lockFlags);
+			}
+
 			actor = dynamicActor;
 		}
 		else
@@ -206,7 +220,7 @@ struct PhysXSystem : PhysicsSystem
 
 		if (box)
 		{
-			auto size = box->size * objectScale;
+			auto size = box->size * objectScale * 0.5f;
 			auto *boxShape = attachShape(PxBoxGeometry(size.x, size.y, size.z), box->isTrigger);
 			boxShape->setLocalPose(PxTransform(box->center.x, box->center.y, box->center.z, PxQuat{box->rotation.x, box->rotation.y, box->rotation.z, box->rotation.w}));
 		}
@@ -214,11 +228,16 @@ struct PhysXSystem : PhysicsSystem
 		{
 			auto size = sphere->radius * std::max(std::max(objectScale.x, objectScale.y), objectScale.z);
 			auto *sphereShape = attachShape(PxSphereGeometry(size), sphere->isTrigger);
-			sphereShape->setLocalPose(PxTransform(box->center.x, box->center.y, box->center.z, PxQuat{}));
+			sphereShape->setLocalPose(PxTransform(sphere->center.x, sphere->center.y, sphere->center.z, PxQuat{}));
 		}
 		if (capsule)
 		{
-			//attachShape(PxCapsuleGeometry(
+			auto *capsuleShape = attachShape(PxCapsuleGeometry(capsule->radius, capsule->height * 0.5f), capsule->isTrigger);
+			if (capsule->direction != CapsuleCollider::Direction::X)
+			{
+				PxQuat localRotation = capsule->direction == CapsuleCollider::Direction::Y ? PxQuat(PxHalfPi, PxVec3(0, 0, 1)) : PxQuat(PxHalfPi, PxVec3(0, 1, 0));
+				capsuleShape->setLocalPose(PxTransform(localRotation));
+			}
 		}
 		if (mesh)
 		{
@@ -323,8 +342,13 @@ struct PhysXSystem : PhysicsSystem
 		{
 			PxRigidDynamic *dynamicActor = static_cast<PxRigidDynamic *>(actor);
 
-			bool result = PxRigidBodyExt::updateMassAndInertia(*dynamicActor, 100.0f);
-			ASSUME(result);
+			bool isCalculateFromShapes = !physicsProperties->mass && !physicsProperties->centerOfMass && !physicsProperties->inertiaTensor;
+
+			if (isCalculateFromShapes)
+			{
+				bool result = PxRigidBodyExt::updateMassAndInertia(*dynamicActor, 100.0f);
+				ASSUME(result);
+			}
 
 			if (linearVelocity)
 			{
@@ -335,16 +359,23 @@ struct PhysXSystem : PhysicsSystem
 				dynamicActor->setAngularVelocity(PxVec3{angularVelocity->x, angularVelocity->y, angularVelocity->z});
 			}
 
+			if (auto com = physicsProperties->centerOfMass; com)
+			{
+				dynamicActor->setCMassLocalPose(PxTransform(com->x, com->y, com->z));
+			}
 			if (physicsProperties->mass)
 			{
 				dynamicActor->setMass(*physicsProperties->mass);
 			}
-			if (physicsProperties->inertiaTensor)
+			if (auto it = physicsProperties->inertiaTensor; it)
 			{
-				//dynamicActor->setMassSpaceInertiaTensor(
+				//dynamicActor->setMassSpaceInertiaTensor(PxVec3{it->x, it->y, it->z});
 			}
+			dynamicActor->setMaxAngularVelocity(maxAngularVelocity);
+			dynamicActor->setMaxDepenetrationVelocity(maxDepenetrationVelocity);
 			dynamicActor->setLinearDamping(physicsProperties->linearDamping);
 			dynamicActor->setAngularDamping(physicsProperties->angularDamping);
+			dynamicActor->setSolverIterationCounts(solverPositionIterations, solverVelocityIterations);
 		}
 
 		static_assert(sizeof(actor->userData) >= sizeof(EntityID));
@@ -360,6 +391,10 @@ struct PhysXSystem : PhysicsSystem
 		_restOffset = settings.restOffset;
 		_sleepThreshold = settings.sleepThreshold;
 		_wakeCounter = settings.wakeCounter;
+		_solverPositionIterations = settings.solverPositionIterations;
+		_solverVelocityIterations = settings.solverVelocityIterations;
+		_maxAngularVelocity = settings.maxAngularVelocity;
+		_maxDepenetrationVelocity = settings.maxDepenetrationVelocity;
 
 		_simulationMemory.reset(static_cast<byte *>(_aligned_malloc(_simulationMemorySize, 16)));
 
@@ -571,6 +606,10 @@ private:
 	f32 _restOffset{};
 	f32 _sleepThreshold{};
 	f32 _wakeCounter{};
+	ui32 _solverPositionIterations{};
+	ui32 _solverVelocityIterations{};
+	f32 _maxAngularVelocity{};
+	f32 _maxDepenetrationVelocity{};
 
 	std::unordered_map<PhysicsPropertiesAssetId, PhysicsProperties> _cachedPhysicsProperties{};
 	vector<PxActor *> _awakeActors{};

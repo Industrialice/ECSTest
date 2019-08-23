@@ -99,7 +99,7 @@ bool ECSEngine::PhysicsProperties::operator < (const PhysicsProperties &other) c
 	C(centerOfMass);
 	C(inertiaTensor);
 	C(inertiaTensorRotation);
-	C(solverIterations);
+	C(solverPositionIterations);
 	C(solverVelocityIterations);
 	C(maxAngularVelocity);
 	C(maxDepenetrationVelocity);
@@ -129,7 +129,7 @@ bool ECSEngine::PhysicsProperties::operator == (const PhysicsProperties &other) 
 	C(centerOfMass);
 	C(inertiaTensor);
 	C(inertiaTensorRotation);
-	C(solverIterations);
+	C(solverPositionIterations);
 	C(solverVelocityIterations);
 	C(maxAngularVelocity);
 	C(maxDepenetrationVelocity);
@@ -155,7 +155,7 @@ uiw ECSEngine::PhysicsProperties::Hash() const
 	H(centerOfMass.has_value());
 	H(inertiaTensor.has_value());
 	H(inertiaTensorRotation.has_value());
-	H(solverIterations);
+	H(solverPositionIterations);
 	H(solverVelocityIterations);
 	H(maxAngularVelocity.has_value());
 	H(maxDepenetrationVelocity.has_value());

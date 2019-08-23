@@ -16,6 +16,10 @@ namespace ECSEngine
 		f32 restOffset = 0.0f;
 		f32 sleepThreshold = 0.01f;
 		f32 wakeCounter = 0.2f;
+		ui32 solverPositionIterations = 4;
+		ui32 solverVelocityIterations = 1;
+		f32 maxAngularVelocity = 100.0f;
+		f32 maxDepenetrationVelocity = 1e+32f;
 	};
 
 	struct PhysicsSystem : public IndirectSystem<PhysicsSystem>

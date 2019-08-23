@@ -571,7 +571,7 @@ void ParseSubobjectIntoEntity(string_view object, const FilePath &pathToMapAsset
 			}
 			else if (key == "solveriterations")
 			{
-				physics.solverIterations = ReadUI32(value);
+				physics.solverPositionIterations = ReadUI32(value);
 			}
 			else if (key == "solvervelocityiterations")
 			{
