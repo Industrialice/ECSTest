@@ -3,7 +3,7 @@
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <IncludePath>$(SolutionDir)\ECS\;$(SolutionDir)\Helpers\;$(SolutionDir)\External\Assimp\include;$(PHYSX_SDK)/physx/Include;$(PHYSX_SDK)/pxshared/include;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)\ECS\;$(SolutionDir)\Helpers\;$(SolutionDir)\External\Assimp\include;$(SolutionDir)\External\PhysX\include\physx\Include;$(SolutionDir)\External\PhysX\include\pxshared\include;$(IncludePath)</IncludePath>
     <LibraryPath>$(SolutionDir)$(Configuration)_$(PlatformTarget)\;$(VisualStudioDir)\Projects\StdLib2018\$(Configuration)_$(PlatformTarget)\;$(SolutionDir)\External\Assimp\$(PlatformTarget)\$(Configuration);$(SolutionDir)External\PhysX\$(PlatformTarget)\$(Configuration)\;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup>
