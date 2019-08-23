@@ -58,7 +58,7 @@ struct PhysXSystem : PhysicsSystem
 			EntityID id;
 			MemOps::Copy(&id, reinterpret_cast<const EntityID *>(&rigid->userData), 1);
 
-			const auto &phyPos = rigid->getGlobalPoseWithoutActor();
+			const auto &phyPos = rigid->getGlobalPose();
 
 			Position pos;
 			pos.position = {phyPos.p.x, phyPos.p.y, phyPos.p.z};
@@ -117,23 +117,6 @@ struct PhysXSystem : PhysicsSystem
 	virtual void ControlInput(Environment &env, const ControlAction &action) override
 	{
 	}
-
-	//optional<f32> mass // used
-	//f32 linearDamping // used
-	//f32 angularDamping // used
-	//boolVector3 lockPositionAxis // used
-	//boolVector3 lockRotationAxis // used
-	//optional<Vector3> centerOfMass // used
-	//optional<Vector3> inertiaTensor
-	//optional<Quaternion> inertiaTensorRotation
-	//optional<ui32> solverPositionIterations // used
-	//optional<ui32> solverVelocityIterations // used
-	//optional<f32> maxAngularVelocity // used
-	//optional<f32> maxDepenetrationVelocity // used
-	//optional<f32> sleepThreshold // used
-	//optional<f32> wakeCounter // used
-	//optional<f32> contactOffset // used
-	//optional<f32> restOffset // used
 
 	void AddObject(System::Environment &env, EntityID entityId, const Vector3 &position, const Quaternion &rotation, const Vector3 *scale, const Vector3 *linearVelocity, const Vector3 *angularVelocity, const BoxCollider *box, const SphereCollider *sphere, const CapsuleCollider *capsule, const MeshCollider *mesh, PhysicsPropertiesAssetId physicsPropertiesId)
 	{
@@ -369,7 +352,7 @@ struct PhysXSystem : PhysicsSystem
 			}
 			if (auto it = physicsProperties->inertiaTensor; it)
 			{
-				//dynamicActor->setMassSpaceInertiaTensor(PxVec3{it->x, it->y, it->z});
+				dynamicActor->setMassSpaceInertiaTensor(PxVec3{it->x, it->y, it->z});
 			}
 			dynamicActor->setMaxAngularVelocity(maxAngularVelocity);
 			dynamicActor->setMaxDepenetrationVelocity(maxDepenetrationVelocity);
