@@ -51,13 +51,8 @@ void AddCamera(EntityIDGenerator &idGenerator, EntitiesStream &stream)
 	camera.clearWith = clearColor;
 	entity.AddComponent(camera);
 
-	Position position;
-	position.position = {0, 0, -5};
-	entity.AddComponent(position);
-
-	Rotation rotation;
-	rotation.rotation = {};
-	entity.AddComponent(rotation);
+	entity.AddComponent(Position{.position = {0, 0, -5}});
+	entity.AddComponent(Rotation());
 
 	stream.AddEntity(idGenerator.Generate(), move(entity));
 }

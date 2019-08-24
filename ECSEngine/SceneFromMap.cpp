@@ -7,9 +7,10 @@
 
 using namespace ECSEngine;
 
-static void AddObjectsFromMap(const FilePath &pathToMap, const FilePath &pathToMapAssets, EntityIDGenerator &idGenerator, AssetIdMapper &assetIdMapper, EntitiesStream &stream);
-static void ParseObjectIntoEntitiesStream(string_view object, const FilePath &pathToMapAssets, EntityIDGenerator &idGenerator, AssetIdMapper &assetIdMapper, struct KeyValue &keyValueStorage, EntityObject &entity);
-static void ParseSubobjectIntoEntity(string_view object, const FilePath &pathToMapAssets, AssetIdMapper &assetIdMapper, EntityObject &entity, struct KeyValue &keyValueStorage);
+static Camera CreateDefaultCamera();
+static void AddObjectsFromMap(const FilePath &pathToMap, const FilePath &pathToMapAssets, EntityIDGenerator &idGenerator, AssetIdMapper &assetIdMapper, EntitiesStream &stream, bool &isAddedCamera);
+static void ParseObjectIntoEntitiesStream(string_view object, const FilePath &pathToMapAssets, EntityIDGenerator &idGenerator, AssetIdMapper &assetIdMapper, struct KeyValue &keyValueStorage, EntityObject &entity, bool &isAddedCamera);
+static void ParseSubobjectIntoEntity(string_view object, const FilePath &pathToMapAssets, AssetIdMapper &assetIdMapper, EntityObject &entity, bool &isAddedCamera, struct KeyValue &keyValueStorage);
 static f32 ReadF32(string_view source);
 static ui32 ReadUI32(string_view source);
 static char ReadChar(string_view source);
@@ -21,46 +22,16 @@ unique_ptr<IEntitiesStream> SceneFromMap::Create(const FilePath &pathToMap, cons
 {
 	auto stream = make_unique<EntitiesStream>();
 
-	AddObjectsFromMap(pathToMap, pathToMapAssets, idGenerator, assetIdMapper, *stream);
+	bool isAddedCamera = false;
+	AddObjectsFromMap(pathToMap, pathToMapAssets, idGenerator, assetIdMapper, *stream, isAddedCamera);
 
+	if (!isAddedCamera)
 	{
 		EntitiesStream::EntityData entity;
-
-		Position pos;
-		pos.position = {0, 75, 0};
-		entity.AddComponent(pos);
-
-		Rotation rot;
-		entity.AddComponent(rot);
-
-		Window window;
-		window.height = 2160;
-		window.width = 3840;
-		window.isFullscreen = false;
-		window.isMaximized = false;
-		window.isNoBorders = false;
-		strcpy_s(window.title.data(), window.title.size(), "Industrialice ECS test engine");
-		window.x = (GetSystemMetrics(SM_CXSCREEN) - window.width) / 2;
-		window.y = (GetSystemMetrics(SM_CYSCREEN) - window.height) / 2;
-		window.cursorType = Window::CursorTypet::Normal;
-
-		RT rt;
-		rt.target = window;
-
-		ClearColor clearColor;
-		clearColor.color = ColorR8G8B8(0, 0, 0);
-
-		Camera camera;
-		camera.rt[0] = rt;
-		camera.farPlane = FLT_MAX;
-		camera.nearPlane = 0.1f;
-		camera.fov = 75.0f;
-		camera.isClearDepthStencil = true;
-		camera.depthBufferFormat = Camera::DepthBufferFormat::DepthOnly;
-		camera.projectionType = Camera::ProjectionTypet::Perspective;
-		camera.clearWith = clearColor;
-		entity.AddComponent(camera);
-	  entity.AddComponent(ActiveCamera());
+		entity.AddComponent(Position{.position = {0, 75, 0}});
+		entity.AddComponent(Rotation());
+		entity.AddComponent(CreateDefaultCamera());
+		entity.AddComponent(ActiveCamera());
 
 		stream->AddEntity(idGenerator.Generate(), move(entity));
 	}
@@ -103,7 +74,43 @@ struct KeyValue
 	}
 };
 
-void AddObjectsFromMap(const FilePath &pathToMap, const FilePath &pathToMapAssets, EntityIDGenerator &idGenerator, AssetIdMapper &assetIdMapper, EntitiesStream &stream)
+Camera CreateDefaultCamera()
+{
+	auto monitors = SystemInfo::MonitorsInfo();
+	i32 screenWidth = monitors[0].width;
+	i32 screenHeight = monitors[0].height;
+
+	Window window;
+	window.height = screenHeight;
+	window.width = screenWidth;
+	window.isFullscreen = false;
+	window.isMaximized = false;
+	window.isNoBorders = true;
+	strcpy_s(window.title.data(), window.title.size(), "Industrialice ECS test engine");
+	window.x = (screenWidth - window.width) / 2;
+	window.y = (screenHeight - window.height) / 2;
+	window.cursorType = Window::CursorTypet::Normal;
+
+	RT rt;
+	rt.target = window;
+
+	ClearColor clearColor;
+	clearColor.color = ColorR8G8B8(0, 0, 0);
+
+	Camera camera;
+	camera.rt[0] = rt;
+	camera.farPlane = FLT_MAX;
+	camera.nearPlane = 0.1f;
+	camera.fov = 75.0f;
+	camera.isClearDepthStencil = true;
+	camera.depthBufferFormat = Camera::DepthBufferFormat::DepthOnly;
+	camera.projectionType = Camera::ProjectionTypet::Perspective;
+	camera.clearWith = clearColor;
+
+	return camera;
+}
+
+void AddObjectsFromMap(const FilePath &pathToMap, const FilePath &pathToMapAssets, EntityIDGenerator &idGenerator, AssetIdMapper &assetIdMapper, EntitiesStream &stream, bool &isAddedCamera)
 {
 	KeyValue keyValueStorage;
 	EntityObject entity;
@@ -197,7 +204,7 @@ void AddObjectsFromMap(const FilePath &pathToMap, const FilePath &pathToMapAsset
 		*boundaries = boundaries->substr(newLine + 1);
 
 		entity.components.Clear();
-		ParseObjectIntoEntitiesStream(*boundaries, pathToMapAssets, idGenerator, assetIdMapper, keyValueStorage, entity);
+		ParseObjectIntoEntitiesStream(*boundaries, pathToMapAssets, idGenerator, assetIdMapper, keyValueStorage, entity, isAddedCamera);
 
 		EntitiesStream::EntityData streamEntity;
 		for (const auto &component : entity.components.GetComponents())
@@ -212,7 +219,7 @@ void AddObjectsFromMap(const FilePath &pathToMap, const FilePath &pathToMapAsset
 	SENDLOG(Info, SceneFromMap, "Parsing map took %.2fms\n", (TimeMoment::Now() - start).ToMSec_f64());
 }
 
-void ParseObjectIntoEntitiesStream(string_view object, const FilePath &pathToMapAssets, EntityIDGenerator &idGenerator, AssetIdMapper &assetIdMapper, KeyValue &keyValueStorage, EntityObject &entity)
+void ParseObjectIntoEntitiesStream(string_view object, const FilePath &pathToMapAssets, EntityIDGenerator &idGenerator, AssetIdMapper &assetIdMapper, KeyValue &keyValueStorage, EntityObject &entity, bool &isAddedCamera)
 {
 	entity.id = idGenerator.Generate();
 
@@ -226,7 +233,7 @@ void ParseObjectIntoEntitiesStream(string_view object, const FilePath &pathToMap
 				SOFTBREAK;
 				return;
 			}
-			ParseSubobjectIntoEntity(*boundaries, pathToMapAssets, assetIdMapper, entity, keyValueStorage);
+			ParseSubobjectIntoEntity(*boundaries, pathToMapAssets, assetIdMapper, entity, isAddedCamera, keyValueStorage);
 			const char *boundariesEnd = boundaries->data() + boundaries->size();
 			const char *currentEnd = current.data() + current.size();
 			current = string_view{boundariesEnd + 2, static_cast<uiw>(currentEnd - boundariesEnd - 2)};
@@ -250,15 +257,11 @@ void ParseObjectIntoEntitiesStream(string_view object, const FilePath &pathToMap
 		}
 		else if (key == "position")
 		{
-			Position pos;
-			pos.position = ReadVec3(value);
-			entity.components.AddComponent(pos);
+			entity.components.AddComponent(Position{.position = ReadVec3(value)});
 		}
 		else if (key == "rotation")
 		{
-			Rotation rot;
-			rot.rotation = ReadVec4<Quaternion>(value);
-			entity.components.AddComponent(rot);
+			entity.components.AddComponent(Rotation{.rotation = ReadVec4<Quaternion>(value)});
 		}
 		else if (key == "children")
 		{
@@ -282,7 +285,7 @@ void ParseObjectIntoEntitiesStream(string_view object, const FilePath &pathToMap
 	}
 }
 
-void ParseSubobjectIntoEntity(string_view object, const FilePath &pathToMapAssets, AssetIdMapper &assetIdMapper, EntityObject &entity, KeyValue &keyValueStorage)
+void ParseSubobjectIntoEntity(string_view object, const FilePath &pathToMapAssets, AssetIdMapper &assetIdMapper, EntityObject &entity, bool &isAddedCamera, KeyValue &keyValueStorage)
 {
 	uiw delim = object.find(':');
 	if (delim == string_view::npos)
@@ -351,36 +354,7 @@ void ParseSubobjectIntoEntity(string_view object, const FilePath &pathToMapAsset
 	}
 	else if (subObjectName == "camera")
 	{
-		auto monitors = SystemInfo::MonitorsInfo();
-		i32 screenWidth = monitors[0].width;
-		i32 screenHeight = monitors[0].height;
-
-		Window window;
-		window.height = screenHeight;
-		window.width = screenWidth;
-		window.isFullscreen = false;
-		window.isMaximized = false;
-		window.isNoBorders = true;
-		strcpy_s(window.title.data(), window.title.size(), "Industrialice ECS test engine");
-		window.x = (screenWidth - window.width) / 2;
-		window.y = (screenHeight - window.height) / 2;
-		window.cursorType = Window::CursorTypet::Normal;
-
-		RT rt;
-		rt.target = window;
-
-		ClearColor clearColor;
-		clearColor.color = ColorR8G8B8(0, 0, 0);
-
-		Camera camera;
-		camera.rt[0] = rt;
-		camera.farPlane = FLT_MAX;
-		camera.nearPlane = 0.1f;
-		camera.fov = 75.0f;
-		camera.isClearDepthStencil = true;
-		camera.depthBufferFormat = Camera::DepthBufferFormat::DepthOnly;
-		camera.projectionType = Camera::ProjectionTypet::Perspective;
-		camera.clearWith = clearColor;
+		Camera camera = CreateDefaultCamera();
 
 		for (const auto &[key, value] : keyValueStorage.storage)
 		{
@@ -396,6 +370,8 @@ void ParseSubobjectIntoEntity(string_view object, const FilePath &pathToMapAsset
 
 		entity.components.AddComponent(camera);
 		entity.components.AddComponent(ActiveCamera());
+
+		isAddedCamera = true;
 	}
 	else if (subObjectName == "boxcollider")
 	{

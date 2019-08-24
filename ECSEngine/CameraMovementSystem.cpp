@@ -56,13 +56,8 @@ void CameraMovementSystem::Update(Environment &env)
 		return;
 	}
 
-	Position pos;
-	pos.position = _cameraTransform.Position();
-	env.messageBuilder.ComponentChanged(_controlledCameraId, pos);
-
-	Rotation rot;
-	rot.rotation = Quaternion::FromEuler(_cameraTransform.Rotation());
-	env.messageBuilder.ComponentChanged(_controlledCameraId, rot);
+	env.messageBuilder.ComponentChanged(_controlledCameraId, Position{.position = _cameraTransform.Position()});
+	env.messageBuilder.ComponentChanged(_controlledCameraId, Rotation{.rotation = Quaternion::FromEuler(_cameraTransform.Rotation())});
 
 	_isUpdated = false;
 }
@@ -146,15 +141,19 @@ void CameraMovementSystem::ControlInput(Environment &env, const ControlAction &a
 	{
 		if (auto mouse = action.Get<ControlAction::MouseMove>(); mouse)
 		{
-			if (mouse->delta.x)
+			f32 mul = _isFreeMode ? 0.001f : -0.001f;
+			if (_isFreeMode || env.keyController->GetKeyInfo(KeyCode::MButton0).IsPressed())
 			{
-				_cameraTransform.RotateAroundUpAxis(mouse->delta.x * 0.001f);
-				_isUpdated = true;
-			}
-			if (mouse->delta.y)
-			{
-				_cameraTransform.RotateAroundRightAxis(mouse->delta.y * 0.001f);
-				_isUpdated = true;
+				if (mouse->delta.x)
+				{
+					_cameraTransform.RotateAroundUpAxis(mouse->delta.x * mul);
+					_isUpdated = true;
+				}
+				if (mouse->delta.y)
+				{
+					_cameraTransform.RotateAroundRightAxis(mouse->delta.y * mul);
+					_isUpdated = true;
+				}
 			}
 		}
 		else if (auto wheel = action.Get<ControlAction::MouseWheel>(); wheel)
@@ -163,6 +162,13 @@ void CameraMovementSystem::ControlInput(Environment &env, const ControlAction &a
 			{
 				_cameraTransform.MoveAlongForwardAxis(-wheel->delta * 5.0f);
 				_isUpdated = true;
+			}
+		}
+		else if (auto key = action.Get<ControlAction::Key>(); key)
+		{
+			if (key->key == KeyCode::Q && key->keyState == ControlAction::Key::KeyState::Pressed)
+			{
+				_isFreeMode = !_isFreeMode;
 			}
 		}
 	}
