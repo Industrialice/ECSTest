@@ -11,10 +11,11 @@ TODO:
 +RequiredComponent can accept arbitrary number of arguments
 +SubtractiveComponent can accept arbitrary number of arguments
 +Implement RequiredComponentAny
-Implement component groups for RequiredComponentAny
+Implement component groups for RequiredComponentAny (is it implemented, but not marked?)
 +Implement OptionalComponent
-Implement solution for shared components
++Implement solution for shared components
 Implement unified CMake settings for StdLib2018 and ECS projects
+Consider adding ability to ignore messages (like ComponentChanged)
 
 Support arbitrary sized components? (can be used, for example, as raw data holders)
 

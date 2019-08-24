@@ -7,6 +7,7 @@
 #include "ObjectsMoverSystem.hpp"
 #include "PhysicsSystem.hpp"
 #include "AssetsLoaders.hpp"
+#include "SetInitialPositionsSystem.hpp"
 
 using namespace ECSEngine;
 
@@ -52,12 +53,16 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 	auto cameraMovementSystem = make_unique<CameraMovementSystem>();
 	cameraMovementSystem->SetKeyController(KeyController::New()); // create a new key controller for each system because otherwise the same key controller might receive the same control more than once (when the controls are dispatched before system execution)
 
+	auto setInitialPositionsSystem = make_unique<SetInitialPositionSystem>();
+	setInitialPositionsSystem->SetKeyController(KeyController::New());
+
     auto rendererPipeline = manager->CreatePipeline(nullopt, false);
     manager->Register(move(renderer), rendererPipeline);
 
 	auto physicsPipeline = manager->CreatePipeline(TimeSecondsFP64(1.0 / 60.0), false);
 	//manager->Register<ObjectsMoverSystem>(physicsPipeline);
 	manager->Register(move(cameraMovementSystem), physicsPipeline);
+	manager->Register(move(setInitialPositionsSystem), physicsPipeline);
 
 	PhysicsSystemSettings physicsSystemSettings{};
 	manager->Register(PhysicsSystem::New(physicsSystemSettings), physicsPipeline);

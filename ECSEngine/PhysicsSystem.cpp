@@ -104,6 +104,30 @@ struct PhysXSystem : PhysicsSystem
 	
 	virtual void ProcessMessages(System::Environment &env, const MessageStreamComponentChanged &stream) override
 	{
+		for (const auto &entry : stream.Enumerate<Position>())
+		{
+			auto it = _actors.find(entry.entityID);
+			if (it != _actors.end())
+			{
+				auto *dynamic = it->second->is<PxRigidDynamic>();
+				ASSUME(dynamic);
+				dynamic->setGlobalPose(PxTransform(entry.component.position.x, entry.component.position.y, entry.component.position.z, dynamic->getGlobalPose().q), false);
+				dynamic->setLinearVelocity(PxVec3(0, 0, 0), false);
+				dynamic->setAngularVelocity(PxVec3(0, 0, 0), true);
+			}
+		}
+		for (const auto &entry : stream.Enumerate<Rotation>())
+		{
+			auto it = _actors.find(entry.entityID);
+			if (it != _actors.end())
+			{
+				auto *dynamic = it->second->is<PxRigidDynamic>();
+				ASSUME(dynamic);
+				dynamic->setGlobalPose(PxTransform(dynamic->getGlobalPose().p, PxQuat(entry.component.rotation.x, entry.component.rotation.y, entry.component.rotation.z, entry.component.rotation.w)), false);
+				dynamic->setLinearVelocity(PxVec3(0, 0, 0), false);
+				dynamic->setAngularVelocity(PxVec3(0, 0, 0), true);
+			}
+		}
 	}
 	
 	virtual void ProcessMessages(System::Environment &env, const MessageStreamComponentRemoved &stream) override
@@ -366,6 +390,8 @@ struct PhysXSystem : PhysicsSystem
 		static_assert(sizeof(actor->userData) >= sizeof(EntityID));
 		MemOps::Copy(reinterpret_cast<EntityID *>(&actor->userData), &entityId, 1);
 		_physXScene->addActor(*actor);
+
+		_actors.insert({entityId, actor});
 	}
 
 	PhysXSystem(const PhysicsSystemSettings &settings)
@@ -608,6 +634,8 @@ private:
 	ui32 _solverVelocityIterations{};
 	f32 _maxAngularVelocity{};
 	f32 _maxDepenetrationVelocity{};
+
+	std::unordered_map<EntityID, PxRigidActor *> _actors{};
 
 	std::unordered_map<PhysicsPropertiesAssetId, PhysicsProperties> _cachedPhysicsProperties{};
 	vector<PxActor *> _awakeActors{};

@@ -238,6 +238,7 @@
     <ClInclude Include="RendererDX11.hpp" />
     <ClInclude Include="Scene.hpp" />
     <ClInclude Include="SceneFromMap.hpp" />
+    <ClInclude Include="SetInitialPositionsSystem.hpp" />
     <ClInclude Include="Texture.hpp" />
     <ClInclude Include="WinAPI.hpp" />
     <ClInclude Include="WinHIDInput.hpp" />

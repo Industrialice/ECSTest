@@ -142,5 +142,8 @@
     <ClInclude Include="PhysicsProperties.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="SetInitialPositionsSystem.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
