@@ -3,10 +3,20 @@
 
 using namespace ECSTest;
 
-void ComponentArrayBuilder::Clear()
+ComponentArrayBuilder::ComponentArrayBuilder(const ComponentArrayBuilder &source)
 {
-    _components.clear();
-    _data.clear();
+	_components = source._components;
+	_data.resize(source._data.size());
+	for (uiw index = 0, dataIndex = 0; index < _components.size(); ++index)
+	{
+		if (_components[index].isTag)
+		{
+			continue;
+		}
+		_data[dataIndex].reset(Allocator::MallocAlignedRuntime::Allocate(_components[index].sizeOf, _components[index].alignmentOf));
+		MemOps::Copy(_data[dataIndex].get(), source._data[dataIndex].get(), _components[index].sizeOf);
+		++dataIndex;
+	}
 }
 
 auto ComponentArrayBuilder::AddComponent(const IEntitiesStream::ComponentDesc &desc, ComponentID id) -> ComponentArrayBuilder &
@@ -39,4 +49,15 @@ auto ComponentArrayBuilder::AddComponent(const SerializedComponent &sc) -> Compo
 	_data.emplace_back(move(data));
 
 	return *this;
+}
+
+void ComponentArrayBuilder::Clear()
+{
+	_components.clear();
+	_data.clear();
+}
+
+Array<const SerializedComponent> ComponentArrayBuilder::GetComponents() const
+{
+	return ToArray(_components);
 }

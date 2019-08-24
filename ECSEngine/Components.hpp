@@ -144,4 +144,6 @@ namespace ECSEngine
 		array<RT, 8> rt{};
 		ProjectionTypet projectionType{};
     };
+
+	struct ActiveCamera : TagComponent<ActiveCamera> {};
 }

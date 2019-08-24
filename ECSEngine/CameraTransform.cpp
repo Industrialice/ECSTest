@@ -33,6 +33,11 @@ void CameraTransform::Rotation(const Vector3 &pitchYawRollAngles)
 	_viewMatrix = nullopt;
 }
 
+void CameraTransform::Rotation(const Quaternion &rotation)
+{
+	return Rotation(rotation.ToEuler());
+}
+
 f32 CameraTransform::Pitch() const
 {
 	return _pitch;

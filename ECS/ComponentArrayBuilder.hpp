@@ -14,10 +14,9 @@ namespace ECSTest
         vector<SerializedComponent> _components{};
         vector<unique_ptr<byte[], AlignedMallocDeleter>> _data{};
 
-        void Clear();
-
     public:
         ComponentArrayBuilder() = default;
+		ComponentArrayBuilder(const ComponentArrayBuilder &source);
         ComponentArrayBuilder(ComponentArrayBuilder &&) = default;
         ComponentArrayBuilder &operator = (ComponentArrayBuilder &&) = default;
 
@@ -61,5 +60,8 @@ namespace ECSTest
         {
             static_assert(false_v<T>, "Passed value is not a component");
         }
+
+		void Clear();
+		Array<const SerializedComponent> GetComponents() const;
     };
 }

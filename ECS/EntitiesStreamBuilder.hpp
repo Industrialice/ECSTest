@@ -19,20 +19,32 @@ namespace ECSTest
 
             template <typename T> void AddComponent(const T &component)
             {
-                EntitiesStream::ComponentDesc desc;
-                desc.alignmentOf = alignof(T);
-                desc.isUnique = T::IsUnique();
-                desc.isTag = T::IsTag();
-                desc.sizeOf = sizeof(T);
-                desc.type = T::GetTypeId();
-                if constexpr (T::IsTag() == false)
-                {
-					uiw offset = componentsData.size();
-					componentsData.resize(offset + sizeof(T));
-                    MemOps::Copy(componentsData.data() + offset, reinterpret_cast<const byte *>(&component), sizeof(T));
-                }
-                descs.emplace_back(desc);
+				SerializedComponent desc;
+				desc.alignmentOf = alignof(T);
+				desc.isUnique = T::IsUnique();
+				desc.isTag = T::IsTag();
+				desc.sizeOf = sizeof(T);
+				desc.type = T::GetTypeId();
+				desc.data = reinterpret_cast<const byte *>(&component);
+				return AddComponent(desc);
             }
+
+			void AddComponent(const SerializedComponent &component)
+			{
+				EntitiesStream::ComponentDesc desc;
+				desc.alignmentOf = component.alignmentOf;
+				desc.isUnique = component.isUnique;
+				desc.isTag = component.isTag;
+				desc.sizeOf = component.sizeOf;
+				desc.type = component.type;
+				if (component.isTag == false)
+				{
+					uiw offset = componentsData.size();
+					componentsData.resize(offset + component.sizeOf);
+					MemOps::Copy(componentsData.data() + offset, component.data, component.sizeOf);
+				}
+				descs.emplace_back(desc);
+			}
         };
 
     private:

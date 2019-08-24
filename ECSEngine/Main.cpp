@@ -8,6 +8,7 @@
 #include "PhysicsSystem.hpp"
 #include "AssetsLoaders.hpp"
 #include "SetInitialPositionsSystem.hpp"
+#include "ObjectShooterSystem.hpp"
 
 using namespace ECSEngine;
 
@@ -63,6 +64,11 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 	//manager->Register<ObjectsMoverSystem>(physicsPipeline);
 	manager->Register(move(cameraMovementSystem), physicsPipeline);
 	manager->Register(move(setInitialPositionsSystem), physicsPipeline);
+
+	//auto objectShooterPipeline = manager->CreatePipeline(TimeMilliSecondsFP64(100.0), true);
+	//auto objectShooterSystem = make_unique<ObjectShooterSystem>();
+	//objectShooterSystem->SetKeyController(KeyController::New());
+	//manager->Register(move(objectShooterSystem), objectShooterPipeline);
 
 	PhysicsSystemSettings physicsSystemSettings{};
 	manager->Register(PhysicsSystem::New(physicsSystemSettings), physicsPipeline);

@@ -226,10 +226,12 @@
     <ClInclude Include="Color.hpp" />
     <ClInclude Include="Components.hpp" />
     <ClInclude Include="CustomControlActions.hpp" />
+    <ClInclude Include="EntityObject.hpp" />
     <ClInclude Include="Material.hpp" />
     <ClInclude Include="Mesh.hpp" />
     <ClInclude Include="AssetsIdentification.hpp" />
     <ClInclude Include="NameManager.hpp" />
+    <ClInclude Include="ObjectShooterSystem.hpp" />
     <ClInclude Include="ObjectsMoverSystem.hpp" />
     <ClInclude Include="PhysicsProperties.hpp" />
     <ClInclude Include="PhysicsSystem.hpp" />

@@ -3,12 +3,13 @@
 #include <EntitiesStreamBuilder.hpp>
 #include "Components.hpp"
 #include "AssetsIdentification.hpp"
+#include "EntityObject.hpp"
 
 using namespace ECSEngine;
 
 static void AddObjectsFromMap(const FilePath &pathToMap, const FilePath &pathToMapAssets, EntityIDGenerator &idGenerator, AssetIdMapper &assetIdMapper, EntitiesStream &stream);
-static void ParseObjectIntoEntitiesStream(string_view object, const FilePath &pathToMapAssets, EntityIDGenerator &idGenerator, AssetIdMapper &assetIdMapper, EntitiesStream &stream, struct KeyValue &keyValueStorage);
-static void ParseSubobjectIntoEntity(string_view object, const FilePath &pathToMapAssets, EntityIDGenerator &idGenerator, AssetIdMapper &assetIdMapper, EntitiesStream::EntityData &entity, struct KeyValue &keyValueStorage);
+static void ParseObjectIntoEntitiesStream(string_view object, const FilePath &pathToMapAssets, EntityIDGenerator &idGenerator, AssetIdMapper &assetIdMapper, struct KeyValue &keyValueStorage, EntityObject &entity);
+static void ParseSubobjectIntoEntity(string_view object, const FilePath &pathToMapAssets, AssetIdMapper &assetIdMapper, EntityObject &entity, struct KeyValue &keyValueStorage);
 static f32 ReadF32(string_view source);
 static ui32 ReadUI32(string_view source);
 static char ReadChar(string_view source);
@@ -59,6 +60,7 @@ unique_ptr<IEntitiesStream> SceneFromMap::Create(const FilePath &pathToMap, cons
 	//	camera.projectionType = Camera::ProjectionTypet::Perspective;
 	//	camera.clearWith = clearColor;
 	//	entity.AddComponent(camera);
+	//  entity.AddComponent(ActiveCamera());
 
 	//	stream->AddEntity(idGenerator.Generate(), move(entity));
 	//}
@@ -104,6 +106,7 @@ struct KeyValue
 void AddObjectsFromMap(const FilePath &pathToMap, const FilePath &pathToMapAssets, EntityIDGenerator &idGenerator, AssetIdMapper &assetIdMapper, EntitiesStream &stream)
 {
 	KeyValue keyValueStorage;
+	EntityObject entity;
 
 	Error<> fileError;
 	File mapFile(pathToMap, FileOpenMode::OpenExisting, FileProcModes::Read, 0, {}, {}, &fileError);
@@ -188,15 +191,23 @@ void AddObjectsFromMap(const FilePath &pathToMap, const FilePath &pathToMapAsset
 
 		*boundaries = boundaries->substr(newLine + 1);
 
-		ParseObjectIntoEntitiesStream(*boundaries, pathToMapAssets, idGenerator, assetIdMapper, stream, keyValueStorage);
+		entity.components.Clear();
+		ParseObjectIntoEntitiesStream(*boundaries, pathToMapAssets, idGenerator, assetIdMapper, keyValueStorage, entity);
+
+		EntitiesStream::EntityData streamEntity;
+		for (const auto &component : entity.components.GetComponents())
+		{
+			streamEntity.AddComponent(component);
+		}
+		stream.AddEntity(entity.id, move(streamEntity));
 
 		dataStart = boundaries->data() + boundaries->size() + 2;
 	} while (dataStart < dataEnd);
 }
 
-void ParseObjectIntoEntitiesStream(string_view object, const FilePath &pathToMapAssets, EntityIDGenerator &idGenerator, AssetIdMapper &assetIdMapper, EntitiesStream &stream, KeyValue &keyValueStorage)
+void ParseObjectIntoEntitiesStream(string_view object, const FilePath &pathToMapAssets, EntityIDGenerator &idGenerator, AssetIdMapper &assetIdMapper, KeyValue &keyValueStorage, EntityObject &entity)
 {
-	EntitiesStream::EntityData entity;
+	entity.id = idGenerator.Generate();
 
 	for (auto current = object; current.size(); )
 	{
@@ -208,7 +219,7 @@ void ParseObjectIntoEntitiesStream(string_view object, const FilePath &pathToMap
 				SOFTBREAK;
 				return;
 			}
-			ParseSubobjectIntoEntity(*boundaries, pathToMapAssets, idGenerator, assetIdMapper, entity, keyValueStorage);
+			ParseSubobjectIntoEntity(*boundaries, pathToMapAssets, assetIdMapper, entity, keyValueStorage);
 			const char *boundariesEnd = boundaries->data() + boundaries->size();
 			const char *currentEnd = current.data() + current.size();
 			current = string_view{boundariesEnd + 2, static_cast<uiw>(currentEnd - boundariesEnd - 2)};
@@ -234,13 +245,13 @@ void ParseObjectIntoEntitiesStream(string_view object, const FilePath &pathToMap
 		{
 			Position pos;
 			pos.position = ReadVec3(value);
-			entity.AddComponent(pos);
+			entity.components.AddComponent(pos);
 		}
 		else if (key == "rotation")
 		{
 			Rotation rot;
 			rot.rotation = ReadVec4<Quaternion>(value);
-			entity.AddComponent(rot);
+			entity.components.AddComponent(rot);
 		}
 		else if (key == "children")
 		{
@@ -252,7 +263,7 @@ void ParseObjectIntoEntitiesStream(string_view object, const FilePath &pathToMap
 
 			if (!EqualsWithEpsilon(scale.scale, {1, 1, 1}))
 			{
-				entity.AddComponent(scale);
+				entity.components.AddComponent(scale);
 			}
 		}
 		else
@@ -262,11 +273,9 @@ void ParseObjectIntoEntitiesStream(string_view object, const FilePath &pathToMap
 
 		current = current.substr(std::min(endOfLine + 1, current.size()));
 	}
-
-	stream.AddEntity(idGenerator.Generate(), move(entity));
 }
 
-void ParseSubobjectIntoEntity(string_view object, const FilePath &pathToMapAssets, EntityIDGenerator &idGenerator, AssetIdMapper &assetIdMapper, EntitiesStream::EntityData &entity, KeyValue &keyValueStorage)
+void ParseSubobjectIntoEntity(string_view object, const FilePath &pathToMapAssets, AssetIdMapper &assetIdMapper, EntityObject &entity, KeyValue &keyValueStorage)
 {
 	uiw delim = object.find(':');
 	if (delim == string_view::npos)
@@ -323,7 +332,7 @@ void ParseSubobjectIntoEntity(string_view object, const FilePath &pathToMapAsset
 	{
 		MeshRenderer meshRenderer;
 		meshRenderer.mesh = createMeshAsset(keyValueStorage);
-		entity.AddComponent(meshRenderer);
+		entity.components.AddComponent(meshRenderer);
 	}
 	else if (subObjectName == "camera")
 	{
@@ -370,7 +379,8 @@ void ParseSubobjectIntoEntity(string_view object, const FilePath &pathToMapAsset
 			}
 		}
 
-		entity.AddComponent(camera);
+		entity.components.AddComponent(camera);
+		entity.components.AddComponent(ActiveCamera());
 	}
 	else if (subObjectName == "boxcollider")
 	{
@@ -398,7 +408,7 @@ void ParseSubobjectIntoEntity(string_view object, const FilePath &pathToMapAsset
 				SOFTBREAK;
 			}
 		}
-		entity.AddComponent(box);
+		entity.components.AddComponent(box);
 	}
 	else if (subObjectName == "spherecollider")
 	{
@@ -422,7 +432,7 @@ void ParseSubobjectIntoEntity(string_view object, const FilePath &pathToMapAsset
 				SOFTBREAK;
 			}
 		}
-		entity.AddComponent(sphere);
+		entity.components.AddComponent(sphere);
 	}
 	else if (subObjectName == "capsulecollider")
 	{
@@ -470,7 +480,7 @@ void ParseSubobjectIntoEntity(string_view object, const FilePath &pathToMapAsset
 				SOFTBREAK;
 			}
 		}
-		entity.AddComponent(capsule);
+		entity.components.AddComponent(capsule);
 	}
 	else if (subObjectName == "meshcollider")
 	{
@@ -493,7 +503,7 @@ void ParseSubobjectIntoEntity(string_view object, const FilePath &pathToMapAsset
 			}
 		}
 		meshCollider.mesh = createMeshAsset(keyValueStorage);
-		entity.AddComponent(meshCollider);
+		entity.components.AddComponent(meshCollider);
 	}
 	else if (subObjectName == "rigidbody")
 	{
@@ -601,7 +611,7 @@ void ParseSubobjectIntoEntity(string_view object, const FilePath &pathToMapAsset
 
 		Physics physicsComponent;
 		physicsComponent.physics = assetIdMapper.Register<PhysicsPropertiesAsset>(PhysicsPropertiesAssetIdentification::New(move(physics)));
-		entity.AddComponent(physicsComponent);
+		entity.components.AddComponent(physicsComponent);
 	}
 	else
 	{

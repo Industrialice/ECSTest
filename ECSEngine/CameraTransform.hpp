@@ -18,6 +18,7 @@ namespace ECSEngine
 		void Position(const Vector3 &newPosition);
 		[[nodiscard]] Vector3 Rotation() const;
 		void Rotation(const Vector3 &pitchYawRollAngles);
+		void Rotation(const Quaternion &rotation);
 		[[nodiscard]] f32 Pitch() const;
 		void Pitch(f32 angle);
 		[[nodiscard]] f32 Yaw() const;

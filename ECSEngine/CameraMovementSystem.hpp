@@ -8,7 +8,7 @@ namespace ECSEngine
 {
 	struct CameraMovementSystem : IndirectSystem<CameraMovementSystem>
 	{
-		void Accept(Array<Position> &positions, Array<Rotation> &rotations, const Array<Camera> &cameras) {}
+		void Accept(Array<Position> &positions, Array<Rotation> &rotations, const Array<Camera> &cameras, RequiredComponent<ActiveCamera>) {}
 		virtual void Update(Environment &env) override;
 		virtual void ProcessMessages(System::Environment &env, const MessageStreamEntityAdded &stream) override;
 		virtual void ProcessMessages(System::Environment &env, const MessageStreamComponentAdded &stream) override;
