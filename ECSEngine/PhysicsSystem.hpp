@@ -29,9 +29,9 @@ namespace ECSEngine
 			const Array<Scale> *,
 			Array<LinearVelocity> *,
 			Array<AngularVelocity> *,
-			const Array<BoxCollider> *,
-			const Array<SphereCollider> *,
-			const Array<CapsuleCollider> *,
+			const NonUnique<BoxCollider> *,
+			const NonUnique<SphereCollider> *,
+			const NonUnique<CapsuleCollider> *,
 			const Array<MeshCollider> *,
 			const Array<Physics> *,
 			RequiredComponentAny<BoxCollider, SphereCollider, CapsuleCollider, MeshCollider>) {}

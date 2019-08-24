@@ -278,7 +278,7 @@ public:
 			return;
 		}
 
-		logger.Info("Finished creating MeshResource\n");
+		//logger.Info("Finished creating MeshResource\n");
 
 		isMeshCreated = true;
 	}

@@ -7,8 +7,8 @@
 using namespace ECSEngine;
 using namespace std::placeholders;
 
-static optional<MeshAsset> LoadProcedural(Array<const byte> source, optional<ui8> subMesh, f32 globalScale);
-static optional<MeshAsset> LoadWithAssimp(Array<const byte> source, optional<ui8> subMesh, f32 globalScale, bool isUseFileScale);
+static optional<MeshAsset> LoadProcedural(pathStringViewNullTerminated name, Array<const byte> source, optional<ui8> subMesh, f32 globalScale);
+static optional<MeshAsset> LoadWithAssimp(pathStringViewNullTerminated name, Array<const byte> source, bool isFBX, optional<ui8> subMesh, f32 globalScale, bool isUseFileScale);
 
 AssetsManager::AssetLoaderFuncType AssetsLoaders::GenerateMeshLoaderFunction()
 {
@@ -81,9 +81,11 @@ AssetsManager::LoadedAsset AssetsLoaders::LoadMesh(AssetId id, TypeId expectedTy
 		return {};
 	}
 
-	if (meshIdentifier->AssetFilePath().ExtensionView() == TSTR("procedural"))
+	const auto &path = meshIdentifier->AssetFilePath();
+
+	if (path.ExtensionView() == TSTR("procedural"))
 	{
-		auto loaded = LoadProcedural(Array(mapping.CMemory(), mapping.Size()), meshIdentifier->SubMeshIndex(), meshIdentifier->GlobalScale());
+		auto loaded = LoadProcedural(meshIdentifier->AssetFilePath().PlatformPath(), Array(mapping.CMemory(), mapping.Size()), meshIdentifier->SubMeshIndex(), meshIdentifier->GlobalScale());
 		if (!loaded)
 		{
 			SENDLOG(Error, AssetsLoaders, "LoadMesh -> LoadProcedural failed\n");
@@ -93,7 +95,10 @@ AssetsManager::LoadedAsset AssetsLoaders::LoadMesh(AssetId id, TypeId expectedTy
 	}
 	else
 	{
-		auto loaded = LoadWithAssimp(Array(mapping.CMemory(), mapping.Size()), meshIdentifier->SubMeshIndex(), meshIdentifier->GlobalScale(), meshIdentifier->IsUseFileScale());
+		pathString ext = pathString{path.ExtensionView().value_or(TSTR(""))};
+		std::transform(ext.begin(), ext.end(), ext.begin(), [](PathChar ch) { return std::tolower(ch); });
+		bool isFBX = ext == TSTR("fbx");
+		auto loaded = LoadWithAssimp(meshIdentifier->AssetFilePath().PlatformPath(), Array(mapping.CMemory(), mapping.Size()), isFBX, meshIdentifier->SubMeshIndex(), meshIdentifier->GlobalScale(), meshIdentifier->IsUseFileScale());
 		if (!loaded)
 		{
 			SENDLOG(Error, AssetsLoaders, "LoadMesh -> LoadWithAssimp failed\n");
@@ -185,7 +190,7 @@ static vector<StoredMesh> GetMeshesFromHierarchy(const aiScene *scene, const aiN
 	return results;
 }
 
-optional<MeshAsset> LoadProcedural(Array<const byte> source, optional<ui8> subMesh, f32 globalScale)
+optional<MeshAsset> LoadProcedural(pathStringViewNullTerminated name, Array<const byte> source, optional<ui8> subMesh, f32 globalScale)
 {
 	MeshAsset loaded{};
 	const byte *ptr = source.data();
@@ -218,7 +223,7 @@ optional<MeshAsset> LoadProcedural(Array<const byte> source, optional<ui8> subMe
 
 	if (verticesCount == 0 || indexesCount == 0)
 	{
-		SENDLOG(Error, AssetsLoaders, "LoadProcedural empty vertices/indexes\n");
+		SENDLOG(Error, AssetsLoaders, "LoadProcedural empty vertices/indexes in %ls\n", name.data());
 		return {};
 	}
 
@@ -235,7 +240,7 @@ optional<MeshAsset> LoadProcedural(Array<const byte> source, optional<ui8> subMe
 	return loaded;
 }
 
-optional<MeshAsset> LoadWithAssimp(Array<const byte> source, optional<ui8> subMesh, f32 globalScale, bool isUseFileScale)
+optional<MeshAsset> LoadWithAssimp(pathStringViewNullTerminated name, Array<const byte> source, bool isFBX, optional<ui8> subMesh, f32 globalScale, bool isUseFileScale)
 {
 	MeshAsset loaded{};
 	Assimp::Importer importer;
@@ -260,7 +265,7 @@ optional<MeshAsset> LoadWithAssimp(Array<const byte> source, optional<ui8> subMe
 	const aiScene *scene = importer.ReadFileFromMemory(source.data(), source.size(), flags);
 	if (!scene)
 	{
-		SENDLOG(Error, AssetsLoaders, "LoadWithAssimp failed to read file from memory\n");
+		SENDLOG(Error, AssetsLoaders, "LoadWithAssimp failed to read file from memory for %ls, error %s\n", name.data(), importer.GetErrorString());
 		return {};
 	}
 
@@ -271,7 +276,7 @@ optional<MeshAsset> LoadWithAssimp(Array<const byte> source, optional<ui8> subMe
 		scale32 = static_cast<f32>(scaleFactor);
 	}
 
-	constexpr f32 scaleAdjust = 0.01f; // Assimp assumes FBX uses cm
+	f32 scaleAdjust = isFBX ? 0.01f : 1.0f; // Assimp assumes FBX uses cm
 	f32 vertexScale = globalScale * scaleAdjust * scale32;
 
 	struct Vertex
@@ -290,7 +295,7 @@ optional<MeshAsset> LoadWithAssimp(Array<const byte> source, optional<ui8> subMe
 
 	if (subMesh.value_or(0) >= meshes.size())
 	{
-		SENDLOG(Error, AssetsLoaders, "LoadWithAssimp invalid subMesh index\n");
+		SENDLOG(Error, AssetsLoaders, "LoadWithAssimp invalid subMesh index for %ls\n", name.data());
 		return {};
 	}
 
@@ -308,7 +313,7 @@ optional<MeshAsset> LoadWithAssimp(Array<const byte> source, optional<ui8> subMe
 
 		if (!mesh->HasNormals())
 		{
-			SENDLOG(Error, AssetsLoaders, "LoadWithAssimp mesh doesn't have normals\n");
+			SENDLOG(Error, AssetsLoaders, "LoadWithAssimp mesh %ls doesn't have normals\n", name.data());
 			return {};
 		}
 
@@ -345,7 +350,7 @@ optional<MeshAsset> LoadWithAssimp(Array<const byte> source, optional<ui8> subMe
 
 	if (totalVertices == 0 || totalIndexes == 0)
 	{
-		SENDLOG(Error, AssetsLoaders, "LoadWithAssimp no vertices/indexes\n");
+		SENDLOG(Error, AssetsLoaders, "LoadWithAssimp no vertices/indexes in %ls\n", name.data());
 		return {};
 	}
 

@@ -72,6 +72,10 @@ struct PhysXSystem : PhysicsSystem
 	
 	virtual void ProcessMessages(System::Environment &env, const MessageStreamEntityAdded &stream) override
 	{
+		vector<const BoxCollider *> boxColliders;
+		vector<const SphereCollider *> sphereColliders;
+		vector<const CapsuleCollider *> capsuleColliders;
+
 		for (const auto &entry : stream)
 		{
 			const Vector3 *scale = nullptr;
@@ -94,7 +98,27 @@ struct PhysXSystem : PhysicsSystem
 			{
 				physicsPropertiesId = pc->physics;
 			}
-			AddObject(env, entry.entityID, entry.GetComponent<Position>().position, entry.GetComponent<Rotation>().rotation, scale, linearVelocity, angularVelocity, entry.FindComponent<BoxCollider>(), entry.FindComponent<SphereCollider>(), entry.FindComponent<CapsuleCollider>(), entry.FindComponent<MeshCollider>(), physicsPropertiesId);
+
+			boxColliders.clear();
+			sphereColliders.clear();
+			capsuleColliders.clear();
+			for (uiw index = 0; index < entry.components.size(); ++index)
+			{
+				if (auto *box = entry.TryToGetComponentAtIndex<BoxCollider>(index).component; box)
+				{
+					boxColliders.push_back(box);
+				}
+				else if (auto *sphere = entry.TryToGetComponentAtIndex<SphereCollider>(index).component; sphere)
+				{
+					sphereColliders.push_back(sphere);
+				}
+				else if (auto *capsule = entry.TryToGetComponentAtIndex<CapsuleCollider>(index).component; capsule)
+				{
+					capsuleColliders.push_back(capsule);
+				}
+			}
+
+			AddObject(env, entry.entityID, entry.GetComponent<Position>().position, entry.GetComponent<Rotation>().rotation, scale, linearVelocity, angularVelocity, ToArray(boxColliders), ToArray(sphereColliders), ToArray(capsuleColliders), entry.FindComponent<MeshCollider>(), physicsPropertiesId);
 		}
 	}
 	
@@ -142,7 +166,7 @@ struct PhysXSystem : PhysicsSystem
 	{
 	}
 
-	void AddObject(System::Environment &env, EntityID entityId, const Vector3 &position, const Quaternion &rotation, const Vector3 *scale, const Vector3 *linearVelocity, const Vector3 *angularVelocity, const BoxCollider *box, const SphereCollider *sphere, const CapsuleCollider *capsule, const MeshCollider *mesh, PhysicsPropertiesAssetId physicsPropertiesId)
+	void AddObject(System::Environment &env, EntityID entityId, const Vector3 &position, const Quaternion &rotation, const Vector3 *scale, const Vector3 *linearVelocity, const Vector3 *angularVelocity, Array<const BoxCollider *> boxes, Array<const SphereCollider *> spheres, Array<const CapsuleCollider *> capsules, const MeshCollider *mesh, PhysicsPropertiesAssetId physicsPropertiesId)
 	{
 		const PhysicsProperties *physicsProperties = nullptr;
 
@@ -179,6 +203,7 @@ struct PhysXSystem : PhysicsSystem
 		PxRigidActor *actor;
 
 		Vector3 objectScale = scale ? *scale : Vector3(1, 1, 1);
+		objectScale.ForEach(abs);
 
 		if (isDynamic)
 		{
@@ -225,19 +250,20 @@ struct PhysXSystem : PhysicsSystem
 			return shape;
 		};
 
-		if (box)
+		for (auto *box : boxes)
 		{
 			auto size = box->size * objectScale * 0.5f;
+			auto center = box->center;
 			auto *boxShape = attachShape(PxBoxGeometry(size.x, size.y, size.z), box->isTrigger);
-			boxShape->setLocalPose(PxTransform(box->center.x, box->center.y, box->center.z, PxQuat{box->rotation.x, box->rotation.y, box->rotation.z, box->rotation.w}));
+			boxShape->setLocalPose(PxTransform(center.x, center.y, center.z, PxQuat{box->rotation.x, box->rotation.y, box->rotation.z, box->rotation.w}));
 		}
-		if (sphere)
+		for (auto *sphere : spheres)
 		{
 			auto size = sphere->radius * std::max(std::max(objectScale.x, objectScale.y), objectScale.z);
 			auto *sphereShape = attachShape(PxSphereGeometry(size), sphere->isTrigger);
 			sphereShape->setLocalPose(PxTransform(sphere->center.x, sphere->center.y, sphere->center.z, PxQuat{}));
 		}
-		if (capsule)
+		for (auto *capsule : capsules)
 		{
 			f32 radius = std::max(capsule->radius, DefaultF32Epsilon);
 			f32 height = std::max((capsule->height - radius * 2) * 0.5f, DefaultF32Epsilon);

@@ -692,7 +692,7 @@ void SystemsManagerST::StartScheduler(vector<unique_ptr<IEntitiesStream>> &strea
     auto after = TimeMoment::Now();
     if (streams.size())
     {
-        _logger->Message(LogLevels::Info, selfName, "Creating ECS structure took %.2lfs\n", (after - before).ToSec_f64());
+        _logger->Message(LogLevels::Info, selfName, "Creating ECS structure took %.2lfms\n", (after - before).ToMSec_f64());
 		streams.clear();
     }
 

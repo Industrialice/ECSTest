@@ -100,7 +100,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 	assetsLoaders.SetAssetIdMapper(assetIdMapper);
 	assetsLoaders.RegisterLoaders(assetsManager);
 
-	std::wstring mapName = L"et";
+	std::wstring mapName = L"pv";
 
     vector<WorkerThread> workers;
     EntityIDGenerator idGenerator;

@@ -50,7 +50,7 @@ namespace ECSEngine
 		char : 8;
 	};
 
-	struct BoxCollider : Component<BoxCollider>
+	struct BoxCollider : NonUniqueComponent<BoxCollider>
 	{
 		bool isTrigger = false;
 		Vector3 center = {0, 0, 0};
@@ -58,14 +58,14 @@ namespace ECSEngine
 		Quaternion rotation{};
 	};
 
-	struct SphereCollider : Component<SphereCollider>
+	struct SphereCollider : NonUniqueComponent<SphereCollider>
 	{
 		bool isTrigger = false;
 		Vector3 center = {0, 0, 0};
 		f32 radius = 1;
 	};
 
-	struct CapsuleCollider : Component<CapsuleCollider>
+	struct CapsuleCollider : NonUniqueComponent<CapsuleCollider>
 	{
 		enum class Direction { X, Y, Z };
 

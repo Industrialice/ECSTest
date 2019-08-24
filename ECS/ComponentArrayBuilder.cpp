@@ -34,6 +34,16 @@ auto ComponentArrayBuilder::AddComponent(const IEntitiesStream::ComponentDesc &d
 
 auto ComponentArrayBuilder::AddComponent(const SerializedComponent &sc) -> ComponentArrayBuilder &
 {
+	#ifdef DEBUG
+		if (sc.isUnique)
+		{
+			for (const auto &stored : _components)
+			{
+				ASSUME(stored.type != sc.type);
+			}
+		}
+	#endif
+
 	_components.push_back(sc);
 	if (sc.isTag)
 	{

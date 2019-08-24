@@ -23,47 +23,47 @@ unique_ptr<IEntitiesStream> SceneFromMap::Create(const FilePath &pathToMap, cons
 
 	AddObjectsFromMap(pathToMap, pathToMapAssets, idGenerator, assetIdMapper, *stream);
 
-	//{
-	//	EntitiesStream::EntityData entity;
+	{
+		EntitiesStream::EntityData entity;
 
-	//	Position pos;
-	//	pos.position = {0, 75, 0};
-	//	entity.AddComponent(pos);
+		Position pos;
+		pos.position = {0, 75, 0};
+		entity.AddComponent(pos);
 
-	//	Rotation rot;
-	//	entity.AddComponent(rot);
+		Rotation rot;
+		entity.AddComponent(rot);
 
-	//	Window window;
-	//	window.height = 2160;
-	//	window.width = 3840;
-	//	window.isFullscreen = false;
-	//	window.isMaximized = false;
-	//	window.isNoBorders = false;
-	//	strcpy_s(window.title.data(), window.title.size(), "Industrialice ECS test engine");
-	//	window.x = (GetSystemMetrics(SM_CXSCREEN) - window.width) / 2;
-	//	window.y = (GetSystemMetrics(SM_CYSCREEN) - window.height) / 2;
-	//	window.cursorType = Window::CursorTypet::Normal;
+		Window window;
+		window.height = 2160;
+		window.width = 3840;
+		window.isFullscreen = false;
+		window.isMaximized = false;
+		window.isNoBorders = false;
+		strcpy_s(window.title.data(), window.title.size(), "Industrialice ECS test engine");
+		window.x = (GetSystemMetrics(SM_CXSCREEN) - window.width) / 2;
+		window.y = (GetSystemMetrics(SM_CYSCREEN) - window.height) / 2;
+		window.cursorType = Window::CursorTypet::Normal;
 
-	//	RT rt;
-	//	rt.target = window;
+		RT rt;
+		rt.target = window;
 
-	//	ClearColor clearColor;
-	//	clearColor.color = ColorR8G8B8(0, 0, 0);
+		ClearColor clearColor;
+		clearColor.color = ColorR8G8B8(0, 0, 0);
 
-	//	Camera camera;
-	//	camera.rt[0] = rt;
-	//	camera.farPlane = FLT_MAX;
-	//	camera.nearPlane = 0.1f;
-	//	camera.fov = 75.0f;
-	//	camera.isClearDepthStencil = true;
-	//	camera.depthBufferFormat = Camera::DepthBufferFormat::DepthOnly;
-	//	camera.projectionType = Camera::ProjectionTypet::Perspective;
-	//	camera.clearWith = clearColor;
-	//	entity.AddComponent(camera);
-	//  entity.AddComponent(ActiveCamera());
+		Camera camera;
+		camera.rt[0] = rt;
+		camera.farPlane = FLT_MAX;
+		camera.nearPlane = 0.1f;
+		camera.fov = 75.0f;
+		camera.isClearDepthStencil = true;
+		camera.depthBufferFormat = Camera::DepthBufferFormat::DepthOnly;
+		camera.projectionType = Camera::ProjectionTypet::Perspective;
+		camera.clearWith = clearColor;
+		entity.AddComponent(camera);
+	  entity.AddComponent(ActiveCamera());
 
-	//	stream->AddEntity(idGenerator.Generate(), move(entity));
-	//}
+		stream->AddEntity(idGenerator.Generate(), move(entity));
+	}
 
 	return move(stream);
 }
@@ -132,6 +132,8 @@ void AddObjectsFromMap(const FilePath &pathToMap, const FilePath &pathToMapAsset
 	const char *dataStart = reinterpret_cast<const char *>(mapMapped.CMemory());
 	const char *dataEnd = reinterpret_cast<const char *>(mapMapped.CMemory() + mapMapped.Size());
 
+	TimeMoment start = TimeMoment::Now();
+
 	vector<char> firstStep(dataEnd - dataStart + 1);
 	char *target = firstStep.data();
 
@@ -164,6 +166,9 @@ void AddObjectsFromMap(const FilePath &pathToMap, const FilePath &pathToMapAsset
 			source = {};
 		}
 	}
+
+	SENDLOG(Info, SceneFromMap, "Removing spaces took %.2fms\n", (TimeMoment::Now() - start).ToMSec_f64());
+	start = TimeMoment::Now();
 
 	dataStart = firstStep.data();
 	dataEnd = target;
@@ -203,6 +208,8 @@ void AddObjectsFromMap(const FilePath &pathToMap, const FilePath &pathToMapAsset
 
 		dataStart = boundaries->data() + boundaries->size() + 2;
 	} while (dataStart < dataEnd);
+
+	SENDLOG(Info, SceneFromMap, "Parsing map took %.2fms\n", (TimeMoment::Now() - start).ToMSec_f64());
 }
 
 void ParseObjectIntoEntitiesStream(string_view object, const FilePath &pathToMapAssets, EntityIDGenerator &idGenerator, AssetIdMapper &assetIdMapper, KeyValue &keyValueStorage, EntityObject &entity)
@@ -314,7 +321,12 @@ void ParseSubobjectIntoEntity(string_view object, const FilePath &pathToMapAsset
 				isUseFileScale = ReadUI32(value) != 0;
 			}
 		}
-		auto identification = MeshPathAssetIdentification::New(pathToMapAssets + FilePath::FromChar(assetPath), subMeshIndex, globalScale, isUseFileScale);
+		FilePath fullPath = (pathToMapAssets + FilePath::FromChar(assetPath)).GetNormalized();
+		if (fullPath.ExtensionView() == TSTR("spm")) // currently ignoring SpeedTree files
+		{
+			return {};
+		}
+		auto identification = MeshPathAssetIdentification::New(fullPath, subMeshIndex, globalScale, isUseFileScale);
 		MeshAssetId id = assetIdMapper.Register<MeshAsset>(identification);
 		#ifdef DEBUG
 			uiw copyLen = std::min(CountOf(id._debugName) - 1, assetPath.size());
@@ -332,7 +344,10 @@ void ParseSubobjectIntoEntity(string_view object, const FilePath &pathToMapAsset
 	{
 		MeshRenderer meshRenderer;
 		meshRenderer.mesh = createMeshAsset(keyValueStorage);
-		entity.components.AddComponent(meshRenderer);
+		if (meshRenderer.mesh)
+		{
+			entity.components.AddComponent(meshRenderer);
+		}
 	}
 	else if (subObjectName == "camera")
 	{
@@ -503,7 +518,10 @@ void ParseSubobjectIntoEntity(string_view object, const FilePath &pathToMapAsset
 			}
 		}
 		meshCollider.mesh = createMeshAsset(keyValueStorage);
-		entity.components.AddComponent(meshCollider);
+		if (meshCollider.mesh)
+		{
+			entity.components.AddComponent(meshCollider);
+		}
 	}
 	else if (subObjectName == "rigidbody")
 	{
