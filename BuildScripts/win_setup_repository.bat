@@ -1,4 +1,4 @@
-pushd %~dp0
+pushd %~dp0\..
 
 mkdir Debug_x64
 mkdir Debug_x86
