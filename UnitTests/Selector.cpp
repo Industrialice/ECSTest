@@ -5,6 +5,7 @@ shared_ptr<Logger<string_view, true>> Log;
 
 void PerformUnitTests(bool isSuppressLogs);
 
+void SimpleOrderTests();
 void Benchmark();
 void Benchmark2();
 void KeyControllerTests();
@@ -12,6 +13,22 @@ void SyncTests();
 void Falling();
 void InteractionTests();
 void ArgumentPassingTests();
+
+namespace
+{
+	using FuncType = void(*)();
+	constexpr FuncType AllTests[] =
+	{
+		SimpleOrderTests,
+		KeyControllerTests,
+		InteractionTests,
+		ArgumentPassingTests,
+		SyncTests,
+		Benchmark,
+		Falling,
+		Benchmark2
+	};
+}
 
 static void DoTest(void func())
 {
@@ -23,13 +40,10 @@ static void DoTest(void func())
 
 static void DoAllTests()
 {
-	DoTest(KeyControllerTests);
-	DoTest(InteractionTests);
-	DoTest(ArgumentPassingTests);
-	DoTest(SyncTests);
-	DoTest(Benchmark);
-	DoTest(Falling);
-	DoTest(Benchmark2);
+	for (auto func : AllTests)
+	{
+		DoTest(func);
+	}
 }
 
 #ifdef PLATFORM_WINDOWS
@@ -62,50 +76,35 @@ int main()
 
 	PerformUnitTests(true);
 
-	Log->Info("", "0. All\n");
-	Log->Info("", "1. KeyControllerTests\n");
-	Log->Info("", "2. InteractionTests\n");
-	Log->Info("", "3. ArgumentPassingTests\n");
-	Log->Info("", "4. SyncTests\n");
-	Log->Info("", "5. Benchmark\n");
-	Log->Info("", "6. Falling\n");
-	Log->Info("", "7. Benchmark2\n");
+	i32 value = 0;
+	Log->Info("", "%i. All\n", value++);
+	Log->Info("", "%i. SimpleOrderTests\n", value++);
+	Log->Info("", "%i. KeyControllerTests\n", value++);
+	Log->Info("", "%i. InteractionTests\n", value++);
+	Log->Info("", "%i. ArgumentPassingTests\n", value++);
+	Log->Info("", "%i. SyncTests\n", value++);
+	Log->Info("", "%i. Benchmark\n", value++);
+	Log->Info("", "%i. Falling\n", value++);
+	Log->Info("", "%i. Benchmark2\n", value++);
 
 restart:
     int choice = 0;
     scanf_s("%i", &choice);
 	Log->Info("", "\n");
 
-    switch (choice)
-    {
-	case 0:
+	if (choice == 0)
+	{
 		DoAllTests();
-		break;
-	case 1:
-        KeyControllerTests();
-        break;
-    case 2:
-        InteractionTests();
-        break;
-	case 3:
-		ArgumentPassingTests();
-		break;
-    case 4:
-        SyncTests();
-        break;
-    case 5:
-        Benchmark();
-        break;
-    case 6:
-        Falling();
-        break;
-    case 7:
-        Benchmark2();
-        break;
-    default:
+	}
+	else if (static_cast<uiw>(choice) < CountOf(AllTests))
+	{
+		AllTests[choice - 1]();
+	}
+	else
+	{
 		Log->Error("", "Incorrect input, try again\n");
-        goto restart;
-    }
+		goto restart;
+	}
 
 	Log->Info("", "Test complete\n\n");
     goto restart;

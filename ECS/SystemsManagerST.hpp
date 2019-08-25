@@ -110,7 +110,8 @@ namespace ECSTest
 
 		// used for matching EntityID to physical entity and its components
 		// this is needed when processing entity/component update messages
-		std::unordered_map<EntityID, EntityLocation> _entitiesLocations{};
+		// EntityID's hint will be an index in this array
+		vector<EntityLocation> _entitiesLocations{};
 
 		// stores all antities and their components grouped by archetype
 		std::unordered_map<ArchetypeFull, ArchetypeGroup> _archetypeGroupsFull{};
@@ -136,6 +137,7 @@ namespace ECSTest
 
 		EntityIDGenerator _entityIdGenerator{};
         ComponentIDGenerator _componentIdGenerator{};
+		UniqueIdManager _entityHintGenerator{};
 
         std::atomic<TimeDifference> _timeSinceStartAtomic{};
         TimeDifference _timeSinceStart{};

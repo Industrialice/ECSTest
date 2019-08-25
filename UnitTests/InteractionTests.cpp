@@ -147,10 +147,13 @@ public:
             {
                 if (_leftToGenerate)
                 {
+					EntityID entityId = env.messageBuilder.AddEntity();
                     GeneratedComponent c;
                     c.value = 15;
                     c.tagsCount = 0;
-                    auto &builder = env.messageBuilder.AddEntity(env.entityIdGenerator.Generate()).AddComponent(c).AddComponent(FilterTag{}).AddComponent(TempComponent{});
+					env.messageBuilder.AddComponent(entityId, c);
+					env.messageBuilder.AddComponent(entityId, FilterTag{});
+					env.messageBuilder.AddComponent(entityId, TempComponent{});
                     for (i32 index = 0, count = rand() % 4; index < count; ++index)
                     {
                         ++c.tagsCount;
@@ -159,21 +162,21 @@ public:
                         if (rand() % 2)
                         {
                             tag.id = env.componentIdGenerator.Generate();
-                            builder.AddComponent(tag, *tag.id);
+							env.messageBuilder.AddComponent(entityId, tag, *tag.id);
                             _info.tagIDHash ^= Hash::Integer<Hash::Precision::P64>(tag.id->ID());
-                            _toTagChange.push({env.entityIdGenerator.LastGenerated(), tag});
+                            _toTagChange.push({entityId, tag});
                         }
                         else
                         {
-                            builder.AddComponent(tag);
+							env.messageBuilder.AddComponent(entityId, tag);
                         }
                         _info.tagConnectionHash ^= Hash::Integer<Hash::Precision::P64>(tag.connectedTo);
                         ++_info.tagComponentsGenerated;
                     }
                     c.value = 25;
-                    env.messageBuilder.ComponentChanged(env.entityIdGenerator.LastGenerated(), c);
+                    env.messageBuilder.ComponentChanged(entityId, c);
                     --_leftToGenerate;
-                    _toComponentChange.push({env.entityIdGenerator.LastGenerated(), c.tagsCount});
+                    _toComponentChange.push({entityId, c.tagsCount});
 
                     if (_pipeline.Phase() == 0)
                     {
@@ -248,8 +251,8 @@ public:
 
         virtual void OnCreate(Environment &env) override
         {
-            _infoID = env.entityIdGenerator.Generate();
-            env.messageBuilder.AddEntity(_infoID).AddComponent(_info);
+            _infoID = env.messageBuilder.AddEntity();
+            env.messageBuilder.AddComponent(_infoID, _info);
         }
 
         virtual void OnDestroy(Environment &env) override
@@ -283,8 +286,8 @@ public:
 
         virtual void OnCreate(Environment &env) override
         {
-            _infoID = env.entityIdGenerator.Generate();
-            env.messageBuilder.AddEntity(_infoID).AddComponent(_info);
+            _infoID = env.messageBuilder.AddEntity();
+            env.messageBuilder.AddComponent(_infoID, _info);
         }
 
         virtual void OnDestroy(Environment &env) override
@@ -435,10 +438,6 @@ public:
                 ui32 stride = tags ? tags->stride : 0;
                 ASSUME(stride == c.tagsCount);
             }
-            for (auto &id : ids)
-            {
-                ASSUME(id.Hash() <= env.entityIdGenerator.LastGenerated().Hash());
-            }
         }
     };
 
@@ -453,11 +452,12 @@ public:
 
             if (_leftToGenerate)
             {
+				EntityID entityId = env.messageBuilder.AddEntity();
                 OtherComponent component;
                 component.value = ValueGenerator++;
-                env.messageBuilder.AddEntity(env.entityIdGenerator.Generate()).AddComponent(component);
-                CurrentData[env.entityIdGenerator.LastGenerated()] = component;
-                _localData[env.entityIdGenerator.LastGenerated()] = component;
+                env.messageBuilder.AddComponent(entityId, component);
+                CurrentData[entityId] = component;
+                _localData[entityId] = component;
             }
 
             ASSUME(CurrentData.size() == _localData.size());

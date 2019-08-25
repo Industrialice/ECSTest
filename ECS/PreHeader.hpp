@@ -26,6 +26,7 @@
 #include <FunctionInfo.hpp>
 #include <TimeMoment.hpp>
 #include <Logger.hpp>
+#include <UniqueIdManager.hpp>
 using namespace StdLib;
 
 using std::vector;

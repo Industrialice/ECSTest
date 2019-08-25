@@ -532,11 +532,13 @@ public:
 
 		for (ui32 index = 0; index < 1000; ++index)
 		{
+			EntityID entityId = gen.Generate();
+
 			{
-				auto &componentBuilder = builder.AddEntity(gen.Generate());
+				auto &componentBuilder = builder.AddEntity(entityId);
 
 				ComponentFirstName name = generateName();
-				entityNames[gen.LastGenerated()] = name;
+				entityNames[entityId] = name;
 
 				ComponentArtist artist;
 				artist.area = ComponentArtist::Areas::Concept;
@@ -552,8 +554,8 @@ public:
 					ComponentArtist::GetTypeId()
 				};
 				Archetype arch = Archetype::Create<TypeId>(ToArray(types));
-				builder.RemoveEntity(gen.LastGenerated(), arch);
-				auto[it, result] = entitiesRemoved.insert(gen.LastGenerated());
+				builder.RemoveEntity(entityId, arch);
+				auto[it, result] = entitiesRemoved.insert(entityId);
 				ASSUME(result);
 			}
 
@@ -561,9 +563,9 @@ public:
 			{
 				ComponentFirstName changed = generateName();
 
-				builder.ComponentChanged(gen.LastGenerated(), changed);
+				builder.ComponentChanged(entityId, changed);
 
-				entityAfterChangeNames[gen.LastGenerated()] = changed;
+				entityAfterChangeNames[entityId] = changed;
 			}
 		}
 

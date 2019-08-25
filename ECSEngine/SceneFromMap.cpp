@@ -83,7 +83,7 @@ Camera CreateDefaultCamera()
 	Window window;
 	window.height = screenHeight;
 	window.width = screenWidth;
-	window.isFullscreen = true;
+	window.isFullscreen = false;
 	window.isMaximized = false;
 	window.isNoBorders = true;
 	strcpy_s(window.title.data(), window.title.size(), "Industrialice ECS test engine");

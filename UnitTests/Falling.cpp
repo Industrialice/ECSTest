@@ -200,8 +200,8 @@ public:
         virtual void OnCreate(Environment &env) override
         {
             ASSUME(_infoId.IsValid() == false);
-            _infoId = env.entityIdGenerator.Generate();
-            env.messageBuilder.AddEntity(_infoId).AddComponent(_info);
+			_infoId = env.messageBuilder.AddEntity();
+            env.messageBuilder.AddComponent(_infoId, _info);
         }
 
         virtual void OnDestroy(Environment &env) override
@@ -452,8 +452,8 @@ public:
             AverageHeight h;
             h.height = 0;
             h.sources = 0;
-            _entityID = env.entityIdGenerator.Generate();
-            env.messageBuilder.AddEntity(_entityID).AddComponent(h);
+            _entityID = env.messageBuilder.AddEntity();
+            env.messageBuilder.AddComponent(_entityID, h);
         }
 
         virtual void OnDestroy(Environment &env) override

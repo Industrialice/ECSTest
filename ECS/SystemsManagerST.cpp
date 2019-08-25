@@ -30,7 +30,7 @@ namespace ECSTest
 
             _tempComponents.clear();
 
-            auto[group, entityIndex] = _it->second;
+            auto[group, entityIndex] = *_it;
 
             for (uiw componentIndex = 0; componentIndex < group->uniqueTypedComponentsCount; ++componentIndex)
             {
@@ -64,9 +64,12 @@ namespace ECSTest
 
             StreamedEntity streamed;
             streamed.components = ToArray(_tempComponents);
-            streamed.entityId = _it->first;
+            streamed.entityId = group->entities[entityIndex];
 
-            ++_it;
+			do
+			{
+				++_it;
+			} while (_it != locked->_entitiesLocations.end() && _it->group == nullptr);
 
             return streamed;
         }
@@ -669,7 +672,11 @@ void SystemsManagerST::AddEntityToArchetypeGroup(const ArchetypeFull &archetype,
 
 	group.entities[group.entitiesCount] = entityId;
 
-	_entitiesLocations[entityId] = {&group, group.entitiesCount};
+	if (entityId.Hint() >= _entitiesLocations.size())
+	{
+		_entitiesLocations.resize(entityId.Hint() + 1);
+	}
+	_entitiesLocations[entityId.Hint()] = {&group, group.entitiesCount};
 
 	++group.entitiesCount;
 }
@@ -850,7 +857,6 @@ void SystemsManagerST::ExecutePipeline(PipelineData &pipeline, TimeDifference ti
             pipeline.executionFrame,
             _timeSinceStart,
             managed.system->GetTypeId(),
-            _entityIdGenerator,
             _componentIdGenerator,
             _tempMessageBuilder,
             LoggerWrapper(_logger.get(), managed.system->GetTypeName()),
@@ -858,6 +864,7 @@ void SystemsManagerST::ExecutePipeline(PipelineData &pipeline, TimeDifference ti
 			_assetsManager
         };
         env.messageBuilder.SourceName(managed.system->GetTypeId().Name());
+		env.messageBuilder.SetEntityIdGenerator(&_entityIdGenerator);
 
         IKeyController::ListenerHandle inputHandle;
         if (env.keyController)
@@ -877,15 +884,11 @@ void SystemsManagerST::ExecutePipeline(PipelineData &pipeline, TimeDifference ti
 
             managed.system->OnCreate(env);
             PassControlsToOtherSystemsAndClear(managed.controlsToSendQueue, managed.system.get());
-            PatchComponentAddedMessages(env.messageBuilder);
-            PatchEntityRemovedArchetypes(env.messageBuilder);
             UpdateECSFromMessagesAndCreateArchetypedMessageBuilders(env.messageBuilder);
             PassMessagesToIndirectSystemsAndClear(env.messageBuilder, nullptr);
 
             managed.system->OnInitialized(env);
             PassControlsToOtherSystemsAndClear(managed.controlsToSendQueue, managed.system.get());
-            PatchComponentAddedMessages(env.messageBuilder);
-            PatchEntityRemovedArchetypes(env.messageBuilder);
             UpdateECSFromMessagesAndCreateArchetypedMessageBuilders(env.messageBuilder);
             PassMessagesToIndirectSystemsAndClear(env.messageBuilder, nullptr);
         }
@@ -905,7 +908,6 @@ void SystemsManagerST::ExecutePipeline(PipelineData &pipeline, TimeDifference ti
             pipeline.executionFrame,
             _timeSinceStart,
             managed.system->GetTypeId(),
-            _entityIdGenerator,
             _componentIdGenerator,
             _tempMessageBuilder,
             LoggerWrapper(_logger.get(), managed.system->GetTypeName()),
@@ -913,6 +915,7 @@ void SystemsManagerST::ExecutePipeline(PipelineData &pipeline, TimeDifference ti
 			_assetsManager
         };
         env.messageBuilder.SourceName(managed.system->GetTypeId().Name());
+		env.messageBuilder.SetEntityIdGenerator(&_entityIdGenerator);
 
         IKeyController::ListenerHandle inputHandle;
         if (env.keyController)
@@ -932,8 +935,6 @@ void SystemsManagerST::ExecutePipeline(PipelineData &pipeline, TimeDifference ti
 
             managed.system->OnCreate(env);
             PassControlsToOtherSystemsAndClear(managed.controlsToSendQueue, managed.system.get());
-            PatchComponentAddedMessages(env.messageBuilder);
-            PatchEntityRemovedArchetypes(env.messageBuilder);
             UpdateECSFromMessagesAndCreateArchetypedMessageBuilders(env.messageBuilder);
             PassMessagesToIndirectSystemsAndClear(env.messageBuilder, managed.system.get());
 
@@ -943,8 +944,6 @@ void SystemsManagerST::ExecutePipeline(PipelineData &pipeline, TimeDifference ti
             auto after = TimeMoment::Now();
             _logger->Message(LogLevels::Info, selfName, "Initializing %*s took %.2lfs\n", static_cast<i32>(managed.system->GetTypeName().size()), managed.system->GetTypeName().data(), (after - before).ToSec_f64());
             PassControlsToOtherSystemsAndClear(managed.controlsToSendQueue, managed.system.get());
-            PatchComponentAddedMessages(env.messageBuilder);
-            PatchEntityRemovedArchetypes(env.messageBuilder);
             UpdateECSFromMessagesAndCreateArchetypedMessageBuilders(env.messageBuilder);
             PassMessagesToIndirectSystemsAndClear(env.messageBuilder, managed.system.get());
         }
@@ -1006,8 +1005,6 @@ void SystemsManagerST::ExecuteIndirectSystem(BaseIndirectSystem &system, Managed
     }
 
     PassControlsToOtherSystemsAndClear(controlsToSendQueue, &system);
-    PatchComponentAddedMessages(env.messageBuilder);
-    PatchEntityRemovedArchetypes(env.messageBuilder);
     UpdateECSFromMessagesAndCreateArchetypedMessageBuilders(env.messageBuilder);
     PassMessagesToIndirectSystemsAndClear(env.messageBuilder, &system);
 }
@@ -1197,8 +1194,6 @@ void SystemsManagerST::ExecuteDirectSystem(BaseDirectSystem &system, ControlsQue
     }
 
     PassControlsToOtherSystemsAndClear(controlsToSendQueue, &system);
-    PatchComponentAddedMessages(env.messageBuilder);
-    PatchEntityRemovedArchetypes(env.messageBuilder);
     UpdateECSFromMessagesAndCreateArchetypedMessageBuilders(env.messageBuilder);
     PassMessagesToIndirectSystemsAndClear(env.messageBuilder, nullptr);
 }
@@ -1251,14 +1246,12 @@ void SystemsManagerST::PatchComponentAddedMessages(MessageBuilder &messageBuilde
     {
         for (auto &info : *stream)
         {
-            auto it = _entitiesLocations.find(info.entityID);
-            ASSUME(it != _entitiesLocations.end());
+			const auto &[group, entityLocationIndex] = _entitiesLocations[info.entityID.Hint()];
+			ASSUME(group->entities[entityLocationIndex] == info.entityID);
 
-            const auto &group = *it->second.group;
-
-            for (ui32 index = 0; index < group.uniqueTypedComponentsCount; ++index)
+            for (ui32 index = 0; index < group->uniqueTypedComponentsCount; ++index)
             {
-                const auto &stored = group.components[index];
+                const auto &stored = group->components[index];
 
                 SerializedComponent serialized;
                 serialized.alignmentOf = stored.alignmentOf;
@@ -1269,10 +1262,10 @@ void SystemsManagerST::PatchComponentAddedMessages(MessageBuilder &messageBuilde
                 
                 for (ui32 stride = 0; stride < stored.stride; ++stride)
                 {
-                    serialized.data = stored.data.get() + stored.sizeOf * it->second.index * stored.stride + stride * stored.sizeOf;
+                    serialized.data = stored.data.get() + stored.sizeOf * entityLocationIndex * stored.stride + stride * stored.sizeOf;
                     if (!serialized.isUnique)
                     {
-                        serialized.id = stored.ids[it->second.index * stored.stride + stride];
+                        serialized.id = stored.ids[entityLocationIndex * stored.stride + stride];
                     }
 
                     info.cab.AddComponent(serialized);
@@ -1290,15 +1283,15 @@ void SystemsManagerST::PatchEntityRemovedArchetypes(MessageBuilder &messageBuild
 {
     for (EntityID id : messageBuilder.EntityRemovedNoArchetype())
     {
-        auto it = _entitiesLocations.find(id);
-        ASSUME(it != _entitiesLocations.end());
-        messageBuilder.RemoveEntity(id, it->second.group->archetype.ToShort());
+		const auto &entityLocation = _entitiesLocations[id.Hint()];
+		ASSUME(entityLocation.group->entities[entityLocation.index] == id);
+        messageBuilder.RemoveEntity(id, entityLocation.group->archetype.ToShort());
     }
 }
 
 void SystemsManagerST::UpdateECSFromMessagesAndCreateArchetypedMessageBuilders(MessageBuilder &messageBuilder)
 {
-    auto removeEntity = [this](ArchetypeGroup &group, ui32 index, optional<decltype(_entitiesLocations)::iterator> entityLocation)
+    auto removeEntity = [this](ArchetypeGroup &group, ui32 index, ui32 entityLocationIndex)
     {
         --group.entitiesCount;
         uiw replaceIndex = group.entitiesCount;
@@ -1329,27 +1322,30 @@ void SystemsManagerST::UpdateECSFromMessagesAndCreateArchetypedMessageBuilders(M
             }
         }
 
-        if (entityLocation)
+        if (entityLocationIndex != ui32_max)
         {
             // remove deleted entity location
-            _entitiesLocations.erase(*entityLocation);
+			_entityIdGenerator.Free(EntityID(ui32_max, entityLocationIndex));
+			#ifdef DEBUG
+				auto &[groupLocation, indexInGroupLocation] = _entitiesLocations[entityLocationIndex];
+				groupLocation = nullptr;
+				indexInGroupLocation = ui32_max;
+			#endif
         }
 
         if (isReplaceWithLast)
         {
             // patch replaced entity's index
-            auto location = _entitiesLocations.find(group.entities[index]);
-            ASSUME(location != _entitiesLocations.end());
-            location->second.index = index;
+            auto &location = _entitiesLocations[group.entities[index].Hint()];
+            location.index = index;
         }
     };
 
     auto addOrRemoveComponent = [this, removeEntity](EntityID entityID, TypeId typeToRemove, ComponentID componentIDToRemove, optional<SerializedComponent> componentToAdd)
     {
-        auto entityLocation = _entitiesLocations.find(entityID);
-        ASSUME(entityLocation != _entitiesLocations.end()); // requested entity that doesn't exist
-
-        auto[group, indexInGroup] = entityLocation->second;
+        const auto &entityLocation = _entitiesLocations[entityID.Hint()];
+        const auto [group, indexInGroup] = entityLocation;
+		ASSUME(group->entities[indexInGroup] == entityID);
 
 		ASSUME(_tempComponents.empty());
 
@@ -1443,7 +1439,7 @@ void SystemsManagerST::UpdateECSFromMessagesAndCreateArchetypedMessageBuilders(M
 
         AddEntityToArchetypeGroup(archetype, *newGroup, entityID, ToArray(_tempComponents), nullptr);
 
-        removeEntity(*group, indexInGroup, nullopt);
+        removeEntity(*group, indexInGroup, ui32_max);
 
 		_tempComponents.clear();
     };
@@ -1472,6 +1468,10 @@ void SystemsManagerST::UpdateECSFromMessagesAndCreateArchetypedMessageBuilders(M
             AddEntityToArchetypeGroup(archetype, *group, entity.entityID, ToArray(entity.components), nullptr);
         }
     }
+
+	// these two must be below EntityAddedStreams in case the messages reference just added entities
+	PatchComponentAddedMessages(messageBuilder);
+	PatchEntityRemovedArchetypes(messageBuilder);
 
     for (auto &[componentType, stream] : messageBuilder.ComponentAddedStreams()._data)
     {
@@ -1506,11 +1506,10 @@ void SystemsManagerST::UpdateECSFromMessagesAndCreateArchetypedMessageBuilders(M
 
 			if (entityID != prevGroup->entities[entityIndex])
 			{
-				auto entityLocation = _entitiesLocations.find(entityID);
-				ASSUME(entityLocation != _entitiesLocations.end());
-
-				group = entityLocation->second.group;
-				entityIndex = entityLocation->second.index;
+				auto &entityLocation = _entitiesLocations[entityID.Hint()];
+				group = entityLocation.group;
+				entityIndex = entityLocation.index;
+				ASSUME(group->entities[entityIndex] == entityID);
 			}
 
             uiw componentIndex = 0;
@@ -1565,11 +1564,11 @@ void SystemsManagerST::UpdateECSFromMessagesAndCreateArchetypedMessageBuilders(M
 
     for (const auto &[streamArchetype, stream] : messageBuilder.EntityRemovedStreams()._data)
     {
-        for (auto &entity : *stream)
+        for (auto &entityId : *stream)
         {
-            auto entityLocation = _entitiesLocations.find(entity);
-            ASSUME(entityLocation != _entitiesLocations.end());
-            removeEntity(*entityLocation->second.group, entityLocation->second.index, entityLocation);
+            auto &entityLocation = _entitiesLocations[entityId.Hint()];
+			ASSUME(entityLocation.group->entities[entityLocation.index] == entityId);
+            removeEntity(*entityLocation.group, entityLocation.index, entityId.Hint());
         }
     }
 }

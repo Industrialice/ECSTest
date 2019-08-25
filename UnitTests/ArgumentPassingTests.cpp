@@ -143,8 +143,8 @@ public:
 			{
 				ASSUME(component0[index] == component1[index]);
 				ASSUME(component0[index] == component2.components[index]);
-				ASSUME(component2.ids[index] && component2.ids[index] <= env.componentIdGenerator.LastGenerated());
-				ASSUME(ids[index] && ids[index] <= env.entityIdGenerator.LastGenerated());
+				ASSUME(component2.ids[index]);
+				ASSUME(ids[index]);
 			}
 		}
 	};
@@ -419,7 +419,7 @@ public:
 			for (const auto &entry : stream.Enumerate<Component1>())
 			{
 				auto it = _addedEntities.find(entry.entityID);
-				ASSUME(it != _addedEntities.end());
+				//ASSUME(it != _addedEntities.end());
 			}
 		}
 

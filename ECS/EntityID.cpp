@@ -3,24 +3,35 @@
 
 using namespace ECSTest;
 
+ui32 EntityID::Hint() const
+{
+	return _hint;
+}
+
+ui32 EntityID::Hash() const
+{
+	return _id;
+}
+
 EntityID EntityIDGenerator::Generate()
 {
-    auto id = EntityID(_current.load());
-    _current.fetch_add(1);
+    auto id = EntityID(_currentId, _hintGenerator.Allocate());
+	_currentId += 1;
     return id;
 }
 
-EntityID EntityIDGenerator::LastGenerated() const
+void EntityIDGenerator::Free(EntityID id)
 {
-    return EntityID(_current.load() - 1);
+	_hintGenerator.Free(id.Hint());
 }
 
-EntityIDGenerator::EntityIDGenerator(EntityIDGenerator &&source) noexcept : _current{source._current.load()}
+EntityIDGenerator::EntityIDGenerator(EntityIDGenerator &&source) noexcept : _currentId{source._currentId}, _hintGenerator(move(source._hintGenerator))
 {}
 
 EntityIDGenerator &EntityIDGenerator::operator = (EntityIDGenerator &&source) noexcept
 {
     ASSUME(this != &source);
-    _current.store(source._current.load());
+	_currentId = source._currentId;
+	_hintGenerator = move(source._hintGenerator);
     return *this;
 }

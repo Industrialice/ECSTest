@@ -181,12 +181,13 @@ public:
         {
             if (_entitiesToAdd)
             {
-                auto &componentBuilder = env.messageBuilder.AddEntity(env.entityIdGenerator.Generate());
+				EntityID id = env.messageBuilder.AddEntity();
                 TestComponent0 c0;
                 c0.value = 10;
                 TestComponent1 c1;
                 c1.value = 20;
-                componentBuilder.AddComponent(c0).AddComponent(c1);
+				env.messageBuilder.AddComponent(id, c0);
+				env.messageBuilder.AddComponent(id, c1);
                 --_entitiesToAdd;
             }
         }

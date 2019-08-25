@@ -642,11 +642,13 @@ namespace ECSTest
         friend class SystemsManagerST;
         friend UnitTests;
 
+		void SetEntityIdGenerator(EntityIDGenerator *generator);
         void SourceName(string_view name);
 		[[nodiscard]] string_view SourceName() const;
 		[[nodiscard]] bool IsEmpty() const;
         void Clear();
 		void Flush();
+		[[nodiscard]] ComponentArrayBuilder &AddEntity(EntityID id);
         [[nodiscard]] MessageStreamsBuilderEntityAdded &EntityAddedStreams();
         [[nodiscard]] MessageStreamsBuilderComponentAdded &ComponentAddedStreams();
         [[nodiscard]] MessageStreamsBuilderComponentChanged &ComponentChangedStreams();
@@ -750,7 +752,7 @@ namespace ECSTest
             static_assert(false_v<T>, "Passed value is not a component");
         }
         
-        ComponentArrayBuilder &AddEntity(EntityID entityID); // archetype will be computed after all the components were added, you can ignore the returned value if you don't want to add any components
+		EntityID AddEntity(string_view debugName = ""); // archetype will be computed after all the components were added, you can ignore the returned value if you don't want to add any components
         void AddComponent(EntityID entityID, const SerializedComponent &sc);
         void ComponentChanged(EntityID entityID, const SerializedComponent &sc);
 		void ComponentChangedHint(const ComponentDescription &desc, uiw count);
@@ -759,6 +761,7 @@ namespace ECSTest
         void RemoveEntity(EntityID entityID, Archetype archetype);
     
 	private:
+		EntityIDGenerator *_entityIdGenerator{};
 		ComponentArrayBuilder _cab{};
 		MessageStreamsBuilderEntityAdded _entityAddedStreams{};
         MessageStreamsBuilderComponentAdded _componentAddedStreams{};

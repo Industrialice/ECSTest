@@ -3,6 +3,11 @@
 
 using namespace ECSTest;
 
+void MessageBuilder::SetEntityIdGenerator(EntityIDGenerator *generator)
+{
+	_entityIdGenerator = generator;
+}
+
 void MessageBuilder::SourceName(string_view name)
 {
     _sourceName = name;
@@ -67,6 +72,15 @@ void MessageBuilder::Flush()
 	_currentEntityId = {};
 }
 
+ComponentArrayBuilder &MessageBuilder::AddEntity(EntityID id)
+{
+	ASSUME(id);
+	Flush();
+	_currentEntityId = id;
+	_cab.Clear();
+	return _cab;
+}
+
 MessageStreamsBuilderEntityAdded &MessageBuilder::EntityAddedStreams()
 {
     Flush();
@@ -98,17 +112,31 @@ const vector<EntityID> &MessageBuilder::EntityRemovedNoArchetype()
     return _entityRemovedNoArchetype;
 }
 
-auto ECSTest::MessageBuilder::AddEntity(EntityID entityID) -> ComponentArrayBuilder &
+EntityID ECSTest::MessageBuilder::AddEntity(string_view debugName)
 {
-    ASSUME(entityID);
+    ASSUME(_entityIdGenerator);
+	EntityID entityId = _entityIdGenerator->Generate();
+	entityId.DebugName(debugName);
     Flush();
-    _currentEntityId = entityID;
+    _currentEntityId = entityId;
     _cab.Clear();
-    return _cab;
+	return entityId;
 }
 
 void MessageBuilder::AddComponent(EntityID entityID, const SerializedComponent &sc)
 {
+	ASSUME(entityID);
+
+	if (entityID == _currentEntityId)
+	{
+		_cab.AddComponent(sc);
+		return;
+	}
+	else
+	{
+		Flush();
+	}
+
     ASSUME(sc.isUnique != sc.id.IsValid());
 
     const auto &entry = [this](TypeId type) -> const shared_ptr<vector<MessageStreamComponentAdded::EntityWithComponents>> &
@@ -135,7 +163,8 @@ void MessageBuilder::AddComponent(EntityID entityID, const SerializedComponent &
 
 void MessageBuilder::ComponentChanged(EntityID entityID, const SerializedComponent &sc)
 {
-    ASSUME(sc.isUnique != sc.id.IsValid());
+	ASSUME(entityID);
+	ASSUME(sc.isUnique != sc.id.IsValid());
     ASSUME(sc.isTag == false);
 
     const auto &entry = [this](const SerializedComponent &sc) -> const shared_ptr<MessageStreamComponentChanged::InfoWithData> &
@@ -208,6 +237,14 @@ void MessageBuilder::ComponentChangedHint(const ComponentDescription &desc, uiw 
 
 void MessageBuilder::RemoveComponent(EntityID entityID, TypeId type, ComponentID componentID)
 {
+	ASSUME(entityID);
+
+	if (_currentEntityId == entityID)
+	{
+		SOFTBREAK; // performance warning, removing a component we just added
+		Flush();
+	}
+
     const auto &entry = [this](TypeId type) -> const shared_ptr<MessageStreamComponentRemoved::ComponentsInfo> &
     {
         for (const auto &[key, value] : _componentRemovedStreams._data)
@@ -230,8 +267,19 @@ void MessageBuilder::RemoveComponent(EntityID entityID, TypeId type, ComponentID
 
 void MessageBuilder::RemoveEntity(EntityID entityID)
 {
-    ASSUME(entityID);
-    _entityRemovedNoArchetype.push_back(entityID);
+	if (_currentEntityId == entityID)
+	{
+		SOFTBREAK; // performance warning, removing an entity we just added
+		// just undoing entity addition
+		_cab.Clear();
+		_currentEntityId = {};
+		_entityIdGenerator->Free(entityID);
+	}
+	else
+	{
+		ASSUME(entityID);
+		_entityRemovedNoArchetype.push_back(entityID);
+	}
 }
 
 void MessageBuilder::RemoveEntity(EntityID entityID, Archetype archetype)

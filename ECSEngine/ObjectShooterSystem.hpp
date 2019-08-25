@@ -66,20 +66,18 @@ namespace ECSEngine
 			{
 				if (key->key == KeyCode::MouseSecondary && key->keyState != ControlAction::Key::KeyState::Released)
 				{
-					auto id = env.entityIdGenerator.Generate();
-					id.DebugName("procedural sphere");
-					auto &cab = env.messageBuilder.AddEntity(id);
+					EntityID id = env.messageBuilder.AddEntity("procedural sphere");
 					for (const auto &r : _referenceEntity.components.GetComponents())
 					{
 						if (r.type == Position::GetTypeId() || r.type == Rotation::GetTypeId() || r.type == LinearVelocity::GetTypeId())
 						{
 							continue;
 						}
-						cab.AddComponent(r);
+						env.messageBuilder.AddComponent(id, r);
 					}
-					cab.AddComponent(Position{.position = _cameraTransform.Position() + _cameraTransform.ForwardAxis() * 2 - _cameraTransform.UpAxis()});
-					cab.AddComponent(LinearVelocity{.velocity = _cameraTransform.ForwardAxis() * 25});
-					cab.AddComponent(Rotation());
+					env.messageBuilder.AddComponent(id, Position{.position = _cameraTransform.Position() + _cameraTransform.ForwardAxis() * 2 - _cameraTransform.UpAxis()});
+					env.messageBuilder.AddComponent(id, LinearVelocity{.velocity = _cameraTransform.ForwardAxis() * 25});
+					env.messageBuilder.AddComponent(id, Rotation());
 				}
 			}
 		}

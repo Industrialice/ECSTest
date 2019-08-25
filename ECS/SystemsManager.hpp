@@ -42,9 +42,9 @@ namespace ECSTest
             TimeDifference timeSinceStart{};
         };
 
-        template <typename T> void Register(Pipeline pipeline)
+        template <typename T, typename... Args> void Register(Pipeline pipeline, Args &&... args)
         {
-            return Register(std::make_unique<T>(), pipeline);
+            return Register(std::make_unique<T>(std::forward<Args>(args)...), pipeline);
         }
 
         void Start(EntityIDGenerator &&idGenerator, vector<WorkerThread> &&workers)
