@@ -98,6 +98,9 @@ template <typename T, T InvalidIDValue> class OpaqueID
 {
 protected:
 	T _id = InvalidIDValue;
+	#ifdef DEBUG
+		char _debugName[64]{};
+	#endif
 
 	using hashType = conditional_t<sizeof(T) == 1, ui8,
 		conditional_t<sizeof(T) == 2, ui16,
@@ -116,9 +119,6 @@ public:
 		return static_cast<hashType>(_id);
 	}
 
-#ifdef SPACESHIP_SUPPORTED
-	[[nodiscard]] auto operator <=> (const OpaqueID &other) const = default;
-#else
 	[[nodiscard]] bool operator == (const OpaqueID &other) const
 	{
 		return _id == other._id;
@@ -149,7 +149,6 @@ public:
 		return _id >= other._id;
 	}
 
-#endif
 	[[nodiscard]] bool IsValid() const
 	{
 		return _id != InvalidIDValue;
@@ -163,5 +162,34 @@ public:
 	[[nodiscard]] static constexpr T InvalidID()
 	{
 		return InvalidIDValue;
+	}
+
+	void DebugName(const char *name)
+	{
+		#ifdef DEBUG
+			return DebugName(string_view(name, strlen(name)));
+		#endif
+	}
+
+	void DebugName(string_view name)
+	{
+		#ifdef DEBUG
+			uiw copyLen = std::min(CountOf(_debugName) - 1, name.size());
+			if (copyLen < name.size())
+			{
+				name = name.substr(name.size() - copyLen, copyLen);
+			}
+			MemOps::Copy(_debugName, name.data(), copyLen);
+			_debugName[copyLen] = '\0';
+		#endif
+	}
+
+	StringViewNullTerminated DebugName() const
+	{
+		#ifdef DEBUG
+			return string_view(_debugName, strlen(_debugName));
+		#else
+			return {};
+		#endif
 	}
 };

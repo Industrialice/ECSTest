@@ -35,6 +35,7 @@ public:
 		manager->Register<System4>(pipeline);
 		manager->Register<System5>(pipeline);
 		manager->Register<System6>(pipeline);
+		manager->Register<System7>(pipeline);
 
 		vector<WorkerThread> workers;
 		if (IsMTECS)
@@ -365,29 +366,98 @@ public:
 		vector<EntityID> _staticEntities{}, _staticPositionEntities{};
 	};
 
+	struct System7 : IndirectSystem<System7>
+	{
+		using BaseIndirectSystem::ProcessMessages;
+
+		void Accept(const Array<Component1> &, SubtractiveComponent<Component0>) {}
+
+		virtual void Update(Environment &env) override
+		{
+		}
+
+		virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override
+		{
+			for (const auto &entry : stream)
+			{
+				for (const auto &c : entry.components)
+				{
+					ASSUME(c.type != Component0::GetTypeId());
+				}
+				auto it = _addedEntities.insert(entry.entityID);
+				ASSUME(it.second);
+			}
+		}
+
+		virtual void ProcessMessages(Environment &env, const MessageStreamComponentAdded &stream) override
+		{
+			ASSUME(stream.Type() == Component1::GetTypeId());
+			for (const auto &entry : stream)
+			{
+				for (const auto &c : entry.components)
+				{
+					ASSUME(c.type != Component0::GetTypeId());
+				}
+				auto it = _addedEntities.insert(entry.entityID);
+				ASSUME(it.second);
+			}
+		}
+
+		virtual void ProcessMessages(Environment &env, const MessageStreamComponentRemoved &stream) override
+		{
+			ASSUME(stream.Type() == Component1::GetTypeId());
+			for (const auto &entry : stream.Enumerate<Component1>())
+			{
+				uiw removed = _addedEntities.erase(entry.entityID);
+				ASSUME(removed == 1);
+			}
+		}
+
+		virtual void ProcessMessages(System::Environment &env, const MessageStreamComponentChanged &stream) override
+		{
+			ASSUME(stream.Type() == Component1::GetTypeId());
+			for (const auto &entry : stream.Enumerate<Component1>())
+			{
+				auto it = _addedEntities.find(entry.entityID);
+				ASSUME(it != _addedEntities.end());
+			}
+		}
+
+		std::set<EntityID> _addedEntities{};
+	};
+
 	static void GenerateScene(EntityIDGenerator &entityIdGenerator, SystemsManager &manager, EntitiesStream &stream)
 	{
 		stream.HintTotal(EntitiesToTest);
 
-		static constexpr array<TypeId, 7> types =
+		using tp = pair<TypeId, string_view>;
+		array<tp, 7> types =
 		{
-			Component0::GetTypeId(),
-			Component1::GetTypeId(),
-			Component2::GetTypeId(),
-			Tag0::GetTypeId(),
-			Tag1::GetTypeId(),
-			Tag2::GetTypeId(),
-			Tag3::GetTypeId()
+			tp{Component0::GetTypeId(), NameOfType<Component0, true>.data()},
+			tp{Component1::GetTypeId(), NameOfType<Component1, true>.data()},
+			tp{Component2::GetTypeId(), NameOfType<Component2, true>.data()},
+			tp{Tag0::GetTypeId(), NameOfType<Tag0, true>.data()},
+			tp{Tag1::GetTypeId(), NameOfType<Tag1, true>.data()},
+			tp{Tag2::GetTypeId(), NameOfType<Tag2, true>.data()},
+			tp{Tag3::GetTypeId(), NameOfType<Tag3, true>.data()}
 		};
+		for (auto &[type, name] : types)
+		{
+			uiw found = name.find_last_of(':');
+			if (found != string_view::npos)
+			{
+				name = name.substr(found + 1);
+			}
+		}
 
-		vector<TypeId> left, generatedTypes;
+		vector<tp> left, generatedTypes;
 
-		auto generate = [](TypeId type, EntitiesStream::EntityData &entity, Array<TypeId> generatedTypes)
+		auto generate = [](TypeId type, EntitiesStream::EntityData &entity, Array<tp> generatedTypes)
 		{
 			if (type == Component0::GetTypeId() || type == Component1::GetTypeId() || type == Component2::GetTypeId())
 			{
 				ComponentBase base;
-				for (TypeId generatedType : generatedTypes)
+				for (auto &[generatedType, nameOfType] : generatedTypes)
 				{
 					base.AddType(generatedType);
 				}
@@ -438,18 +508,26 @@ public:
 			left.assign(types.begin(), types.end());
 			uiw count = static_cast<uiw>(rand()) % types.size();
 			EntitiesStream::EntityData entity;
+			string typeNames;
 			for (; count; --count)
 			{
 				iw typeIndex = rand() % left.size();
-				TypeId type = left[typeIndex];
+				auto [type, nameOfType] = left[typeIndex];
 				left.erase(left.begin() + typeIndex);
-				generatedTypes.push_back(type);
+				generatedTypes.push_back({type, nameOfType});
+				if (!typeNames.empty())
+				{
+					typeNames += "_";
+				}
+				typeNames += nameOfType;
 			}
-			for (TypeId type : generatedTypes)
+			for (auto &[type, nameOfType] : generatedTypes)
 			{
 				generate(type, entity, ToArray(generatedTypes));
 			}
-			stream.AddEntity(entityIdGenerator.Generate(), move(entity));
+			EntityID id = entityIdGenerator.Generate();
+			id.DebugName(typeNames);
+			stream.AddEntity(id, move(entity));
 		}
 	}
 };

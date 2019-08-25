@@ -254,6 +254,7 @@ void ParseObjectIntoEntitiesStream(string_view object, const FilePath &pathToMap
 
 		if (key == "name")
 		{
+			entity.id.DebugName(value);
 		}
 		else if (key == "position")
 		{
@@ -331,15 +332,7 @@ void ParseSubobjectIntoEntity(string_view object, const FilePath &pathToMapAsset
 		}
 		auto identification = MeshPathAssetIdentification::New(fullPath, subMeshIndex, globalScale, isUseFileScale);
 		MeshAssetId id = assetIdMapper.Register<MeshAsset>(identification);
-		#ifdef DEBUG
-			uiw copyLen = std::min(CountOf(id._debugName) - 1, assetPath.size());
-			if (copyLen < assetPath.size())
-			{
-				assetPath = assetPath.substr(assetPath.size() - copyLen, copyLen);
-			}
-			MemOps::Copy(id._debugName, assetPath.data(), copyLen);
-			id._debugName[copyLen] = '\0';
-		#endif
+		id.DebugName(assetPath);
 		return id;
 	};
 

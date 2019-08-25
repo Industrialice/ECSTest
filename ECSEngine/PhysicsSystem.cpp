@@ -6,10 +6,11 @@ using namespace physx;
 
 class SimulationCallback : public PxSimulationEventCallback
 {
+	std::unordered_map<PxActor *, uiw> &_awakeActorsLookup;
 	vector<PxActor *> &_awakeActors;
 
 public:
-	SimulationCallback(vector<PxActor *> &awakeActors) : _awakeActors(awakeActors) {}
+	SimulationCallback(std::unordered_map<PxActor *, uiw> &awakeActorsLookup, vector<PxActor *> &awakeActors) : _awakeActorsLookup(awakeActorsLookup), _awakeActors(awakeActors) {}
 	virtual void onConstraintBreak(PxConstraintInfo *constraints, PxU32 count) override;
 	virtual void onWake(PxActor **actors, PxU32 count) override;
 	virtual void onSleep(PxActor **actors, PxU32 count) override;
@@ -49,14 +50,12 @@ struct PhysXSystem : PhysicsSystem
 		env.messageBuilder.ComponentChangedHint(Position::Description(), _awakeActors.size());
 		env.messageBuilder.ComponentChangedHint(Rotation::Description(), _awakeActors.size());
 
-		for (const PxActor *awake : _awakeActors)
+		for (PxActor *actor : _awakeActors)
 		{
-			ASSUME(awake->is<PxRigidActor>());
+			ASSUME(actor->is<PxRigidActor>());
 
-			const PxRigidActor *rigid = static_cast<const PxRigidActor *>(awake);
-
-			EntityID id;
-			MemOps::Copy(&id, reinterpret_cast<const EntityID *>(&rigid->userData), 1);
+			EntityID id = GetUserData(actor);
+			const PxRigidActor *rigid = static_cast<const PxRigidActor *>(actor);
 
 			const auto &phyPos = rigid->getGlobalPose();
 
@@ -160,6 +159,14 @@ struct PhysXSystem : PhysicsSystem
 	
 	virtual void ProcessMessages(System::Environment &env, const MessageStreamEntityRemoved &stream) override
 	{
+		for (auto id : stream)
+		{
+			auto it = _actors.find(id);
+			ASSUME(it != _actors.end());
+			RemoveUserData(it->second);
+			_physXScene->removeActor(*it->second);
+			_actors.erase(it);
+		}
 	}
 	
 	virtual void ControlInput(Environment &env, const ControlAction &action) override
@@ -255,13 +262,19 @@ struct PhysXSystem : PhysicsSystem
 			auto size = box->size * objectScale * 0.5f;
 			auto center = box->center;
 			auto *boxShape = attachShape(PxBoxGeometry(size.x, size.y, size.z), box->isTrigger);
-			boxShape->setLocalPose(PxTransform(center.x, center.y, center.z, PxQuat{box->rotation.x, box->rotation.y, box->rotation.z, box->rotation.w}));
+			if (!center.EqualsWithEpsilon({}) && !box->rotation.EqualsWithEpsilon({}))
+			{
+				boxShape->setLocalPose(PxTransform(center.x, center.y, center.z, PxQuat{box->rotation.x, box->rotation.y, box->rotation.z, box->rotation.w}));
+			}
 		}
 		for (auto *sphere : spheres)
 		{
 			auto size = sphere->radius * std::max(std::max(objectScale.x, objectScale.y), objectScale.z);
 			auto *sphereShape = attachShape(PxSphereGeometry(size), sphere->isTrigger);
-			sphereShape->setLocalPose(PxTransform(sphere->center.x, sphere->center.y, sphere->center.z, PxQuat{}));
+			if (!sphere->center.EqualsWithEpsilon({}))
+			{
+				sphereShape->setLocalPose(PxTransform(sphere->center.x, sphere->center.y, sphere->center.z, PxQuat{}));
+			}
 		}
 		for (auto *capsule : capsules)
 		{
@@ -413,8 +426,7 @@ struct PhysXSystem : PhysicsSystem
 			dynamicActor->setSolverIterationCounts(solverPositionIterations, solverVelocityIterations);
 		}
 
-		static_assert(sizeof(actor->userData) >= sizeof(EntityID));
-		MemOps::Copy(reinterpret_cast<EntityID *>(&actor->userData), &entityId, 1);
+		AddUserData(actor, entityId);
 		_physXScene->addActor(*actor);
 
 		_actors.insert({entityId, actor});
@@ -442,11 +454,7 @@ struct PhysXSystem : PhysicsSystem
 			return;
 		}
 
-		//Pvd = PxCreatePvd(*Foundation);
-		//PxPvdTransport* transport = PxDefaultPvdSocketTransportCreate(PVD_HOST, 5425, 10);
-		//Pvd->connect(*transport, PxPvdInstrumentationFlag::eALL);
-
-		_physics.reset(PxCreateBasePhysics(PX_PHYSICS_VERSION, *_foundation, PxTolerancesScale(), false, _pvd.get()));
+		_physics.reset(PxCreateBasePhysics(PX_PHYSICS_VERSION, *_foundation, PxTolerancesScale(), false, nullptr));
 		if (!_physics)
 		{
 			SENDLOG(Error, PhysXSystem, "Initialization -> PxCreatePhysics failed\n");
@@ -474,7 +482,7 @@ struct PhysXSystem : PhysicsSystem
 			return;
 		}
 
-		if (!PxInitExtensions(*_physics, _pvd.get()))
+		if (!PxInitExtensions(*_physics, nullptr))
 		{
 			SENDLOG(Error, PhysXSystem, "Initialization -> PxInitExtensions failed\n");
 			return;
@@ -551,18 +559,6 @@ struct PhysXSystem : PhysicsSystem
 		}
 
 		_physXMaterial.reset(_physics->createMaterial(0.6f, 0.6f, 0));
-
-		//PhysXPlaneData.actor = PxCreatePlane(*Physics, PxPlane(0, 1, 0, 1), *PhysXMaterial);
-		//PhysXScene->addActor(*PhysXPlaneData.actor);
-		//PhysXPlaneData.WriteUserData(PhysXActorData::UserDataSource::SourceId::Plane, 0);
-
-		//_defaultCubeShape.reset(_physics->createShape(PxBoxGeometry(0.5f, 0.5f, 0.5f), *_physXMaterial, false, PxShapeFlag::eSIMULATION_SHAPE));
-		//_defaultCubeShape->setContactOffset(contactOffset);
-		//_defaultCubeShape->setRestOffset(restOffset);
-
-		//_defaultSphereShape.reset(_physics->createShape(PxSphereGeometry(0.5f), *_physXMaterial, false, PxShapeFlag::eSIMULATION_SHAPE));
-		//_defaultSphereShape->setContactOffset(contactOffset);
-		//_defaultSphereShape->setRestOffset(restOffset);
 
 		SENDLOG(Info, PhysXSystem, "PhysX done initializing\n");
 	}
@@ -648,6 +644,40 @@ struct PhysXSystem : PhysicsSystem
 
 		return true;
 	}
+
+	static void AddUserData(PxActor *actor, const EntityID &id)
+	{
+		if constexpr (sizeof(actor->userData) >= sizeof(EntityID))
+		{
+			MemOps::Copy(reinterpret_cast<const EntityID *>(&actor->userData), &id, 1);
+		}
+		else
+		{
+			actor->userData = new EntityID(id);
+		}
+	}
+
+	static void RemoveUserData(PxActor *actor)
+	{
+		if constexpr (sizeof(actor->userData) < sizeof(EntityID))
+		{
+			delete static_cast<EntityID *>(actor->userData);
+		}
+	}
+
+	static EntityID GetUserData(const PxActor *actor)
+	{
+		if constexpr (sizeof(actor->userData) >= sizeof(EntityID))
+		{
+			EntityID id;
+			MemOps::Copy(&id, reinterpret_cast<const EntityID *>(&actor->userData), 1);
+			return id;
+		}
+		else
+		{
+			return *static_cast<const EntityID *>(actor->userData);
+		}
+	}
 	
 private:
 	ui32 _simulationMemorySize{};
@@ -665,21 +695,19 @@ private:
 
 	std::unordered_map<PhysicsPropertiesAssetId, PhysicsProperties> _cachedPhysicsProperties{};
 	vector<PxActor *> _awakeActors{};
+	std::unordered_map<PxActor *, uiw> _awakeActorsLookup{};
 
 	PxDefaultAllocator _defaultAllocator{};
 	PxDefaultErrorCallback _defaultErrorCallback{};
 	PXUniquePtr<PxFoundation> _foundation{};
-	PXUniquePtr<PxPvd> _pvd{};
 	PXUniquePtr<PxPhysics> _physics{};
 	PXUniquePtr<PxCooking> _cooking{};
 	PXUniquePtr<PxCudaContextManager> _cudaContexManager{};
 	PXUniquePtr<PxDefaultCpuDispatcher> _cpuDispatcher{};
 	PXUniquePtr<PxScene> _physXScene{};
 	PXUniquePtr<PxMaterial> _physXMaterial{};
-	//PXUniquePtr<PxShape> _defaultCubeShape{};
-	//PXUniquePtr<PxShape> _defaultSphereShape{};
 	unique_ptr<byte, AlignedMallocDeleter> _simulationMemory{};
-	SimulationCallback _simulationCallback{_awakeActors};
+	SimulationCallback _simulationCallback{_awakeActorsLookup, _awakeActors};
 };
 
 void SimulationCallback::onConstraintBreak(PxConstraintInfo *constraints, PxU32 count)
@@ -690,10 +718,8 @@ void SimulationCallback::onWake(PxActor **actors, PxU32 count)
 	for (PxU32 index = 0; index < count; ++index)
 	{
 		PxActor *actor = actors[index];
-		#ifdef DEBUG
-			auto it = std::find(_awakeActors.begin(), _awakeActors.end(), actor);
-			ASSUME(it == _awakeActors.end());
-		#endif
+		auto inserted = _awakeActorsLookup.insert({actor, _awakeActors.size()});
+		ASSUME(inserted.second);
 		_awakeActors.push_back(actor);
 	}
 }
@@ -703,9 +729,15 @@ void SimulationCallback::onSleep(PxActor **actors, PxU32 count)
 	for (PxU32 index = 0; index < count; ++index)
 	{
 		PxActor *actor = actors[index];
-		auto it = std::find(_awakeActors.begin(), _awakeActors.end(), actor);
-		ASSUME(it != _awakeActors.end());
-		*it = _awakeActors.back();
+		auto it = _awakeActorsLookup.find(actor);
+		ASSUME(it != _awakeActorsLookup.end());
+		uiw awakeIndex = it->second;
+		_awakeActorsLookup.erase(it);
+		if (awakeIndex != _awakeActors.size() - 1)
+		{
+			_awakeActors[awakeIndex] = _awakeActors.back();
+			_awakeActorsLookup[_awakeActors[awakeIndex]] = awakeIndex;
+		}
 		_awakeActors.pop_back();
 	}
 }

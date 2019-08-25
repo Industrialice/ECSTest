@@ -142,7 +142,7 @@ void CameraMovementSystem::ControlInput(Environment &env, const ControlAction &a
 		if (auto mouse = action.Get<ControlAction::MouseMove>(); mouse)
 		{
 			f32 mul = _isFreeMode ? 0.001f : -0.001f;
-			if (_isFreeMode || env.keyController->GetKeyInfo(KeyCode::MButton0).IsPressed())
+			if (_isFreeMode || env.keyController->GetKeyInfo(KeyCode::MousePrimary).IsPressed())
 			{
 				if (mouse->delta.x)
 				{

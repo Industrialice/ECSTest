@@ -9,6 +9,7 @@
 #include "AssetsLoaders.hpp"
 #include "SetInitialPositionsSystem.hpp"
 #include "ObjectShooterSystem.hpp"
+#include "AssetsIdentification.hpp"
 
 using namespace ECSEngine;
 
@@ -21,6 +22,7 @@ namespace
     std::atomic<bool> IsExiting{false};
 }
 
+static void AddObjectShooterSystem(SystemsManager &manager, AssetIdMapper &assetIdMapper, EntityIDGenerator &entityIdGenerator);
 static void LogRecipient(LogLevels::LogLevel logLevel, StringViewNullTerminated message, string_view senderName);
 static void FileLogRecipient(File &file, LogLevels::LogLevel logLevel, StringViewNullTerminated message, string_view senderName);
 static bool ReceiveInput(const ControlAction &action);
@@ -65,11 +67,6 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 	manager->Register(move(cameraMovementSystem), physicsPipeline);
 	manager->Register(move(setInitialPositionsSystem), physicsPipeline);
 
-	//auto objectShooterPipeline = manager->CreatePipeline(TimeMilliSecondsFP64(100.0), true);
-	//auto objectShooterSystem = make_unique<ObjectShooterSystem>();
-	//objectShooterSystem->SetKeyController(KeyController::New());
-	//manager->Register(move(objectShooterSystem), objectShooterPipeline);
-
 	PhysicsSystemSettings physicsSystemSettings{};
 	manager->Register(PhysicsSystem::New(physicsSystemSettings), physicsPipeline);
 
@@ -100,12 +97,14 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 	assetsLoaders.SetAssetIdMapper(assetIdMapper);
 	assetsLoaders.RegisterLoaders(assetsManager);
 
-	std::wstring mapName = L"pv";
+	std::wstring mapName = L"et";
 
     vector<WorkerThread> workers;
     EntityIDGenerator idGenerator;
 	auto stream = SceneFromMap::Create(L"Assets\\Scenes\\" + mapName + L".imf", L"Assets\\Scenes\\" + mapName + L"_assets\\", idGenerator, *assetIdMapper);
     //auto stream = Scene::Create(idGenerator, *assetIdMapper, assetsManager);
+
+	AddObjectShooterSystem(*manager, *assetIdMapper, idGenerator);
 
     manager->Start(move(assetsManager), move(idGenerator), move(workers), move(stream));
 
@@ -156,6 +155,32 @@ static const char *LogLevelToTag(LogLevels::LogLevel logLevel)
 
     UNREACHABLE;
     return nullptr;
+}
+
+void AddObjectShooterSystem(SystemsManager &manager, AssetIdMapper &assetIdMapper, EntityIDGenerator &entityIdGenerator)
+{
+	EntityObject shootEntity;
+	shootEntity.id = entityIdGenerator.Generate();
+
+	auto meshIdentification = MeshPathAssetIdentification::New(TSTR("Assets/Meshes/sphere.procedural"), 0, 1, true);
+
+	MeshRenderer mesh;
+	mesh.mesh = assetIdMapper.Register<MeshAsset>(meshIdentification);
+	shootEntity.components.AddComponent(mesh);
+
+	MeshCollider collider;
+	collider.mesh = mesh.mesh;
+	shootEntity.components.AddComponent(collider);
+
+	auto physicsIdentification = PhysicsPropertiesAssetIdentification::New({});
+	Physics physics;
+	physics.physics = assetIdMapper.Register<PhysicsPropertiesAsset>(physicsIdentification);
+	shootEntity.components.AddComponent(physics);
+
+	auto objectShooterPipeline = manager.CreatePipeline(TimeMilliSecondsFP64(100.0), true);
+	auto objectShooterSystem = make_unique<ObjectShooterSystem>(shootEntity);
+	objectShooterSystem->SetKeyController(KeyController::New());
+	manager.Register(move(objectShooterSystem), objectShooterPipeline);
 }
 
 void LogRecipient(LogLevels::LogLevel logLevel, StringViewNullTerminated message, string_view senderName)

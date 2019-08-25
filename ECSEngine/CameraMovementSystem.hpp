@@ -21,6 +21,6 @@ namespace ECSEngine
 		CameraTransform _cameraTransform{};
 		EntityID _controlledCameraId{};
 		bool _isUpdated = false;
-		bool _isFreeMode = false;
+		bool _isFreeMode = true;
 	};
 }

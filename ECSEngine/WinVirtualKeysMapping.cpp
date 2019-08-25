@@ -8,10 +8,10 @@ namespace ECSEngine
         static const array<KeyCode, 256> mapping =
         {
             /*    0 none  */  KeyCode::Undefined,
-            /*    1 VK_LBUTTON  */  KeyCode::MButton0,
-            /*    2 VK_RBUTTON  */  KeyCode::MButton1,
+            /*    1 VK_LBUTTON  */  KeyCode::MousePrimary,
+            /*    2 VK_RBUTTON  */  KeyCode::MouseSecondary,
             /*    3 none  */  KeyCode::Undefined,
-            /*    4 VK_MBUTTON  */  KeyCode::MButton2,
+            /*    4 VK_MBUTTON  */  KeyCode::MouseMiddle,
             /*    5 none  */  KeyCode::Undefined,
             /*    6 none  */  KeyCode::Undefined,
             /*    7 none  */  KeyCode::Undefined,

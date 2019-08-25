@@ -36,6 +36,7 @@ namespace ECSEngine
 		{
 			for (const auto &entry : stream.Enumerate<Position>())
 			{
+				env.logger.Info("position %f %f %f\n", entry.component.position.x, entry.component.position.y, entry.component.position.z);
 				_cameraTransform.Position(entry.component.position);
 			}
 			for (const auto &entry : stream.Enumerate<Rotation>())
@@ -56,21 +57,22 @@ namespace ECSEngine
 		{
 			if (auto key = action.Get<ControlAction::Key>(); key)
 			{
-				if (key->key == KeyCode::MButton2 && key->keyState != ControlAction::Key::KeyState::Released)
+				if (key->key == KeyCode::MouseSecondary && key->keyState != ControlAction::Key::KeyState::Released)
 				{
 					auto id = env.entityIdGenerator.Generate();
+					id.DebugName("procedural sphere");
 					auto &cab = env.messageBuilder.AddEntity(id);
 					for (const auto &r : _referenceEntity.components.GetComponents())
 					{
-						if (r.type == Position::GetTypeId())
+						if (r.type == Position::GetTypeId() || r.type == Rotation::GetTypeId() || r.type == LinearVelocity::GetTypeId())
 						{
 							continue;
 						}
 						cab.AddComponent(r);
 					}
-					Position pos;
-					pos.position = _cameraTransform.Position();
-					cab.AddComponent(pos);
+					cab.AddComponent(Position{.position = _cameraTransform.Position()});
+					cab.AddComponent(LinearVelocity{.velocity = _cameraTransform.ForwardAxis() * 50});
+					cab.AddComponent(Rotation());
 				}
 			}
 		}

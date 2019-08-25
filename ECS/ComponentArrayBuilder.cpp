@@ -14,6 +14,7 @@ ComponentArrayBuilder::ComponentArrayBuilder(const ComponentArrayBuilder &source
 			continue;
 		}
 		_data[dataIndex].reset(Allocator::MallocAlignedRuntime::Allocate(_components[index].sizeOf, _components[index].alignmentOf));
+		_components[index].data = _data[dataIndex].get();
 		MemOps::Copy(_data[dataIndex].get(), source._data[dataIndex].get(), _components[index].sizeOf);
 		++dataIndex;
 	}

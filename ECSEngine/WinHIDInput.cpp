@@ -163,11 +163,11 @@ void HIDInput::Dispatch(ControlsQueue &controlsQueue, HWND hwnd, WPARAM wParam, 
 				}
 			};
 
-			checkKey(RI_MOUSE_BUTTON_1_UP, RI_MOUSE_BUTTON_1_DOWN, KeyCode::MButton0);
-			checkKey(RI_MOUSE_BUTTON_2_UP, RI_MOUSE_BUTTON_2_DOWN, KeyCode::MButton1);
-			checkKey(RI_MOUSE_BUTTON_3_UP, RI_MOUSE_BUTTON_3_DOWN, KeyCode::MButton2);
-			checkKey(RI_MOUSE_BUTTON_4_UP, RI_MOUSE_BUTTON_4_DOWN, KeyCode::MButton3);
-			checkKey(RI_MOUSE_BUTTON_5_UP, RI_MOUSE_BUTTON_5_DOWN, KeyCode::MButton4);
+			checkKey(RI_MOUSE_BUTTON_1_UP, RI_MOUSE_BUTTON_1_DOWN, KeyCode::MousePrimary);
+			checkKey(RI_MOUSE_BUTTON_2_UP, RI_MOUSE_BUTTON_2_DOWN, KeyCode::MouseSecondary);
+			checkKey(RI_MOUSE_BUTTON_3_UP, RI_MOUSE_BUTTON_3_DOWN, KeyCode::MouseMiddle);
+			checkKey(RI_MOUSE_BUTTON_4_UP, RI_MOUSE_BUTTON_4_DOWN, KeyCode::MouseButton3);
+			checkKey(RI_MOUSE_BUTTON_5_UP, RI_MOUSE_BUTTON_5_DOWN, KeyCode::MouseButton4);
 
 			if (mouse.usButtonFlags & RI_MOUSE_WHEEL)
 			{

@@ -11,10 +11,6 @@ namespace ECSTest
 		{
 			return TargetAssetType(_id);
 		}
-
-	#ifdef DEBUG
-		char _debugName[32]{};
-	#endif
 	};
 }
 

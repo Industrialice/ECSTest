@@ -546,7 +546,8 @@ auto SystemsManagerST::AddNewArchetypeGroup(const ArchetypeFull &archetype, Arra
     {
         if (component.isTag)
         {
-            tagTypes.push_back(component.type);
+			ASSUME(std::find(tagTypes.begin(), tagTypes.end(), component.type) == tagTypes.end());
+			tagTypes.push_back(component.type);
         }
     }
     group.tagsCount = static_cast<ui16>(tagTypes.size());
@@ -606,7 +607,10 @@ void SystemsManagerST::AddEntityToArchetypeGroup(const ArchetypeFull &archetype,
 	{
 		if (group.components[index].isUnique == false)
 		{
-			MemOps::Set(group.components[index].ids.get() + group.entitiesCount * group.components[index].stride, ComponentID::InvalidID() & 0xFF, sizeof(ComponentID) * group.components[index].stride);
+			for (uiw componentIndex = 0; componentIndex < group.components[index].stride; ++componentIndex)
+			{
+				group.components[index].ids[componentIndex] = ComponentID();
+			}
 		}
 	}
 
@@ -681,6 +685,7 @@ void SystemsManagerST::StartScheduler(vector<unique_ptr<IEntitiesStream>> &strea
 	{
 		while (const auto &entity = stream->Next())
 		{
+			ASSUME(entity->entityId);
 			StreamedToSerialized(entity->components, serialized);
 			AssignComponentIDs(ToArray(serialized), _componentIdGenerator);
 			ArchetypeFull entityArchetype = ComputeArchetype(ToArray(serialized));
