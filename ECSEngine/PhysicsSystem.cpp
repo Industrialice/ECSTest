@@ -649,7 +649,7 @@ struct PhysXSystem : PhysicsSystem
 	{
 		if constexpr (sizeof(actor->userData) >= sizeof(EntityID))
 		{
-			MemOps::Copy(reinterpret_cast<const EntityID *>(&actor->userData), &id, 1);
+			MemOps::Copy(reinterpret_cast<EntityID *>(&actor->userData), &id, 1);
 		}
 		else
 		{

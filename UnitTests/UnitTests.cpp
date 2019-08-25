@@ -627,7 +627,7 @@ public:
 		checked = 0;
 		for (const auto &[type, streamSource] : builder.ComponentChangedStreams()._data)
 		{
-			MessageStreamComponentChanged changed(streamSource.second, streamSource.first, "MessageBuilderTests");
+			MessageStreamComponentChanged changed({}, streamSource.second, streamSource.first, "MessageBuilderTests");
 
 			for (auto component : changed.Enumerate<ComponentFirstName>())
 			{

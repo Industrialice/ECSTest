@@ -879,14 +879,14 @@ void SystemsManagerST::ExecutePipeline(PipelineData &pipeline, TimeDifference ti
             PassControlsToOtherSystemsAndClear(managed.controlsToSendQueue, managed.system.get());
             PatchComponentAddedMessages(env.messageBuilder);
             PatchEntityRemovedArchetypes(env.messageBuilder);
-            UpdateECSFromMessages(env.messageBuilder);
+            UpdateECSFromMessagesAndCreateArchetypedMessageBuilders(env.messageBuilder);
             PassMessagesToIndirectSystemsAndClear(env.messageBuilder, nullptr);
 
             managed.system->OnInitialized(env);
             PassControlsToOtherSystemsAndClear(managed.controlsToSendQueue, managed.system.get());
             PatchComponentAddedMessages(env.messageBuilder);
             PatchEntityRemovedArchetypes(env.messageBuilder);
-            UpdateECSFromMessages(env.messageBuilder);
+            UpdateECSFromMessagesAndCreateArchetypedMessageBuilders(env.messageBuilder);
             PassMessagesToIndirectSystemsAndClear(env.messageBuilder, nullptr);
         }
 
@@ -934,7 +934,7 @@ void SystemsManagerST::ExecutePipeline(PipelineData &pipeline, TimeDifference ti
             PassControlsToOtherSystemsAndClear(managed.controlsToSendQueue, managed.system.get());
             PatchComponentAddedMessages(env.messageBuilder);
             PatchEntityRemovedArchetypes(env.messageBuilder);
-            UpdateECSFromMessages(env.messageBuilder);
+            UpdateECSFromMessagesAndCreateArchetypedMessageBuilders(env.messageBuilder);
             PassMessagesToIndirectSystemsAndClear(env.messageBuilder, managed.system.get());
 
             auto before = TimeMoment::Now();
@@ -945,7 +945,7 @@ void SystemsManagerST::ExecutePipeline(PipelineData &pipeline, TimeDifference ti
             PassControlsToOtherSystemsAndClear(managed.controlsToSendQueue, managed.system.get());
             PatchComponentAddedMessages(env.messageBuilder);
             PatchEntityRemovedArchetypes(env.messageBuilder);
-            UpdateECSFromMessages(env.messageBuilder);
+            UpdateECSFromMessagesAndCreateArchetypedMessageBuilders(env.messageBuilder);
             PassMessagesToIndirectSystemsAndClear(env.messageBuilder, managed.system.get());
         }
 
@@ -1008,7 +1008,7 @@ void SystemsManagerST::ExecuteIndirectSystem(BaseIndirectSystem &system, Managed
     PassControlsToOtherSystemsAndClear(controlsToSendQueue, &system);
     PatchComponentAddedMessages(env.messageBuilder);
     PatchEntityRemovedArchetypes(env.messageBuilder);
-    UpdateECSFromMessages(env.messageBuilder);
+    UpdateECSFromMessagesAndCreateArchetypedMessageBuilders(env.messageBuilder);
     PassMessagesToIndirectSystemsAndClear(env.messageBuilder, &system);
 }
 
@@ -1199,7 +1199,7 @@ void SystemsManagerST::ExecuteDirectSystem(BaseDirectSystem &system, ControlsQue
     PassControlsToOtherSystemsAndClear(controlsToSendQueue, &system);
     PatchComponentAddedMessages(env.messageBuilder);
     PatchEntityRemovedArchetypes(env.messageBuilder);
-    UpdateECSFromMessages(env.messageBuilder);
+    UpdateECSFromMessagesAndCreateArchetypedMessageBuilders(env.messageBuilder);
     PassMessagesToIndirectSystemsAndClear(env.messageBuilder, nullptr);
 }
 
@@ -1296,7 +1296,7 @@ void SystemsManagerST::PatchEntityRemovedArchetypes(MessageBuilder &messageBuild
     }
 }
 
-void SystemsManagerST::UpdateECSFromMessages(MessageBuilder &messageBuilder)
+void SystemsManagerST::UpdateECSFromMessagesAndCreateArchetypedMessageBuilders(MessageBuilder &messageBuilder)
 {
     auto removeEntity = [this](ArchetypeGroup &group, ui32 index, optional<decltype(_entitiesLocations)::iterator> entityLocation)
     {
@@ -1598,7 +1598,7 @@ void SystemsManagerST::PassMessagesToIndirectSystemsAndClear(MessageBuilder &mes
 
     for (const auto &[componentType, streamPointer] : messageBuilder.ComponentAddedStreams()._data)
     {
-        auto stream = MessageStreamComponentAdded(componentType, streamPointer, messageBuilder.SourceName());
+		auto stream = MessageStreamComponentAdded(componentType, {}, streamPointer, messageBuilder.SourceName());
 
         for (auto &pipeline : _pipelines)
         {
@@ -1626,7 +1626,7 @@ void SystemsManagerST::PassMessagesToIndirectSystemsAndClear(MessageBuilder &mes
 
     for (const auto &[componentType, streamPointer] : messageBuilder.ComponentChangedStreams()._data)
     {
-        auto stream = MessageStreamComponentChanged(streamPointer.second, streamPointer.first, messageBuilder.SourceName());
+		auto stream = MessageStreamComponentChanged({}, streamPointer.second, streamPointer.first, messageBuilder.SourceName());
 
         for (auto &pipeline : _pipelines)
         {
@@ -1654,7 +1654,7 @@ void SystemsManagerST::PassMessagesToIndirectSystemsAndClear(MessageBuilder &mes
 
     for (const auto &[componentType, streamPointer] : messageBuilder.ComponentRemovedStreams()._data)
     {
-        auto stream = MessageStreamComponentRemoved(componentType, streamPointer, messageBuilder.SourceName());
+		auto stream = MessageStreamComponentRemoved(componentType, {}, streamPointer, messageBuilder.SourceName());
 
         for (auto &pipeline : _pipelines)
         {

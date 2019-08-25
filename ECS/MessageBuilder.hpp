@@ -114,13 +114,18 @@ namespace ECSTest
 
     private:
         shared_ptr<const vector<EntityWithComponents>> _source{};
-        Archetype _archetype;
+		Archetype _archetype{};
         string_view _sourceName{};
 
         MessageStreamEntityAdded(Archetype archetype, const shared_ptr<const vector<EntityWithComponents>> &source, string_view sourceName) : _archetype(archetype), _source(source), _sourceName(sourceName)
         {
             ASSUME(_source->size());
         }
+
+		[[nodiscard]] string_view SourceName() const
+		{
+			return _sourceName;
+		}
 
     public:
         [[nodiscard]] const EntityWithComponents *begin() const
@@ -136,11 +141,6 @@ namespace ECSTest
         [[nodiscard]] Archetype Archetype() const
         {
             return _archetype;
-        }
-
-        [[nodiscard]] string_view SourceName() const
-        {
-            return _sourceName;
         }
     };
 
@@ -225,9 +225,10 @@ namespace ECSTest
     private:
         shared_ptr<const vector<EntityWithComponents>> _source{};
         TypeId _type{};
-        string_view _sourceName{};
+		Archetype _archetype{};
+		string_view _sourceName{};
 
-        MessageStreamComponentAdded(TypeId type, const shared_ptr<const vector<EntityWithComponents>> &source, string_view sourceName) : _type(type), _source(source), _sourceName(sourceName)
+        MessageStreamComponentAdded(TypeId type, Archetype archetype, const shared_ptr<const vector<EntityWithComponents>> &source, string_view sourceName) : _type(type), _archetype(archetype), _source(source), _sourceName(sourceName)
         {
             ASSUME(_source->size());
 			ASSUME(_type != TypeId{});
@@ -253,6 +254,11 @@ namespace ECSTest
         {
             return _type;
         }
+
+		[[nodiscard]] Archetype Archetype() const
+		{
+			return _archetype;
+		}
     };
 
     class MessageStreamComponentChanged
@@ -281,10 +287,11 @@ namespace ECSTest
         };
 
         shared_ptr<const InfoWithData> _source{};
-        string_view _sourceName{};
+		Archetype _archetype{};
+		string_view _sourceName{};
 		ComponentDescription _componentDesc{};
 
-        MessageStreamComponentChanged(const shared_ptr<const InfoWithData> &source, ComponentDescription componentDesc, string_view sourceName) : _source(source), _componentDesc(componentDesc), _sourceName(sourceName)
+        MessageStreamComponentChanged(Archetype archetype, const shared_ptr<const InfoWithData> &source, ComponentDescription componentDesc, string_view sourceName) : _archetype(archetype), _source(source), _componentDesc(componentDesc), _sourceName(sourceName)
         {
             ASSUME(_source->entityIds.size());
 			ASSUME(componentDesc.type != TypeId{});
@@ -398,6 +405,11 @@ namespace ECSTest
 			return _componentDesc.type;
 		}
 
+		[[nodiscard]] Archetype Archetype() const
+		{
+			return _archetype;
+		}
+
         [[nodiscard]] const ComponentDescription &ComponentDesc() const
         {
             return _componentDesc;
@@ -425,9 +437,10 @@ namespace ECSTest
     private:
         shared_ptr<const ComponentsInfo> _source{};
         TypeId _type{};
-        string_view _sourceName{};
+		Archetype _archetype{};
+		string_view _sourceName{};
 
-        MessageStreamComponentRemoved(TypeId type, const shared_ptr<const ComponentsInfo> &source, string_view sourceName) : _type(type), _source(source), _sourceName(sourceName)
+        MessageStreamComponentRemoved(TypeId type, Archetype archetype, const shared_ptr<const ComponentsInfo> &source, string_view sourceName) : _type(type), _archetype(archetype), _source(source), _sourceName(sourceName)
         {
             ASSUME(_source->entityIds.size());
 			ASSUME(_type != TypeId{});
@@ -529,6 +542,11 @@ namespace ECSTest
         {
             return _type;
         }
+
+		[[nodiscard]] Archetype Archetype() const
+		{
+			return _archetype;
+		}
     };
 
 	class MessageStreamEntityRemoved

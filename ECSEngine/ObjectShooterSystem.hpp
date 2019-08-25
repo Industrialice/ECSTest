@@ -21,6 +21,7 @@ namespace ECSEngine
 			for (const auto &entry : stream)
 			{
 				_cameraTransform = {entry.GetComponent<Position>().position, entry.GetComponent<Rotation>().rotation};
+				_controllingCamera = entry.entityID;
 			}
 		}
 		
@@ -29,6 +30,7 @@ namespace ECSEngine
 			for (const auto &entry : stream)
 			{
 				_cameraTransform = {entry.GetComponent<Position>().position, entry.GetComponent<Rotation>().rotation};
+				_controllingCamera = entry.entityID;
 			}
 		}
 		
@@ -36,12 +38,17 @@ namespace ECSEngine
 		{
 			for (const auto &entry : stream.Enumerate<Position>())
 			{
-				env.logger.Info("position %f %f %f\n", entry.component.position.x, entry.component.position.y, entry.component.position.z);
-				_cameraTransform.Position(entry.component.position);
+				if (entry.entityID == _controllingCamera)
+				{
+					_cameraTransform.Position(entry.component.position);
+				}
 			}
 			for (const auto &entry : stream.Enumerate<Rotation>())
 			{
-				_cameraTransform.Rotation(entry.component.rotation);
+				if (entry.entityID == _controllingCamera)
+				{
+					_cameraTransform.Rotation(entry.component.rotation);
+				}
 			}
 		}
 		
@@ -70,14 +77,15 @@ namespace ECSEngine
 						}
 						cab.AddComponent(r);
 					}
-					cab.AddComponent(Position{.position = _cameraTransform.Position()});
-					cab.AddComponent(LinearVelocity{.velocity = _cameraTransform.ForwardAxis() * 50});
+					cab.AddComponent(Position{.position = _cameraTransform.Position() + _cameraTransform.ForwardAxis() * 2 - _cameraTransform.UpAxis()});
+					cab.AddComponent(LinearVelocity{.velocity = _cameraTransform.ForwardAxis() * 25});
 					cab.AddComponent(Rotation());
 				}
 			}
 		}
 
 	private:
+		EntityID _controllingCamera{};
 		CameraTransform _cameraTransform{};
 		EntityObject _referenceEntity{};
 	};

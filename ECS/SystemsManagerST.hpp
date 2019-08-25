@@ -168,7 +168,7 @@ namespace ECSTest
         void PassControlsToOtherSystemsAndClear(ControlsQueue &controlsQueue, System *systemToIgnore);
         void PatchComponentAddedMessages(MessageBuilder &messageBuilder);
         void PatchEntityRemovedArchetypes(MessageBuilder &messageBuilder);
-        void UpdateECSFromMessages(MessageBuilder &messageBuilder);
+        void UpdateECSFromMessagesAndCreateArchetypedMessageBuilders(MessageBuilder &messageBuilder);
         void PassMessagesToIndirectSystemsAndClear(MessageBuilder &messageBuilder, System *systemToIgnore);
         static bool SendControlActionToQueue(ControlsQueue &controlsQueue, const ControlAction &action);
 	};
