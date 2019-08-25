@@ -141,6 +141,11 @@ void CameraMovementSystem::ControlInput(Environment &env, const ControlAction &a
 	{
 		if (auto mouse = action.Get<ControlAction::MouseMove>(); mouse)
 		{
+			#ifdef PLATFORM_WINDOWS
+				ShowCursor(FALSE);
+				SetCursorPos(500, 500);
+			#endif
+
 			f32 mul = _isFreeMode ? 0.001f : -0.001f;
 			if (_isFreeMode || env.keyController->GetKeyInfo(KeyCode::MousePrimary).IsPressed())
 			{

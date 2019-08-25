@@ -116,24 +116,38 @@ Streaming in new entities:
 
 
 Message types:
-ComponentChanged: header contains ComponentType and an array of 
-  {EntityID, ComponentID, ComponentData}.
-ComponentRemoved: header contains ComponentType and an array of 
-  {EntityID, ComponentID}.
-ComponentAdded: header contains ComponentType and an array of 
-  {EntityID, ComponentID, 
-  array of {ComponentType, ComponentID, ComponentData}}.
-EntityRemoved: header contains an array of {EntityID}.
-EntityAdded: header contains Archetype and an array of
+RegisterEntity: header contains Archetype and an array of
   {EntityID, array of {ComponentType, ComponentID, ComponentData}}.
+UnregisterEntity: header contains Archetype and an array of {EntityID}.
+ComponentChanged: header contains Archetype, ComponentType and an array of 
+  {EntityID, ComponentID, ComponentData}.
+ComponentAdded: header contains Archetype, ComponentType and an array of 
+  {EntityID, ComponentID, ComponentData}.
+ComponentRemoved: header contains Archetype, ComponentType and an array of
+  {EntityID, ComponentID}.
   
-It's crucial to include all components of an entity when calling
-  ComponentAdded because to a system the entity may appear for the
-  first time, so it doesn't know the states of the other components.
+  
+Message translation rules:
+AddEntity: all archetypes are already known, fetch what systems request them
+  and issue the messages.
+RemoveEntity: only ids are known, first need to fetch archetypes from ECS,
+  putting the messages in streams based on archetype. Then issue streams only
+  to systems that requested that archetype.
+ComponentChanged: same as for RemoveEntity.
+AddComponent: archetype changing event. Need to request current entity archetypes,
+  then compute new archetypes. For systems that request both archetypes generated
+  ComponentAdded messages, for systems that request only the new archetype generate
+  RegisterEntity, and for systems that request only the old archetype generate
+  UnregisterEntity.
+RemoveComponent: same as AddComponent.
+
+When receiving messages from direct systems, looking for archetype is still necessary
+  because the system might generage messages for its cached entity instead of only
+  currently processed ones.
   
   
 Messages execution order:
-  EntityAdded, ComponentAdded, ComponentChanged, ComponentRemoved, EntityRemoved.
+  RegisterEntity, ComponentAdded, ComponentChanged, ComponentRemoved, UnregisterEntity.
   This ordering might be problematic, if you did ComponentAdded, ComponentRemoved,
   ComponentAdded for the same component and the component type is unique, you'll
   have an error.
@@ -161,9 +175,9 @@ Message sending rules:
 	instead. Only systems that requested that type of component will receive this message.
 	Reasoning: 
   ComponentAdded: same as for ComponentRemoved.
-  EntityRemoved: any system can call it. The order will be undefined, so keep that in mind.
+  UnregisterEntity: any system can call it. The order will be undefined, so keep that in mind.
     Only systems that track that Archetype will receive this message.
-  EntityAdded: same as EntityRemoved. And try to specify as many components as possible
+  RegisterEntity: same as UnregisterEntity. And try to specify as many components as possible
     in that message. Adding components later through ComponentAdded will be much less
 	efficient. Only systems that track that Archetype will receive this message.
   

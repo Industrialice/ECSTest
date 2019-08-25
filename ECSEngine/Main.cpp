@@ -97,7 +97,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
 	assetsLoaders.SetAssetIdMapper(assetIdMapper);
 	assetsLoaders.RegisterLoaders(assetsManager);
 
-	std::wstring mapName = L"pv";
+	std::wstring mapName = L"et";
 
     vector<WorkerThread> workers;
     EntityIDGenerator idGenerator;
@@ -105,7 +105,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int)
     //auto stream = Scene::Create(idGenerator, *assetIdMapper, assetsManager);
 
 	AddObjectShooterSystem(*manager, *assetIdMapper, idGenerator);
-
+	
     manager->Start(move(assetsManager), move(idGenerator), move(workers), move(stream));
 
     for (;;)

@@ -17,6 +17,8 @@ Implement component groups for RequiredComponentAny (is it implemented, but not 
 Implement unified CMake settings for StdLib2018 and ECS projects
 Consider adding ability to ignore messages (like ComponentChanged)
 Move GetPlatformMapping into StdLib2018
+Fix center of mass
+Refactor messaging system
 
 Support arbitrary sized components? (can be used, for example, as raw data holders)
 
