@@ -572,7 +572,7 @@ public:
 		ui32 checked = 0;
 		for (const auto &streamSource : builder.EntityAddedStreams()._data)
 		{
-			MessageStreamEntityAdded addedStream(streamSource.first, streamSource.second, "MessageBuilderTests");
+			MessageStreamRegisterEntity addedStream(streamSource.first, streamSource.second, "MessageBuilderTests");
 
 			for (const auto &entity : addedStream)
 			{
@@ -616,7 +616,7 @@ public:
 		checked = 0;
 		for (const auto &streamSource : builder.EntityRemovedStreams()._data)
 		{
-			MessageStreamEntityRemoved removedStream(streamSource.first, streamSource.second, "MessageBuilderTests");
+			MessageStreamUnregisterEntity removedStream(streamSource.first, streamSource.second, "MessageBuilderTests");
 
 			for (const auto &id : removedStream)
 			{

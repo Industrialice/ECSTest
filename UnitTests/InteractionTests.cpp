@@ -295,7 +295,7 @@ public:
             env.messageBuilder.RemoveEntity(_infoID);
         }
 
-        virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override
+        virtual void ProcessMessages(Environment &env, const MessageStreamRegisterEntity &stream) override
         {
             for (auto &entity : stream)
             {
@@ -388,7 +388,7 @@ public:
             }
         }
 
-        virtual void ProcessMessages(Environment &env, const MessageStreamEntityRemoved &stream) override
+        virtual void ProcessMessages(Environment &env, const MessageStreamUnregisterEntity &stream) override
         {
             for (auto &entity : stream)
             {
@@ -474,7 +474,7 @@ public:
         virtual void OnDestroy(Environment &env) override
         {}
 
-        virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override
+        virtual void ProcessMessages(Environment &env, const MessageStreamRegisterEntity &stream) override
         {
             for (auto &entry : stream)
             {

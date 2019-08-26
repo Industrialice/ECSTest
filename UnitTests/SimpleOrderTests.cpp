@@ -63,7 +63,7 @@ public:
 		ProducerSystem(SimpleOrderValues &args) : _args(args) {}
 
 		void Accept(Array<TestComponent> &) {}
-		virtual void ProcessMessages(System::Environment &env, const MessageStreamEntityAdded &stream) override
+		virtual void ProcessMessages(System::Environment &env, const MessageStreamRegisterEntity &stream) override
 		{
 			SOFTBREAK;
 		}
@@ -79,7 +79,7 @@ public:
 		{
 			SOFTBREAK;
 		}
-		virtual void ProcessMessages(System::Environment &env, const MessageStreamEntityRemoved &stream) override
+		virtual void ProcessMessages(System::Environment &env, const MessageStreamUnregisterEntity &stream) override
 		{
 			SOFTBREAK;
 		}
@@ -107,7 +107,7 @@ public:
 
 		void Accept(const Array<TestComponent> &) {}
 
-		virtual void ProcessMessages(System::Environment &env, const MessageStreamEntityAdded &stream) override
+		virtual void ProcessMessages(System::Environment &env, const MessageStreamRegisterEntity &stream) override
 		{
 			for (auto &entry : stream)
 			{
@@ -135,7 +135,7 @@ public:
 		{
 			SOFTBREAK;
 		}
-		virtual void ProcessMessages(System::Environment &env, const MessageStreamEntityRemoved &stream) override
+		virtual void ProcessMessages(System::Environment &env, const MessageStreamUnregisterEntity &stream) override
 		{
 			SOFTBREAK;
 		}

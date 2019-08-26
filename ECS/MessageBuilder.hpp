@@ -6,7 +6,7 @@
 
 namespace ECSTest
 {
-    class MessageStreamEntityAdded
+    class MessageStreamRegisterEntity
     {
         friend class SystemsManagerMT;
         friend class SystemsManagerST;
@@ -117,7 +117,7 @@ namespace ECSTest
 		Archetype _archetype{};
         string_view _sourceName{};
 
-        MessageStreamEntityAdded(Archetype archetype, const shared_ptr<const vector<EntityWithComponents>> &source, string_view sourceName) : _archetype(archetype), _source(source), _sourceName(sourceName)
+		MessageStreamRegisterEntity(Archetype archetype, const shared_ptr<const vector<EntityWithComponents>> &source, string_view sourceName) : _archetype(archetype), _source(source), _sourceName(sourceName)
         {
             ASSUME(_source->size());
         }
@@ -549,7 +549,7 @@ namespace ECSTest
 		}
     };
 
-	class MessageStreamEntityRemoved
+	class MessageStreamUnregisterEntity
 	{
         friend class SystemsManagerMT;
         friend class SystemsManagerST;
@@ -559,7 +559,7 @@ namespace ECSTest
         Archetype _archetype;
         string_view _sourceName{};
 
-		MessageStreamEntityRemoved(Archetype archetype, const shared_ptr<const vector<EntityID>> &source, string_view sourceName) : _archetype(archetype), _source(source), _sourceName(sourceName)
+		MessageStreamUnregisterEntity(Archetype archetype, const shared_ptr<const vector<EntityID>> &source, string_view sourceName) : _archetype(archetype), _source(source), _sourceName(sourceName)
 		{
             ASSUME(source->size());
         }
@@ -593,7 +593,7 @@ namespace ECSTest
         friend class MessageBuilder;
         friend UnitTests;
 
-        vector<pair<Archetype, shared_ptr<vector<MessageStreamEntityAdded::EntityWithComponents>>>> _data{};
+        vector<pair<Archetype, shared_ptr<vector<MessageStreamRegisterEntity::EntityWithComponents>>>> _data{};
     };
 
     class MessageStreamsBuilderComponentAdded

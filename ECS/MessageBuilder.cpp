@@ -48,13 +48,13 @@ void MessageBuilder::Flush()
 		return;
 	}
 	
-	MessageStreamEntityAdded::EntityWithComponents entry;
+	MessageStreamRegisterEntity::EntityWithComponents entry;
     Archetype archetype = Archetype::Create<SerializedComponent, ComponentDescription, &SerializedComponent::type>(ToArray(_cab._components));
 	entry.entityID = _currentEntityId;
 	entry.components = move(_cab._components);
 	entry.componentsData = move(_cab._data);
 
-    const auto &target = [this](const Archetype &archetype) -> const shared_ptr<vector<MessageStreamEntityAdded::EntityWithComponents>> &
+    const auto &target = [this](const Archetype &archetype) -> const shared_ptr<vector<MessageStreamRegisterEntity::EntityWithComponents>> &
     {
         for (const auto &[key, value] : _entityAddedStreams._data)
         {
@@ -63,7 +63,7 @@ void MessageBuilder::Flush()
                 return value;
             }
         }
-        _entityAddedStreams._data.emplace_back(archetype, make_shared<vector<MessageStreamEntityAdded::EntityWithComponents>>());
+        _entityAddedStreams._data.emplace_back(archetype, make_shared<vector<MessageStreamRegisterEntity::EntityWithComponents>>());
         return _entityAddedStreams._data.back().second;
     } (archetype);
 

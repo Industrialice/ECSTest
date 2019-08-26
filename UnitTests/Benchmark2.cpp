@@ -184,7 +184,7 @@ public:
 			}
         }
 
-        virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override
+        virtual void ProcessMessages(Environment &env, const MessageStreamRegisterEntity &stream) override
         {
             for (auto &entry : stream)
             {
@@ -257,7 +257,7 @@ public:
 			}
         }
 
-        virtual void ProcessMessages(Environment &env, const MessageStreamEntityRemoved &stream) override
+        virtual void ProcessMessages(Environment &env, const MessageStreamUnregisterEntity &stream) override
         {
             for (auto &entry : stream)
             {
@@ -295,7 +295,7 @@ public:
             //}
         }
 
-        virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override
+        virtual void ProcessMessages(Environment &env, const MessageStreamRegisterEntity &stream) override
         {
             for (auto &entry : stream)
             {
@@ -384,7 +384,7 @@ public:
 			}
         }
 
-        virtual void ProcessMessages(Environment &env, const MessageStreamEntityRemoved &stream) override
+        virtual void ProcessMessages(Environment &env, const MessageStreamUnregisterEntity &stream) override
         {
             for (auto &entry : stream)
             {

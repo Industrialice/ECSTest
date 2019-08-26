@@ -93,7 +93,7 @@ public:
 		void Accept(Array<TestComponent0> &) {}
 		using BaseIndirectSystem::ProcessMessages;
 
-        virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override
+        virtual void ProcessMessages(Environment &env, const MessageStreamRegisterEntity &stream) override
         {
             for (auto &entry : stream)
             {
@@ -101,7 +101,7 @@ public:
             }
         }
 
-        virtual void ProcessMessages(Environment &env, const MessageStreamEntityRemoved &stream) override
+        virtual void ProcessMessages(Environment &env, const MessageStreamUnregisterEntity &stream) override
         {
             for (auto &entry : stream)
             {
@@ -131,7 +131,7 @@ public:
 		void Accept(const Array<TestComponent0> &, const Array<TestComponent1> &, const NonUnique<TestComponent2> *) {}
 		using BaseIndirectSystem::ProcessMessages;
 
-        virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override
+        virtual void ProcessMessages(Environment &env, const MessageStreamRegisterEntity &stream) override
         {
             for (auto &entry : stream)
             {
@@ -168,13 +168,13 @@ public:
 		void Accept(Array<TestComponent0> &) {}
 		using BaseIndirectSystem::ProcessMessages;
 
-        virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override
+        virtual void ProcessMessages(Environment &env, const MessageStreamRegisterEntity &stream) override
         {}
 
         virtual void ProcessMessages(Environment &env, const MessageStreamComponentChanged &stream) override
         {}
 
-        virtual void ProcessMessages(Environment &env, const MessageStreamEntityRemoved &stream) override
+        virtual void ProcessMessages(Environment &env, const MessageStreamUnregisterEntity &stream) override
         {}
 
         virtual void Update(Environment &env) override
@@ -201,7 +201,7 @@ public:
 		void Accept() {}
 		using BaseIndirectSystem::ProcessMessages;
 
-        virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override
+        virtual void ProcessMessages(Environment &env, const MessageStreamRegisterEntity &stream) override
         {
             for (auto &entry : stream)
             {
@@ -239,7 +239,7 @@ public:
 			ASSUME(stream.Type() == TestComponent0::GetTypeId() || stream.Type() == TestComponent1::GetTypeId() || stream.Type() == TestComponent2::GetTypeId());
         }
 
-        virtual void ProcessMessages(Environment &env, const MessageStreamEntityRemoved &stream) override
+        virtual void ProcessMessages(Environment &env, const MessageStreamUnregisterEntity &stream) override
         {
             for (auto &entry : stream)
             {

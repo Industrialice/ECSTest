@@ -712,14 +712,14 @@ void SystemsManagerST::StartScheduler(vector<unique_ptr<IEntitiesStream>> &strea
 	for (auto &[archetype, messages] : entityAddedStreams._data)
 	{
 		auto reflected = _archetypeReflector.Reflect(archetype);
-		MessageStreamEntityAdded stream = {archetype, messages, _tempMessageBuilder.SourceName()};
+		MessageStreamRegisterEntity stream = {archetype, messages, _tempMessageBuilder.SourceName()};
 		for (auto &pipeline : _pipelines)
 		{
 			for (auto &managed : pipeline.indirectSystems)
 			{
 				if (ArchetypeReflector::Satisfies(reflected, managed.system->RequestedComponents().archetypeDefiningInfoOnly))
 				{
-					managed.messageQueue.entityAddedStreams.push_back(stream);
+					managed.messageQueue.registerEntityStreams.push_back(stream);
 				}
 			}
 		}
@@ -958,7 +958,7 @@ void SystemsManagerST::ExecutePipeline(PipelineData &pipeline, TimeDifference ti
 
 void SystemsManagerST::ProcessMessagesAndClear(BaseIndirectSystem &system, ManagedIndirectSystem::MessageQueue &messageQueue, System::Environment &env)
 {
-	for (const auto &stream : messageQueue.entityAddedStreams)
+	for (const auto &stream : messageQueue.registerEntityStreams)
 	{
 		system.ProcessMessages(env, stream);
 	}
@@ -974,7 +974,7 @@ void SystemsManagerST::ProcessMessagesAndClear(BaseIndirectSystem &system, Manag
     {
         system.ProcessMessages(env, stream);
     }
-	for (const auto &stream : messageQueue.entityRemovedStreams)
+	for (const auto &stream : messageQueue.unregisterEntityStreams)
 	{
 		system.ProcessMessages(env, stream);
 	}
@@ -1578,7 +1578,7 @@ void SystemsManagerST::PassMessagesToIndirectSystemsAndClear(MessageBuilder &mes
     for (auto &[streamArchetype, streamPointer] : messageBuilder.EntityAddedStreams()._data)
     {
         auto reflected = _archetypeReflector.Reflect(streamArchetype);
-        auto stream = MessageStreamEntityAdded(streamArchetype, streamPointer, messageBuilder.SourceName());
+        auto stream = MessageStreamRegisterEntity(streamArchetype, streamPointer, messageBuilder.SourceName());
 
         for (auto &pipeline : _pipelines)
         {
@@ -1588,7 +1588,7 @@ void SystemsManagerST::PassMessagesToIndirectSystemsAndClear(MessageBuilder &mes
                 {
                     if (ArchetypeReflector::Satisfies(reflected, managed.system->RequestedComponents().archetypeDefiningInfoOnly))
                     {
-                        managed.messageQueue.entityAddedStreams.emplace_back(stream);
+                        managed.messageQueue.registerEntityStreams.emplace_back(stream);
                     }
                 }
             }
@@ -1682,7 +1682,7 @@ void SystemsManagerST::PassMessagesToIndirectSystemsAndClear(MessageBuilder &mes
     for (const auto &[streamArchetype, streamPointer] : messageBuilder.EntityRemovedStreams()._data)
     {
         auto reflected = _archetypeReflector.Reflect(streamArchetype);
-        auto stream = MessageStreamEntityRemoved(streamArchetype, streamPointer, messageBuilder.SourceName());
+        auto stream = MessageStreamUnregisterEntity(streamArchetype, streamPointer, messageBuilder.SourceName());
 
         for (auto &pipeline : _pipelines)
         {
@@ -1692,7 +1692,7 @@ void SystemsManagerST::PassMessagesToIndirectSystemsAndClear(MessageBuilder &mes
                 {
                     if (ArchetypeReflector::Satisfies(reflected, managed.system->RequestedComponents().archetypeDefiningInfoOnly))
                     {
-                        managed.messageQueue.entityRemovedStreams.emplace_back(stream);
+                        managed.messageQueue.unregisterEntityStreams.emplace_back(stream);
                     }
                 }
             }
@@ -1710,19 +1710,19 @@ bool SystemsManagerST::SendControlActionToQueue(ControlsQueue &controlsQueue, co
 
 void SystemsManagerST::ManagedIndirectSystem::MessageQueue::clear()
 {
-    entityAddedStreams.clear();
+    registerEntityStreams.clear();
     componentAddedStreams.clear();
     componentChangedStreams.clear();
     componentRemovedStreams.clear();
-    entityRemovedStreams.clear();
+    unregisterEntityStreams.clear();
 }
 
 bool SystemsManagerST::ManagedIndirectSystem::MessageQueue::empty() const
 {
     return
-        entityAddedStreams.empty() &&
+        registerEntityStreams.empty() &&
         componentAddedStreams.empty() &&
         componentChangedStreams.empty() &&
         componentRemovedStreams.empty() &&
-        entityRemovedStreams.empty();
+        unregisterEntityStreams.empty();
 }

@@ -263,7 +263,7 @@ public:
 		{
 		}
 
-		virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override
+		virtual void ProcessMessages(Environment &env, const MessageStreamRegisterEntity &stream) override
 		{
 		}
 
@@ -331,7 +331,7 @@ public:
 			_staticPositionEntities.clear();
 		}
 
-		virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override
+		virtual void ProcessMessages(Environment &env, const MessageStreamRegisterEntity &stream) override
 		{
 			for (auto &entry : stream)
 			{
@@ -376,7 +376,7 @@ public:
 		{
 		}
 
-		virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override
+		virtual void ProcessMessages(Environment &env, const MessageStreamRegisterEntity &stream) override
 		{
 			for (const auto &entry : stream)
 			{

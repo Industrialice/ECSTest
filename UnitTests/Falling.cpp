@@ -138,7 +138,7 @@ public:
             env.logger.Info("Finished generating entities\n");
         }
 
-        virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override
+        virtual void ProcessMessages(Environment &env, const MessageStreamRegisterEntity &stream) override
         {
             for (auto &entity : stream)
             {
@@ -151,7 +151,7 @@ public:
             }
         }
 
-        virtual void ProcessMessages(Environment &env, const MessageStreamEntityRemoved &stream) override
+        virtual void ProcessMessages(Environment &env, const MessageStreamUnregisterEntity &stream) override
         {
             for (auto &entity : stream)
             {
@@ -210,7 +210,7 @@ public:
             env.messageBuilder.RemoveEntity(_infoId);
         }
 
-        virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override
+        virtual void ProcessMessages(Environment &env, const MessageStreamRegisterEntity &stream) override
         {
             for (auto &entity : stream)
             {
@@ -285,7 +285,7 @@ public:
 			ASSUME(stream.Type() == Transform::GetTypeId() || stream.Type() == NegativeHeightCooldown::GetTypeId() || stream.Type() == HeightFixerInfo::GetTypeId());
         }
 
-        virtual void ProcessMessages(Environment &env, const MessageStreamEntityRemoved &stream) override
+        virtual void ProcessMessages(Environment &env, const MessageStreamUnregisterEntity &stream) override
         {
             for (auto &entity : stream)
             {
@@ -328,7 +328,7 @@ public:
             }
         }
 
-        virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override
+        virtual void ProcessMessages(Environment &env, const MessageStreamRegisterEntity &stream) override
         {
             for (auto &entity : stream)
             {
@@ -391,7 +391,7 @@ public:
 			ASSUME(stream.Type() == Transform::GetTypeId() || stream.Type() == SpeedOfFall::GetTypeId());
         }
 
-        virtual void ProcessMessages(Environment &env, const MessageStreamEntityRemoved &stream) override
+        virtual void ProcessMessages(Environment &env, const MessageStreamUnregisterEntity &stream) override
         {
             for (auto &entity : stream)
             {
@@ -462,7 +462,7 @@ public:
             env.messageBuilder.RemoveEntity(_entityID);
         }
 
-        virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override
+        virtual void ProcessMessages(Environment &env, const MessageStreamRegisterEntity &stream) override
         {
             for (auto &entity : stream)
             {
@@ -503,7 +503,7 @@ public:
             _isChanged = true;
         }
 
-        virtual void ProcessMessages(Environment &env, const MessageStreamEntityRemoved &stream) override
+        virtual void ProcessMessages(Environment &env, const MessageStreamUnregisterEntity &stream) override
         {
             for (auto &entity : stream)
             {
@@ -542,7 +542,7 @@ public:
             }
         }
 
-        virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override
+        virtual void ProcessMessages(Environment &env, const MessageStreamRegisterEntity &stream) override
         {
             for (auto &entity : stream)
             {
@@ -576,7 +576,7 @@ public:
             }
         }
 
-        virtual void ProcessMessages(Environment &env, const MessageStreamEntityRemoved &stream) override
+        virtual void ProcessMessages(Environment &env, const MessageStreamUnregisterEntity &stream) override
         {
             for (auto &entity : stream)
             {

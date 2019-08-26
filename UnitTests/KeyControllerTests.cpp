@@ -116,7 +116,7 @@ public:
 
     #ifdef PHYSICS_INDIRECT
 		using BaseIndirectSystem::ProcessMessages;
-        virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override {}
+        virtual void ProcessMessages(Environment &env, const MessageStreamRegisterEntity &stream) override {}
         virtual void Update(Environment &env) override;
     #endif
     };
@@ -163,7 +163,7 @@ public:
         }
 
 		using BaseIndirectSystem::ProcessMessages;
-        virtual void ProcessMessages(Environment &env, const MessageStreamEntityAdded &stream) override {}
+        virtual void ProcessMessages(Environment &env, const MessageStreamRegisterEntity &stream) override {}
         virtual void ProcessMessages(Environment &env, const MessageStreamComponentChanged &stream) override {}
     };
 

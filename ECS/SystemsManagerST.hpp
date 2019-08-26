@@ -80,11 +80,11 @@ namespace ECSTest
 			// contains messages that the system needs to process before it starts its update
 			struct MessageQueue
 			{
-				vector<MessageStreamEntityAdded> entityAddedStreams{};
+				vector<MessageStreamRegisterEntity> registerEntityStreams{};
                 vector<MessageStreamComponentAdded> componentAddedStreams{};
 				vector<MessageStreamComponentChanged> componentChangedStreams{};
                 vector<MessageStreamComponentRemoved> componentRemovedStreams{};
-				vector<MessageStreamEntityRemoved> entityRemovedStreams{};
+				vector<MessageStreamUnregisterEntity> unregisterEntityStreams{};
 
 				void clear();
 				bool empty() const;
@@ -113,10 +113,10 @@ namespace ECSTest
 		// EntityID's hint will be an index in this array
 		vector<EntityLocation> _entitiesLocations{};
 
-		// stores all antities and their components grouped by archetype
+		// stores all entities and their components grouped by archetype
 		std::unordered_map<ArchetypeFull, ArchetypeGroup> _archetypeGroupsFull{};
-		// similar archetypes, like containing entities with multiple components of the same type,
-		// will be considered as same archetype, so if you don't care about the components count,
+		// similar archetypes, like the ones containing entities with multiple components of the same type,
+		// will be considered as same archetype, so if you don't care about the components count
 		// but only about their presence, use this
 		std::unordered_map<Archetype, vector<std::reference_wrapper<ArchetypeGroup>>> _archetypeGroups{};
 
